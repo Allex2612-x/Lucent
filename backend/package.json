@@ -1,0 +1,47 @@
+{
+  "name": "sasha-licenta-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "lint": "eslint .",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "cookie-parser": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "exceljs": "latest",
+    "express": "latest",
+    "helmet": "latest",
+    "jsonwebtoken": "latest",
+    "morgan": "latest",
+    "pdfkit": "latest",
+    "rate-limiter-flexible": "latest",
+    "zod": "latest",
+    "bcryptjs": "latest",
+    "@sasha-licenta/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "@types/cookie-parser": "latest",
+    "@types/cors": "latest",
+    "@types/express": "latest",
+    "@types/jsonwebtoken": "latest",
+    "@types/morgan": "latest",
+    "@types/node": "latest",
+    "@types/pdfkit": "latest",
+    "eslint": "latest",
+    "typescript": "latest",
+    "tsx": "latest",
+    "prisma": "^6.4.1",
+    "vitest": "latest"
+  }
+}

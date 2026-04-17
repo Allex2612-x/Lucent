@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  currency  String   @default("RON")
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  notifications Notification[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  icon      String?
+  color     String?
+  type      String   // "income" | "expense"
+  userId    String?  // null means it is a default global category
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user            User?             @relation(fields: [userId], references: [id])
+  transactions    Transaction[]
+  budgetCategories BudgetCategory[]
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  amount      Float
+  type        String   // "income" | "expense"
+  description String?
+  date        DateTime
+  categoryId  String
+  userId      String
+  receiptUrl  String?
+  isRecurring Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model Budget {
+  id         String   @id @default(uuid())
+  month      Int
+  year       Int
+  totalLimit Float
+  userId     String
+  createdAt  DateTime @default(now())
+
+  user       User             @relation(fields: [userId], references: [id])
+  categories BudgetCategory[]
+
+  @@unique([userId, month, year])
+}
+
+model BudgetCategory {
+  id          String   @id @default(uuid())
+  budgetId    String
+  categoryId  String
+  limitAmount Float
+  createdAt   DateTime @default(now())
+
+  budget   Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([budgetId, categoryId])
+}
+
+model Notification {
+  id              String   @id @default(uuid())
+  userId          String
+  type            String   // "budget_exceeded" | "budget_near_limit" | "bill_reminder"
+  title           String
+  message         String
+  isRead          Boolean  @default(false)
+  relatedEntityId String?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

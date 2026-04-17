@@ -1,0 +1,69 @@
+import { Request, Response, NextFunction } from 'express';
+import { AuthService, registerSchema, loginSchema } from './auth.service.js';
+import { AppError } from '../../shared/errors.js';
+
+export class AuthController {
+  static async register(req: Request, res: Response, next: NextFunction) {
+    try {
+      const validatedData = registerSchema.parse(req.body);
+      const { user, accessToken, refreshToken } = await AuthService.register(validatedData);
+
+      // set refresh token in httpOnly cookie
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          },
+          accessToken,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async login(req: Request, res: Response, next: NextFunction) {
+    try {
+      const validatedData = loginSchema.parse(req.body);
+      const { user, accessToken, refreshToken } = await AuthService.login(validatedData);
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          },
+          accessToken,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async logout(req: Request, res: Response, next: NextFunction) {
+    res.clearCookie('refreshToken');
+    res.json({ success: true, message: 'Logged out successfully' });
+  }
+}

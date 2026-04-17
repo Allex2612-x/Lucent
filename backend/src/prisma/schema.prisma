@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TransactionType {
+  income
+  expense
+}
+
+enum CategoryType {
+  income
+  expense
+}
+
+enum NotificationType {
+  budget_exceeded
+  budget_near_limit
+  bill_reminder
+  weekly_summary
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  currency     String         @default("EUR")
+  avatarUrl    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  notifications Notification[]
+}
+
+model Category {
+  id        String        @id @default(uuid())
+  name      String
+  icon      String?
+  color     String?
+  type      CategoryType
+  isDefault Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  userId String?
+  user   User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  transactions     Transaction[]
+  budgetCategories BudgetCategory[]
+
+  @@index([userId])
+  @@index([type])
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  amount      Decimal         @db.Decimal(12, 2)
+  type        TransactionType
+  description String?
+  date        DateTime
+  receiptUrl  String?
+  isRecurring Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  userId String
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId, date])
+  @@index([categoryId])
+  @@index([type])
+}
+
+model Budget {
+  id         String           @id @default(uuid())
+  month      Int
+  year       Int
+  totalLimit Decimal?         @db.Decimal(12, 2)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categories BudgetCategory[]
+
+  @@unique([userId, month, year])
+  @@index([userId, year, month])
+}
+
+model BudgetCategory {
+  id          String   @id @default(uuid())
+  limitAmount Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  budgetId   String
+  budget     Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetId, categoryId])
+  @@index([budgetId])
+  @@index([categoryId])
+}
+
+model Notification {
+  id              String           @id @default(uuid())
+  type            NotificationType
+  title           String
+  message         String
+  isRead          Boolean          @default(false)
+  relatedEntityId String?
+  createdAt       DateTime         @default(now())
+
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+}
+
