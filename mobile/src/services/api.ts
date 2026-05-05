@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 // Adjust baseURL based on emulator vs physical device
 // For iOS Simulator: http://localhost:5000/api
 // For Android Emulator: http://10.0.2.2:5000/api
-const baseURL = 'http://localhost:5000/api'; 
+const baseURL = 'http://localhost:4000/api'; 
 
 export const api = axios.create({
   baseURL,

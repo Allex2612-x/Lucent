@@ -1,6 +1,7 @@
 import { prisma } from '../../shared/prisma.js';
 import { NotFoundError } from '../../shared/errors.js';
 import { z } from 'zod';
+import { NotificationService } from '../notification/notification.service.js';
 
 export const createTransactionSchema = z.object({
   amount: z.number().positive(),
@@ -34,7 +35,7 @@ export class TransactionService {
   }
 
   static async createTransaction(userId: string, data: z.infer<typeof createTransactionSchema>) {
-    return prisma.transaction.create({
+    const transaction = await prisma.transaction.create({
       data: {
         amount: data.amount,
         type: data.type,
@@ -47,6 +48,17 @@ export class TransactionService {
       },
       include: { category: true }
     });
+
+    // Check and create budget notifications if this is an expense
+    if (data.type === 'expense') {
+      await NotificationService.checkAndCreateBudgetNotifications(
+        userId,
+        data.categoryId,
+        new Date(data.date)
+      );
+    }
+
+    return transaction;
   }
 
   static async getTransactionById(userId: string, id: string) {
@@ -63,7 +75,7 @@ export class TransactionService {
     const transaction = await prisma.transaction.findFirst({ where: { id, userId } });
     if (!transaction) throw new NotFoundError('Transaction not found');
 
-    return prisma.transaction.update({
+    const updatedTransaction = await prisma.transaction.update({
       where: { id },
       data: {
         ...data,
@@ -71,6 +83,19 @@ export class TransactionService {
       },
       include: { category: true }
     });
+
+    // Check and create budget notifications if this is an expense
+    // Use the updated type if provided, otherwise use the original type
+    const finalType = data.type || transaction.type;
+    if (finalType === 'expense') {
+      await NotificationService.checkAndCreateBudgetNotifications(
+        userId,
+        data.categoryId || transaction.categoryId,
+        data.date ? new Date(data.date) : transaction.date
+      );
+    }
+
+    return updatedTransaction;
   }
 
   static async deleteTransaction(userId: string, id: string) {

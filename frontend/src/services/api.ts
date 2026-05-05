@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/useAuthStore';
 
 // Create an Axios instance with base URL depending on environment
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL:  'http://localhost:4000/api',
   withCredentials: true, // Needed for sending httpOnly cookies
 });
 

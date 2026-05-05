@@ -9,14 +9,22 @@ import userRoutes from './modules/user/user.routes.js';
 import categoryRoutes from './modules/category/category.routes.js';
 import transactionRoutes from './modules/transaction/transaction.routes.js';
 import budgetRoutes from './modules/budget/budget.routes.js';
+import statisticsRoutes from './modules/statistics/statistics.routes.js';
+import reportRoutes from './modules/report/report.routes.js';
+import notificationRoutes from './modules/notification/notification.routes.js';
 
 const app = express();
 
 // Security and utility middlewares
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for development
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(cors({
-  origin: ['http://localhost:5173', 'exp://localhost:8081'],
+  origin: ['http://localhost:5173', 'exp://localhost:8081', process.env.FRONTEND_URL].filter(Boolean) as string[],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -34,6 +42,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/budgets', budgetRoutes);
+app.use('/api/statistics', statisticsRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware should be last
 app.use(errorHandler);
