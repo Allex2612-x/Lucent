@@ -76,6 +76,19 @@ export function Categories() {
     if (formData.name.length < 2) {
       return;
     }
+    
+    // Check for duplicates (case-insensitive, trimmed)
+    const normalizedName = formData.name.trim().toLowerCase();
+    const duplicate = categories.find((cat: Category) => 
+      cat.name.trim().toLowerCase() === normalizedName && 
+      cat.type === formData.type
+    );
+    
+    if (duplicate) {
+      alert(`Există deja o categorie cu numele "${formData.name}" pentru tipul selectat.`);
+      return;
+    }
+    
     createMutation.mutate(formData);
   };
 
@@ -92,6 +105,19 @@ export function Categories() {
 
   const handleUpdateCategory = () => {
     if (editingCategory && formData.name.length >= 2) {
+      // Check for duplicates (excluding current category)
+      const normalizedName = formData.name.trim().toLowerCase();
+      const duplicate = categories.find((cat: Category) => 
+        cat.id !== editingCategory.id &&
+        cat.name.trim().toLowerCase() === normalizedName && 
+        cat.type === formData.type
+      );
+      
+      if (duplicate) {
+        alert(`Există deja o categorie cu numele "${formData.name}" pentru tipul selectat.`);
+        return;
+      }
+      
       updateMutation.mutate({ id: editingCategory.id, data: formData });
     }
   };
@@ -114,41 +140,46 @@ export function Categories() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '1rem',
+        padding: '1.25rem',
         backgroundColor: '#1e293b',
         borderRadius: '0.5rem',
         border: '1px solid #334155',
+        transition: 'border-color 0.2s',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {/* Color square */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        {/* Color square with icon */}
         <div
           style={{
-            width: '2.5rem',
-            height: '2.5rem',
+            width: '3rem',
+            height: '3rem',
             backgroundColor: category.color || '#818cf8',
-            borderRadius: '0.375rem',
+            borderRadius: '0.5rem',
             flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
           }}
-        />
+        >
+          {category.icon || '📁'}
+        </div>
         
-        {/* Icon and name */}
+        {/* Name and type badge */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {category.icon && (
-              <span style={{ fontSize: '1.25rem' }}>{category.icon}</span>
-            )}
-            <span style={{ fontWeight: 600, fontSize: '1rem' }}>{category.name}</span>
+          <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.375rem', color: '#f8fafc' }}>
+            {category.name}
           </div>
           <span
             style={{
               display: 'inline-block',
-              marginTop: '0.25rem',
-              padding: '0.125rem 0.5rem',
-              borderRadius: '0.75rem',
+              padding: '0.125rem 0.625rem',
+              borderRadius: '1rem',
               fontSize: '0.75rem',
-              backgroundColor: category.type === 'income' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              fontWeight: 500,
+              backgroundColor: category.type === 'income' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
               color: category.type === 'income' ? '#10b981' : '#ef4444',
+              border: `1px solid ${category.type === 'income' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
             }}
           >
             {category.type === 'income' ? 'Venit' : 'Cheltuială'}
@@ -162,7 +193,13 @@ export function Categories() {
           variant="ghost"
           onClick={() => handleEditClick(category)}
           disabled={isDefault}
-          style={{ padding: '0.5rem', minWidth: 'auto' }}
+          style={{ 
+            padding: '0.5rem', 
+            minWidth: 'auto',
+            opacity: isDefault ? 0.5 : 1,
+            cursor: isDefault ? 'not-allowed' : 'pointer'
+          }}
+          title={isDefault ? 'Categoriile implicite nu pot fi editate' : 'Editează categoria'}
         >
           <Edit2 size={16} />
         </Button>
@@ -170,7 +207,14 @@ export function Categories() {
           variant="ghost"
           onClick={() => handleDeleteClick(category.id)}
           disabled={isDefault}
-          style={{ padding: '0.5rem', minWidth: 'auto', color: isDefault ? '#64748b' : '#ef4444' }}
+          style={{ 
+            padding: '0.5rem', 
+            minWidth: 'auto', 
+            color: isDefault ? '#64748b' : '#ef4444',
+            opacity: isDefault ? 0.5 : 1,
+            cursor: isDefault ? 'not-allowed' : 'pointer'
+          }}
+          title={isDefault ? 'Categoriile implicite nu pot fi șterse' : 'Șterge categoria'}
         >
           <Trash2 size={16} />
         </Button>

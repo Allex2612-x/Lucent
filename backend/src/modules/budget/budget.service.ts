@@ -6,11 +6,25 @@ export const createBudgetSchema = z.object({
   month: z.number().min(1).max(12),
   year: z.number().min(2000),
   totalLimit: z.number().positive(),
+  isTotal: z.boolean().default(false),
   categories: z.array(z.object({
     categoryId: z.string().uuid(),
     limitAmount: z.number().positive()
-  })).min(1),
-});
+  })).optional(),
+}).refine(
+  (data) => {
+    // If isTotal is true, categories should be empty or undefined
+    // If isTotal is false, categories should have at least 1 item
+    if (data.isTotal) {
+      return !data.categories || data.categories.length === 0;
+    } else {
+      return data.categories && data.categories.length >= 1;
+    }
+  },
+  {
+    message: "Bugetul total nu poate avea categorii, iar bugetul pe categorii trebuie să aibă cel puțin o categorie",
+  }
+);
 
 export const updateBudgetSchema = z.object({
   totalLimit: z.number().positive().optional(),
@@ -51,12 +65,19 @@ export class BudgetService {
   }
 
   static async createBudget(userId: string, data: z.infer<typeof createBudgetSchema>) {
+    // Check if budget already exists for this month/year/type
     const existing = await prisma.budget.findFirst({
-      where: { userId, month: data.month, year: data.year }
+      where: { 
+        userId, 
+        month: data.month, 
+        year: data.year,
+        isTotal: data.isTotal 
+      }
     });
 
     if (existing) {
-      throw new BadRequestError(`Budget for ${data.month}/${data.year} already exists.`);
+      const budgetType = data.isTotal ? 'total' : 'pe categorii';
+      throw new BadRequestError(`Buget ${budgetType} pentru ${data.month}/${data.year} există deja.`);
     }
 
     return prisma.budget.create({
@@ -64,15 +85,22 @@ export class BudgetService {
         month: data.month,
         year: data.year,
         totalLimit: data.totalLimit,
+        isTotal: data.isTotal,
         userId,
-        categories: {
-          create: data.categories.map(c => ({
-            categoryId: c.categoryId,
-            limitAmount: c.limitAmount
-          }))
-        }
+        ...(data.categories && data.categories.length > 0 ? {
+          categories: {
+            create: data.categories.map(c => ({
+              categoryId: c.categoryId,
+              limitAmount: c.limitAmount
+            }))
+          }
+        } : {})
       },
-      include: { categories: true }
+      include: { 
+        categories: {
+          include: { category: true }
+        }
+      }
     });
   }
 

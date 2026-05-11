@@ -7,7 +7,7 @@ export const createTransactionSchema = z.object({
   amount: z.number().positive(),
   type: z.enum(['income', 'expense']),
   description: z.string().optional(),
-  date: z.string().datetime().or(z.date()),
+  date: z.string().or(z.date()).transform((val) => new Date(val)),
   categoryId: z.string().uuid(),
   receiptUrl: z.string().optional(),
   isRecurring: z.boolean().default(false),

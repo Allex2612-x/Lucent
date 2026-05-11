@@ -66,4 +66,30 @@ export class AuthController {
     res.clearCookie('refreshToken');
     res.json({ success: true, message: 'Logged out successfully' });
   }
+
+  static async refresh(req: Request, res: Response, next: NextFunction) {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+      
+      if (!refreshToken) {
+        throw new AppError('Refresh token not found', 401);
+      }
+
+      const { accessToken, refreshToken: newRefreshToken } = await AuthService.refreshTokens(refreshToken);
+
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.json({
+        success: true,
+        data: { accessToken },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

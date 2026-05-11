@@ -39,7 +39,7 @@ export class StatisticsController {
       const validatedParams = monthlyTrendSchema.parse(req.query);
       const result = await StatisticsService.getMonthlyTrend(
         req.user!.userId,
-        validatedParams.months
+        validatedParams
       );
       res.json({ success: true, data: result });
     } catch (error) {

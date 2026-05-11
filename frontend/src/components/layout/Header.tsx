@@ -59,9 +59,6 @@ export function Header() {
     <header className="header">
       <div className="header-content">
         <div className="header-left">
-          {/* Page title can be added here dynamically if needed */}
-        </div>
-        <div className="header-right">
           <div className="notification-bell-wrapper" ref={dropdownRef}>
             <button
               className="notification-bell"
@@ -77,6 +74,8 @@ export function Header() {
               <NotificationDropdown onClose={() => setIsDropdownOpen(false)} />
             )}
           </div>
+        </div>
+        <div className="header-right">
           <div className="user-info">
             <span className="user-name">
               {user?.firstName} {user?.lastName}

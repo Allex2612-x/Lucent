@@ -41,6 +41,100 @@ function BudgetProgress({ spent, limit }: BudgetProgressProps) {
   );
 }
 
+interface BudgetCardProps {
+  budget: Budget;
+  onEdit: (budget: Budget) => void;
+  onDelete: (id: string) => void;
+}
+
+function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
+  const { data: overviewData } = useQuery({
+    queryKey: ['statistics', 'overview', budget.month, budget.year],
+    queryFn: () => statisticsService.getOverview({ month: budget.month, year: budget.year }),
+  });
+
+  const spent = overviewData?.data?.data?.totalExpenses || 0;
+  const isTotal = (budget as any).isTotal || false;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
+                {getMonthName(budget.month)} {budget.year}
+              </h3>
+              {isTotal && (
+                <span style={{ 
+                  padding: '0.25rem 0.75rem', 
+                  borderRadius: '1rem', 
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  backgroundColor: 'rgba(129, 140, 248, 0.2)',
+                  color: '#818cf8',
+                  border: '1px solid rgba(129, 140, 248, 0.3)'
+                }}>
+                  BUGET TOTAL
+                </span>
+              )}
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
+              Limită: {Number(budget.totalLimit).toFixed(2)} RON
+            </p>
+            {!isTotal && budget.categories && budget.categories.length > 0 && (
+              <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                {budget.categories.slice(0, 3).map((bc: any) => (
+                  <span 
+                    key={bc.id}
+                    style={{ 
+                      padding: '0.125rem 0.5rem', 
+                      borderRadius: '0.75rem', 
+                      fontSize: '0.75rem',
+                      backgroundColor: 'rgba(100, 116, 139, 0.2)',
+                      color: '#cbd5e1'
+                    }}
+                  >
+                    {bc.category?.name}
+                  </span>
+                ))}
+                {budget.categories.length > 3 && (
+                  <span style={{ 
+                    padding: '0.125rem 0.5rem', 
+                    fontSize: '0.75rem',
+                    color: '#94a3b8'
+                  }}>
+                    +{budget.categories.length - 3} mai multe
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button
+              variant="ghost"
+              onClick={() => onEdit(budget)}
+              style={{ padding: '0.5rem', minWidth: 'auto' }}
+            >
+              <Edit2 size={16} />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => onDelete(budget.id)}
+              style={{ padding: '0.5rem', minWidth: 'auto', color: '#ef4444' }}
+            >
+              <Trash2 size={16} />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardBody>
+        <BudgetProgress spent={spent} limit={Number(budget.totalLimit)} />
+      </CardBody>
+    </Card>
+  );
+}
+
 interface CategoryLimitField {
   categoryId: string;
   limitAmount: number;
@@ -56,6 +150,7 @@ export function Budgets() {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     totalLimit: 0,
+    isTotal: false,
   });
 
   const [categoryLimits, setCategoryLimits] = useState<CategoryLimitField[]>([
@@ -66,6 +161,7 @@ export function Budgets() {
   const { data: budgetsResponse, isLoading, error } = useQuery({
     queryKey: ['budgets'],
     queryFn: () => budgetsService.getAll(),
+    retry: 1,
   });
 
   // Query for categories (expense only for budgets)
@@ -113,6 +209,7 @@ export function Budgets() {
       month: new Date().getMonth() + 1,
       year: new Date().getFullYear(),
       totalLimit: 0,
+      isTotal: false,
     });
     setCategoryLimits([{ categoryId: '', limitAmount: 0 }]);
   };
@@ -134,21 +231,34 @@ export function Budgets() {
   };
 
   const handleCreateBudget = () => {
-    const validCategories = categoryLimits.filter(cl => cl.categoryId && cl.limitAmount > 0);
-    
-    if (validCategories.length === 0) {
-      alert('Adaugă cel puțin o categorie cu o limită validă.');
-      return;
+    if (formData.isTotal) {
+      // Buget total - nu necesită categorii
+      const budgetData: BudgetData = {
+        month: formData.month,
+        year: formData.year,
+        totalLimit: formData.totalLimit,
+        isTotal: true,
+      };
+      createMutation.mutate(budgetData);
+    } else {
+      // Buget pe categorii
+      const validCategories = categoryLimits.filter(cl => cl.categoryId && cl.limitAmount > 0);
+      
+      if (validCategories.length === 0) {
+        alert('Adaugă cel puțin o categorie cu o limită validă.');
+        return;
+      }
+
+      const budgetData: BudgetData = {
+        month: formData.month,
+        year: formData.year,
+        totalLimit: formData.totalLimit,
+        isTotal: false,
+        categories: validCategories,
+      };
+
+      createMutation.mutate(budgetData);
     }
-
-    const budgetData: BudgetData = {
-      month: formData.month,
-      year: formData.year,
-      totalLimit: formData.totalLimit,
-      categories: validCategories,
-    };
-
-    createMutation.mutate(budgetData);
   };
 
   const handleEditClick = (budget: Budget) => {
@@ -203,18 +313,6 @@ export function Budgets() {
     setIsCreateModalOpen(true);
   };
 
-  // Calculate spent for each budget
-  const budgetsWithSpent = budgets.map((budget: Budget) => {
-    const { data: overviewData } = useQuery({
-      queryKey: ['statistics', 'overview', budget.month, budget.year],
-      queryFn: () => statisticsService.getOverview({ month: budget.month, year: budget.year }),
-      enabled: !!budget.id,
-    });
-
-    const spent = overviewData?.data?.data?.totalExpenses || 0;
-    return { ...budget, spent };
-  });
-
   return (
     <div className="budgets-container">
       <div className="page-header">
@@ -232,10 +330,22 @@ export function Budgets() {
           Se încarcă bugetele...
         </div>
       ) : error ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>
-          Nu s-au putut încărca datele. Încearcă din nou.
-        </div>
-      ) : budgetsWithSpent.length === 0 ? (
+        <Card>
+          <CardBody>
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444', marginBottom: '1rem' }}>
+                Nu s-au putut încărca datele. Încearcă din nou.
+              </div>
+              <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                {error instanceof Error ? error.message : 'Eroare necunoscută'}
+              </p>
+              <Button variant="primary" onClick={() => queryClient.invalidateQueries({ queryKey: ['budgets'] })}>
+                Reîncearcă
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      ) : budgets.length === 0 ? (
         <Card>
           <CardBody>
             <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
@@ -251,45 +361,17 @@ export function Budgets() {
         </Card>
       ) : (
         <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-          {budgetsWithSpent.map((budget: Budget & { spent: number }) => (
-            <Card key={budget.id}>
-              <CardHeader>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                      {getMonthName(budget.month)} {budget.year}
-                    </h3>
-                    <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-                      Limită Totală: {Number(budget.totalLimit).toFixed(2)} RON
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleEditClick(budget)}
-                      style={{ padding: '0.5rem', minWidth: 'auto' }}
-                    >
-                      <Edit2 size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleDeleteClick(budget.id)}
-                      style={{ padding: '0.5rem', minWidth: 'auto', color: '#ef4444' }}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardBody>
-                <BudgetProgress spent={budget.spent} limit={Number(budget.totalLimit)} />
-              </CardBody>
-            </Card>
+          {budgets.map((budget: Budget) => (
+            <BudgetCard 
+              key={budget.id} 
+              budget={budget} 
+              onEdit={handleEditClick}
+              onDelete={handleDeleteClick}
+            />
           ))}
         </div>
       )}
 
-      {/* Create Budget Modal */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -328,6 +410,40 @@ export function Budgets() {
             />
           </div>
 
+          {/* Toggle pentru tip buget */}
+          <div style={{ padding: '1rem', backgroundColor: 'rgba(100, 116, 139, 0.1)', borderRadius: '0.5rem' }}>
+            <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#e2e8f0', marginBottom: '0.75rem', display: 'block' }}>
+              Tip Buget
+            </label>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="budgetType"
+                  checked={!formData.isTotal}
+                  onChange={() => setFormData({ ...formData, isTotal: false })}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ color: '#e2e8f0' }}>Buget pe Categorii</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="budgetType"
+                  checked={formData.isTotal}
+                  onChange={() => setFormData({ ...formData, isTotal: true })}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ color: '#e2e8f0' }}>Buget Total Lunar</span>
+              </label>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem', marginBottom: 0 }}>
+              {formData.isTotal 
+                ? 'Plafonul general de cheltuieli pentru întreaga lună' 
+                : 'Limite separate pentru fiecare categorie de cheltuieli'}
+            </p>
+          </div>
+
           <Input
             label="Limită Totală (RON)"
             type="number"
@@ -336,54 +452,58 @@ export function Budgets() {
             onChange={(e) => setFormData({ ...formData, totalLimit: parseFloat(e.target.value) || 0 })}
           />
 
-          <div style={{ borderTop: '1px solid #334155', paddingTop: '1rem', marginTop: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#e2e8f0' }}>
-                Limite pe Categorii
-              </label>
-              <Button
-                variant="secondary"
-                onClick={handleAddCategoryLimit}
-                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-              >
-                <Plus size={16} style={{ marginRight: '0.25rem' }} /> Adaugă Categorie
-              </Button>
-            </div>
-
-            {categoryLimits.map((cl, index) => (
-              <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                <Select
-                  value={cl.categoryId}
-                  onChange={(e) => handleCategoryLimitChange(index, 'categoryId', e.target.value)}
-                  options={expenseCategories.map((cat: Category) => ({
-                    value: cat.id,
-                    label: cat.name,
-                  }))}
-                  placeholder="Selectează categoria"
-                />
-                <Input
-                  type="number"
-                  placeholder="Limită (RON)"
-                  value={cl.limitAmount || ''}
-                  onChange={(e) => handleCategoryLimitChange(index, 'limitAmount', parseFloat(e.target.value) || 0)}
-                />
-                {categoryLimits.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleRemoveCategoryLimit(index)}
-                    style={{ padding: '0.5rem', minWidth: 'auto', color: '#ef4444' }}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                )}
+          {!formData.isTotal && (
+            <div style={{ borderTop: '1px solid #334155', paddingTop: '1rem', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#e2e8f0' }}>
+                  Limite pe Categorii
+                </label>
+                <Button
+                  variant="secondary"
+                  onClick={handleAddCategoryLimit}
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                >
+                  <Plus size={16} style={{ marginRight: '0.25rem' }} /> Adaugă Categorie
+                </Button>
               </div>
-            ))}
-          </div>
+
+              {categoryLimits.map((cl, index) => (
+                <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <Select
+                    value={cl.categoryId}
+                    onChange={(e) => handleCategoryLimitChange(index, 'categoryId', e.target.value)}
+                    options={expenseCategories.map((cat: Category) => ({
+                      value: cat.id,
+                      label: cat.name,
+                    }))}
+                    placeholder="Selectează categoria"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Limită (RON)"
+                    value={cl.limitAmount || ''}
+                    onChange={(e) => handleCategoryLimitChange(index, 'limitAmount', parseFloat(e.target.value) || 0)}
+                  />
+                  {categoryLimits.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleRemoveCategoryLimit(index)}
+                      style={{ padding: '0.5rem', minWidth: 'auto', color: '#ef4444' }}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {createMutation.isError && (
           <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.5rem' }}>
-            Eroare la salvarea bugetului. Încearcă din nou.
+            <strong>Eroare la salvarea bugetului:</strong>
+            <br />
+            {(createMutation.error as any)?.response?.data?.message || 'Încearcă din nou.'}
           </div>
         )}
       </Modal>

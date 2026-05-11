@@ -6,10 +6,9 @@ import { FileText, Download, PieChart as PieChartIcon, BarChart3 } from 'lucide-
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { statisticsService } from '../../services/statistics.service';
 import { api } from '../../services/api';
+import { CHART_COLORS, tokens } from '../../styles/colors';
 
 const MONTH_NAMES = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
-
-const COLORS = ['#818cf8', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 export function Reports() {
   // Initialize with current month and 6 months ago
@@ -38,8 +37,11 @@ export function Reports() {
   });
 
   const { data: trendData, isLoading: trendLoading, error: trendError } = useQuery({
-    queryKey: ['statistics', 'monthly-trend'],
-    queryFn: () => statisticsService.getMonthlyTrend({ months: 12 }),
+    queryKey: ['statistics', 'monthly-trend', startDateFull, endDateFull],
+    queryFn: () => statisticsService.getMonthlyTrend({ 
+      startDate: startDateFull, 
+      endDate: endDateFull 
+    }),
   });
 
   const categoryChartData = categoryData?.data?.data?.map((item: any) => ({
@@ -131,7 +133,7 @@ export function Reports() {
         <CardBody>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FileText size={20} className="text-indigo-400" />
+              <FileText size={20} className="text-teal-400" />
               <span style={{ fontWeight: 500 }}>Selectează Perioada:</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -145,16 +147,16 @@ export function Reports() {
                 onChange={(e) => setStartDate(e.target.value)}
                 style={{
                   padding: '0.5rem 0.75rem',
-                  backgroundColor: '#1e293b',
-                  border: '1px solid #334155',
+                  backgroundColor: tokens['bg-elevated'],
+                  border: `1px solid ${tokens['border-default']}`,
                   borderRadius: '0.5rem',
-                  color: '#f8fafc',
+                  color: tokens['text-primary'],
                   fontSize: '0.9rem',
                 }}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <label htmlFor="endDate" style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+              <label htmlFor="endDate" style={{ fontSize: '0.9rem', color: tokens['text-muted'] }}>
                 Până la:
               </label>
               <input
@@ -164,10 +166,10 @@ export function Reports() {
                 onChange={(e) => setEndDate(e.target.value)}
                 style={{
                   padding: '0.5rem 0.75rem',
-                  backgroundColor: '#1e293b',
-                  border: '1px solid #334155',
+                  backgroundColor: tokens['bg-elevated'],
+                  border: `1px solid ${tokens['border-default']}`,
                   borderRadius: '0.5rem',
-                  color: '#f8fafc',
+                  color: tokens['text-primary'],
                   fontSize: '0.9rem',
                 }}
               />
@@ -182,7 +184,7 @@ export function Reports() {
         <Card style={{ padding: '0' }}>
           <CardHeader style={{ padding: '1.5rem 1.5rem 0', borderBottom: 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PieChartIcon size={20} className="text-indigo-400" />
+              <PieChartIcon size={20} className="text-teal-400" />
               <h3>Distribuție Cheltuieli pe Categorii</h3>
             </div>
           </CardHeader>
@@ -208,16 +210,16 @@ export function Reports() {
                       dataKey="value"
                     >
                       {categoryChartData.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1e293b',
-                        borderColor: '#334155',
+                        backgroundColor: tokens['bg-elevated'],
+                        borderColor: tokens['border-default'],
                         borderRadius: '0.5rem',
                       }}
-                      itemStyle={{ color: '#f8fafc' }}
+                      itemStyle={{ color: tokens['text-primary'] }}
                       formatter={(value: any) => `${Number(value).toFixed(2)} RON`}
                     />
                   </PieChart>
@@ -231,7 +233,7 @@ export function Reports() {
         <Card style={{ padding: '0' }}>
           <CardHeader style={{ padding: '1.5rem 1.5rem 0', borderBottom: 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <BarChart3 size={20} className="text-indigo-400" />
+              <BarChart3 size={20} className="text-teal-400" />
               <h3>Venituri și Cheltuieli Lunare</h3>
             </div>
           </CardHeader>
@@ -246,28 +248,28 @@ export function Reports() {
               <div style={{ width: '100%', height: 350, minWidth: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={trendChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={tokens['border-default']} vertical={false} />
                     <XAxis
                       dataKey="name"
-                      stroke="#94a3b8"
-                      tick={{ fill: '#94a3b8' }}
+                      stroke={tokens['text-muted']}
+                      tick={{ fill: tokens['text-muted'] }}
                       axisLine={false}
                       tickLine={false}
                     />
                     <YAxis
-                      stroke="#94a3b8"
-                      tick={{ fill: '#94a3b8' }}
+                      stroke={tokens['text-muted']}
+                      tick={{ fill: tokens['text-muted'] }}
                       axisLine={false}
                       tickLine={false}
                       tickFormatter={(val) => `${val}`}
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1e293b',
-                        borderColor: '#334155',
+                        backgroundColor: tokens['bg-elevated'],
+                        borderColor: tokens['border-default'],
                         borderRadius: '0.5rem',
                       }}
-                      itemStyle={{ color: '#f8fafc' }}
+                      itemStyle={{ color: tokens['text-primary'] }}
                       formatter={(value: any) => `${Number(value).toFixed(2)} RON`}
                     />
                     <Legend
@@ -275,8 +277,8 @@ export function Reports() {
                       iconType="circle"
                       formatter={(value) => (value === 'income' ? 'Venituri' : 'Cheltuieli')}
                     />
-                    <Bar dataKey="income" fill="#10b981" radius={[8, 8, 0, 0]} />
-                    <Bar dataKey="expenses" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="income" fill={tokens['accent-success']} radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="expenses" fill={tokens['accent-danger']} radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

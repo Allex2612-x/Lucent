@@ -29,9 +29,44 @@ export class CategoryService {
   }
 
   static async createCategory(userId: string, data: z.infer<typeof createCategorySchema>) {
+    // Check for duplicate (case-insensitive, trimmed)
+    const normalizedName = data.name.trim().toLowerCase();
+    
+    const duplicate = await prisma.category.findFirst({
+      where: {
+        OR: [
+          { userId },
+          { isDefault: true, userId: null }
+        ],
+        type: data.type,
+      }
+    });
+
+    // Check if any category matches the normalized name
+    if (duplicate) {
+      const allCategories = await prisma.category.findMany({
+        where: {
+          OR: [
+            { userId },
+            { isDefault: true, userId: null }
+          ],
+          type: data.type,
+        }
+      });
+      
+      const nameExists = allCategories.some(cat => 
+        cat.name.trim().toLowerCase() === normalizedName
+      );
+      
+      if (nameExists) {
+        throw new BadRequestError(`Există deja o categorie cu numele "${data.name}" pentru tipul selectat.`);
+      }
+    }
+
     return prisma.category.create({
       data: {
         ...data,
+        name: data.name.trim(), // Trim the name before saving
         userId,
         isDefault: false
       }
@@ -46,9 +81,36 @@ export class CategoryService {
     if (!category) throw new NotFoundError('Category not found or you cannot edit default categories');
     if (category.isDefault) throw new BadRequestError('Cannot edit default categories');
 
+    // Check for duplicate if name is being updated
+    if (data.name) {
+      const normalizedName = data.name.trim().toLowerCase();
+      
+      const allCategories = await prisma.category.findMany({
+        where: {
+          OR: [
+            { userId },
+            { isDefault: true, userId: null }
+          ],
+          type: data.type || category.type,
+          id: { not: categoryId } // Exclude current category
+        }
+      });
+      
+      const nameExists = allCategories.some(cat => 
+        cat.name.trim().toLowerCase() === normalizedName
+      );
+      
+      if (nameExists) {
+        throw new BadRequestError(`Există deja o categorie cu numele "${data.name}" pentru tipul selectat.`);
+      }
+    }
+
     return prisma.category.update({
       where: { id: categoryId },
-      data
+      data: {
+        ...data,
+        ...(data.name && { name: data.name.trim() }) // Trim the name if provided
+      }
     });
   }
 

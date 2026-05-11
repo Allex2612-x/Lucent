@@ -7,13 +7,43 @@ export const overviewSchema = z.object({
 });
 
 export const byCategorySchema = z.object({
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: z.string().optional().transform((val) => {
+    if (!val) return undefined;
+    // Handle YYYY-MM-DD format
+    if (val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return val;
+    }
+    return val;
+  }),
+  endDate: z.string().optional().transform((val) => {
+    if (!val) return undefined;
+    // Handle YYYY-MM-DD format
+    if (val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return val;
+    }
+    return val;
+  }),
   type: z.enum(['income', 'expense']).optional(),
 });
 
 export const monthlyTrendSchema = z.object({
-  months: z.coerce.number().min(1).max(12).default(6),
+  months: z.coerce.number().min(1).max(12).optional(),
+  startDate: z.string().optional().transform((val) => {
+    if (!val) return undefined;
+    // Handle YYYY-MM-DD format
+    if (val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return val;
+    }
+    return val;
+  }),
+  endDate: z.string().optional().transform((val) => {
+    if (!val) return undefined;
+    // Handle YYYY-MM-DD format
+    if (val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return val;
+    }
+    return val;
+  }),
 });
 
 export class StatisticsService {
@@ -101,10 +131,14 @@ export class StatisticsService {
     if (params?.startDate || params?.endDate) {
       whereClause.date = {};
       if (params.startDate) {
-        whereClause.date.gte = new Date(params.startDate);
+        // Start from the beginning of the month
+        const start = new Date(params.startDate);
+        whereClause.date.gte = new Date(start.getFullYear(), start.getMonth(), 1);
       }
       if (params.endDate) {
-        whereClause.date.lte = new Date(params.endDate);
+        // Include the entire end month (last day at 23:59:59.999)
+        const end = new Date(params.endDate);
+        whereClause.date.lte = new Date(end.getFullYear(), end.getMonth() + 1, 0, 23, 59, 59, 999);
       }
     }
 
@@ -165,10 +199,12 @@ export class StatisticsService {
   }
 
   /**
-   * Get monthly trend for the last N months
+   * Get monthly trend for a date range or last N months
    */
-  static async getMonthlyTrend(userId: string, months: number = 6) {
-    const now = new Date();
+  static async getMonthlyTrend(
+    userId: string, 
+    params?: { months?: number; startDate?: string; endDate?: string }
+  ) {
     const result: Array<{
       month: number;
       year: number;
@@ -177,15 +213,37 @@ export class StatisticsService {
       balance: number;
     }> = [];
 
-    // Generate array of {month, year} for the last N months
-    for (let i = months - 1; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const month = date.getMonth() + 1;
-      const year = date.getFullYear();
+    let startDate: Date;
+    let endDate: Date;
+
+    // If startDate and endDate are provided, use them
+    if (params?.startDate && params?.endDate) {
+      const start = new Date(params.startDate);
+      const end = new Date(params.endDate);
+      
+      // Start from the beginning of the start month
+      startDate = new Date(start.getFullYear(), start.getMonth(), 1);
+      // End at the last day of the end month
+      endDate = new Date(end.getFullYear(), end.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else {
+      // Otherwise, use the last N months (default 6)
+      const months = params?.months || 6;
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+
+    // Generate array of months between startDate and endDate
+    const currentMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const lastMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+    while (currentMonth <= lastMonth) {
+      const month = currentMonth.getMonth() + 1;
+      const year = currentMonth.getFullYear();
 
       // Calculate start and end dates for this month
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
       // Get income for this month
       const incomeResult = await prisma.transaction.aggregate({
@@ -193,8 +251,8 @@ export class StatisticsService {
           userId,
           type: 'income',
           date: {
-            gte: startDate,
-            lte: endDate,
+            gte: monthStart,
+            lte: monthEnd,
           },
         },
         _sum: {
@@ -208,8 +266,8 @@ export class StatisticsService {
           userId,
           type: 'expense',
           date: {
-            gte: startDate,
-            lte: endDate,
+            gte: monthStart,
+            lte: monthEnd,
           },
         },
         _sum: {
@@ -228,6 +286,9 @@ export class StatisticsService {
         expenses,
         balance,
       });
+
+      // Move to next month
+      currentMonth.setMonth(currentMonth.getMonth() + 1);
     }
 
     return result;

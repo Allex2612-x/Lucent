@@ -13,6 +13,8 @@ export interface ByCategoryParams {
 
 export interface MonthlyTrendParams {
   months?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 export const statisticsService = {

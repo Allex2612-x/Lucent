@@ -9,7 +9,8 @@ export interface BudgetData {
   month: number;
   year: number;
   totalLimit: number;
-  categories: BudgetCategoryData[];
+  isTotal: boolean;
+  categories?: BudgetCategoryData[];
 }
 
 export const budgetsService = {

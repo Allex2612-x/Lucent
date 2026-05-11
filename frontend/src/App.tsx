@@ -1,5 +1,6 @@
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import { AppRoutes } from './routes/index.tsx';
 
 const queryClient = new QueryClient({
@@ -17,6 +18,16 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AppRoutes />
+        <Toaster 
+          position="top-right" 
+          toastOptions={{
+            style: {
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-default)',
+            },
+          }}
+        />
       </BrowserRouter>
     </QueryClientProvider>
   );

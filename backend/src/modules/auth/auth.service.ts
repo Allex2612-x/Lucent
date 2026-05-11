@@ -76,4 +76,25 @@ export class AuthService {
 
     return { user, accessToken, refreshToken };
   }
+
+  static async refreshTokens(refreshToken: string) {
+    try {
+      const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { userId: string };
+      
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+      });
+
+      if (!user) {
+        throw new UnauthorizedError('User not found');
+      }
+
+      const newAccessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: '15m' });
+      const newRefreshToken = jwt.sign({ userId: user.id }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    } catch (error) {
+      throw new UnauthorizedError('Invalid refresh token');
+    }
+  }
 }

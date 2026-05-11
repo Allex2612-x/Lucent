@@ -30,14 +30,20 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       try {
         // Attempt to refresh token using httpOnly cookie
-        const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
-        if (res.data?.accessToken) {
-          // If you decide to store accessToken in memory (outside zustand), do it here
-          // Update the original request with the new token setup if needed
+        const res = await api.post('/auth/refresh', {}, { withCredentials: true });
+        if (res.data?.data?.accessToken) {
+          // Update the access token in zustand store
+          const state = useAuthStore.getState();
+          state.setAuth(state.user, res.data.data.accessToken);
+          
+          // Update the original request with the new token
+          originalRequest.headers.Authorization = `Bearer ${res.data.data.accessToken}`;
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed, likely log out user
+        // Refresh failed, log out user
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }

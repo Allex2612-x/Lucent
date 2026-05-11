@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "latest",
+    "@types/bcryptjs": "latest",
     "@types/cookie-parser": "latest",
     "@types/cors": "latest",
     "@types/express": "latest",
