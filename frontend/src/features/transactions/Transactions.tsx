@@ -1,18 +1,28 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter, Trash2, X, Repeat } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Plus,
+  Search,
+  Filter,
+  Calendar,
+  Download,
+  ChevronDown,
+  MoreHorizontal,
+  Repeat,
+  X,
+  Trash2,
+  Inbox,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
-import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
-import { AddTransactionModal } from '../../components/ui/AddTransactionModal';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
-import { tokens } from '../../styles/colors';
-import { toast } from 'sonner';
-import { Inbox } from 'lucide-react';
+
+const fmt = (n: number, dec = 2) =>
+  n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 
 interface Transaction {
   id: string;
@@ -23,10 +33,6 @@ interface Transaction {
   date: string;
   createdAt: string;
   isRecurring?: boolean;
-  recurringGroupId?: string | null;
-  frequency?: string | null;
-  originalStartDate?: string | null;
-  sequenceNumber?: number | null;
 }
 
 interface Category {
@@ -38,10 +44,10 @@ interface Category {
 }
 
 interface FilterState {
+  segment: 'all' | 'income' | 'expense' | 'recurring';
   dateRange: 'current-month' | 'last-30-days' | 'current-year' | 'custom';
   customStartDate: string;
   customEndDate: string;
-  types: Set<'income' | 'expense'>;
   categoryIds: Set<string>;
   minAmount: number;
   maxAmount: number;
@@ -49,17 +55,27 @@ interface FilterState {
 
 const ITEMS_PER_PAGE = 20;
 
-// Helper function to map frequency to Romanian labels
-const getFrequencyLabel = (frequency: string | null | undefined): string => {
-  if (!frequency) return '';
-  const frequencyMap: Record<string, string> = {
-    daily: 'Zilnic',
-    weekly: 'Săptămânal',
-    monthly: 'Lunar',
-    yearly: 'Anual',
-  };
-  return frequencyMap[frequency] || frequency;
-};
+const ROMANIAN_MONTHS = [
+  'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+  'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+];
+
+function periodLabel(filters: FilterState) {
+  const now = new Date();
+  if (filters.dateRange === 'current-month') {
+    return `1–${now.getDate()} ${ROMANIAN_MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  }
+  if (filters.dateRange === 'last-30-days') {
+    return 'Ultimele 30 de zile';
+  }
+  if (filters.dateRange === 'current-year') {
+    return `Anul ${now.getFullYear()}`;
+  }
+  if (filters.customStartDate && filters.customEndDate) {
+    return `${filters.customStartDate} → ${filters.customEndDate}`;
+  }
+  return 'Personalizat';
+}
 
 export function Transactions() {
   const queryClient = useQueryClient();
@@ -70,23 +86,15 @@ export function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
-  // Delete modal states
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
-  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
-  
   const [filters, setFilters] = useState<FilterState>({
+    segment: 'all',
     dateRange: 'current-month',
     customStartDate: '',
     customEndDate: '',
-    types: new Set(),
     categoryIds: new Set(),
     minAmount: 0,
     maxAmount: 999999,
   });
-  
-  // Form data for Edit modal only (Add modal uses AddTransactionModal component)
   const [formData, setFormData] = useState<TransactionData>({
     description: '',
     amount: 0,
@@ -95,13 +103,11 @@ export function Transactions() {
     date: new Date().toISOString().split('T')[0],
   });
 
-  // Fetch transactions
   const { data: transactionsResponse, isLoading: transactionsLoading } = useQuery({
     queryKey: ['transactions'],
     queryFn: () => transactionsService.getAll(),
   });
 
-  // Fetch categories
   const { data: categoriesResponse } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesService.getAll(),
@@ -110,7 +116,18 @@ export function Transactions() {
   const transactions: Transaction[] = transactionsResponse?.data?.data || [];
   const categories: Category[] = categoriesResponse?.data?.data || [];
 
-  // Update mutation
+  const createMutation = useMutation({
+    mutationFn: (data: TransactionData) => transactionsService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
+      setIsAddModalOpen(false);
+      resetForm();
+      toast.success('Tranzacție adăugată cu succes!');
+    },
+    onError: () => toast.error('Eroare la adăugarea tranzacției'),
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<TransactionData> }) =>
       transactionsService.update(id, data),
@@ -122,15 +139,11 @@ export function Transactions() {
       resetForm();
       toast.success('Tranzacție actualizată cu succes!');
     },
-    onError: () => {
-      toast.error('Eroare la actualizarea tranzacției');
-    },
+    onError: () => toast.error('Eroare la actualizarea tranzacției'),
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: ({ id, deleteFuture }: { id: string; deleteFuture?: boolean }) => 
-      transactionsService.delete(id, deleteFuture),
+    mutationFn: (id: string) => transactionsService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
@@ -138,9 +151,7 @@ export function Transactions() {
       setEditingTransaction(null);
       toast.success('Tranzacție ștearsă cu succes!');
     },
-    onError: () => {
-      toast.error('Eroare la ștergerea tranzacției');
-    },
+    onError: () => toast.error('Eroare la ștergerea tranzacției'),
   });
 
   const resetForm = () => {
@@ -157,26 +168,15 @@ export function Transactions() {
     e.preventDefault();
     if (editingTransaction) {
       updateMutation.mutate({ id: editingTransaction.id, data: formData });
+    } else {
+      createMutation.mutate(formData);
     }
   };
 
   const handleDelete = () => {
-    if (editingTransaction) {
-      setTransactionToDelete(editingTransaction);
-      setIsDeleteModalOpen(true);
+    if (editingTransaction && window.confirm('Sigur vrei să ștergi această tranzacție?')) {
+      deleteMutation.mutate(editingTransaction.id);
     }
-  };
-
-  const handleConfirmDelete = (deleteFuture?: boolean) => {
-    if (transactionToDelete) {
-      deleteMutation.mutate({ id: transactionToDelete.id, deleteFuture });
-      setIsDeleteModalOpen(false);
-      setTransactionToDelete(null);
-    }
-  };
-
-  const handleOpenAddModal = () => {
-    setIsAddModalOpen(true);
   };
 
   const handleRowClick = (transaction: Transaction) => {
@@ -191,60 +191,47 @@ export function Transactions() {
     setIsEditModalOpen(true);
   };
 
-  const getCategoryForTransaction = (categoryId: string) => {
-    return categories.find((cat) => cat.id === categoryId);
-  };
+  const getCategory = (id: string) => categories.find((c) => c.id === id);
 
-  // Apply all filters
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((transaction) => {
-      // Search filter
+    return transactions.filter((t) => {
       const matchesSearch =
-        transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.amount.toString().includes(searchTerm);
+        !searchTerm ||
+        t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        Number(t.amount).toString().includes(searchTerm);
       if (!matchesSearch) return false;
 
-      // Type filter
-      if (filters.types.size > 0 && !filters.types.has(transaction.type)) {
-        return false;
-      }
+      if (filters.segment === 'income' && t.type !== 'income') return false;
+      if (filters.segment === 'expense' && t.type !== 'expense') return false;
+      if (filters.segment === 'recurring' && !t.isRecurring) return false;
 
-      // Category filter
-      if (filters.categoryIds.size > 0 && !filters.categoryIds.has(transaction.categoryId)) {
-        return false;
-      }
+      if (filters.categoryIds.size > 0 && !filters.categoryIds.has(t.categoryId)) return false;
 
-      // Amount filter
-      const amount = Number(transaction.amount);
-      if (amount < filters.minAmount || amount > filters.maxAmount) {
-        return false;
-      }
+      const amt = Number(t.amount);
+      if (amt < filters.minAmount || amt > filters.maxAmount) return false;
 
-      // Date range filter
-      const transactionDate = new Date(transaction.date);
+      const tDate = new Date(t.date);
       const now = new Date();
-      
       if (filters.dateRange === 'current-month') {
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        if (transactionDate < startOfMonth || transactionDate > endOfMonth) return false;
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        if (tDate < start || tDate > end) return false;
       } else if (filters.dateRange === 'last-30-days') {
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(now.getDate() - 30);
-        if (transactionDate < thirtyDaysAgo) return false;
+        const start = new Date(now);
+        start.setDate(now.getDate() - 30);
+        if (tDate < start) return false;
       } else if (filters.dateRange === 'current-year') {
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-        if (transactionDate < startOfYear || transactionDate > endOfYear) return false;
+        const start = new Date(now.getFullYear(), 0, 1);
+        const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        if (tDate < start || tDate > end) return false;
       } else if (filters.dateRange === 'custom') {
         if (filters.customStartDate) {
-          const startDate = new Date(filters.customStartDate);
-          if (transactionDate < startDate) return false;
+          if (tDate < new Date(filters.customStartDate)) return false;
         }
         if (filters.customEndDate) {
-          const endDate = new Date(filters.customEndDate);
-          endDate.setHours(23, 59, 59, 999);
-          if (transactionDate > endDate) return false;
+          const end = new Date(filters.customEndDate);
+          end.setHours(23, 59, 59, 999);
+          if (tDate > end) return false;
         }
       }
 
@@ -252,43 +239,36 @@ export function Transactions() {
     });
   }, [transactions, searchTerm, filters]);
 
-  // Calculate summary
   const summary = useMemo(() => {
-    const totalIncome = filteredTransactions
+    const income = filteredTransactions
       .filter((t) => t.type === 'income')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    const totalExpenses = filteredTransactions
+      .reduce((s, t) => s + Number(t.amount), 0);
+    const expense = filteredTransactions
       .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
+      .reduce((s, t) => s + Number(t.amount), 0);
+    const recurring = filteredTransactions
+      .filter((t) => t.isRecurring)
+      .reduce((s, t) => s + Number(t.amount), 0);
+    const count = filteredTransactions.length;
     return {
-      count: filteredTransactions.length,
-      totalIncome,
-      totalExpenses,
-      net: totalIncome - totalExpenses,
+      count,
+      total: income + expense,
+      income,
+      expense,
+      recurring,
+      incomeCount: filteredTransactions.filter((t) => t.type === 'income').length,
+      expenseCount: filteredTransactions.filter((t) => t.type === 'expense').length,
+      recurringCount: filteredTransactions.filter((t) => t.isRecurring).length,
     };
   }, [filteredTransactions]);
 
-  // Pagination
   const paginatedTransactions = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTransactions.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredTransactions, currentPage]);
 
-  const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE));
 
-  // Active filter count
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.dateRange !== 'current-month') count++;
-    if (filters.types.size > 0) count++;
-    if (filters.categoryIds.size > 0) count++;
-    if (filters.minAmount > 0 || filters.maxAmount < 999999) count++;
-    return count;
-  }, [filters]);
-
-  // Selection handlers
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -309,228 +289,234 @@ export function Transactions() {
     }
   };
 
-  const handleBulkDeleteClick = () => {
-    setIsBulkDeleteModalOpen(true);
-  };
-
   const handleBulkDelete = async () => {
+    if (!window.confirm(`Sigur vrei să ștergi ${selectedIds.size} tranzacții?`)) return;
     try {
       await Promise.all(Array.from(selectedIds).map((id) => transactionsService.delete(id)));
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['statistics'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
       setSelectedIds(new Set());
-      setIsBulkDeleteModalOpen(false);
       toast.success(`${selectedIds.size} tranzacții șterse cu succes!`);
-    } catch (error) {
+    } catch {
       toast.error('Eroare la ștergerea tranzacțiilor');
     }
   };
 
   const handleResetFilters = () => {
     setFilters({
+      segment: 'all',
       dateRange: 'current-month',
       customStartDate: '',
       customEndDate: '',
-      types: new Set(),
       categoryIds: new Set(),
       minAmount: 0,
       maxAmount: 999999,
     });
     setIsFilterOpen(false);
-  };
-
-  const handleApplyFilters = () => {
-    setIsFilterOpen(false);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = activeFilterCount > 0 || searchTerm.length > 0;
+  const filteredCategories = categories.filter((c) => c.type === formData.type);
+  const hasActiveFilters =
+    filters.segment !== 'all' ||
+    filters.dateRange !== 'current-month' ||
+    filters.categoryIds.size > 0 ||
+    filters.minAmount > 0 ||
+    filters.maxAmount < 999999 ||
+    searchTerm.length > 0;
 
-  const filteredCategories = categories.filter((cat) => cat.type === formData.type);
+  const summaryCards = [
+    { l: 'Total perioadă', v: summary.total, c: 'var(--text-1)', sub: `${summary.count} tranzacții` },
+    { l: 'Venituri', v: summary.income, c: 'var(--income)', sub: `${summary.incomeCount} intrări` },
+    { l: 'Cheltuieli', v: summary.expense, c: 'var(--expense)', sub: `${summary.expenseCount} ieșiri` },
+    { l: 'Recurente', v: summary.recurring, c: 'var(--accent)', sub: `${summary.recurringCount} active` },
+  ];
 
   return (
-    <div className="page-content">
-      {/* Page Header */}
-      <div className="page-header">
-        <div className="page-header-content">
-          <h1>Tranzacții</h1>
-          <p>Gestionează toate tranzacțiile tale financiare</p>
+    <>
+      <div className="page-head">
+        <div>
+          <div className="page-title">Tranzacții</div>
+          <div className="page-sub">Toate veniturile și cheltuielile tale, într-un singur loc.</div>
         </div>
-        <div className="page-header-actions">
-          <Button variant="primary" onClick={handleOpenAddModal}>
-            <Plus size={18} style={{ marginRight: '0.5rem' }} />
-            Adaugă Tranzacție
-          </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary">
+            <Download size={14} /> Export
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              resetForm();
+              setIsAddModalOpen(true);
+            }}
+          >
+            <Plus size={14} /> Tranzacție nouă
+          </button>
         </div>
       </div>
 
-      {/* Search and Filter Bar - FIXED LAYOUT */}
+      {/* summary strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+        {summaryCards.map((s, i) => (
+          <div
+            key={i}
+            style={{
+              background: '#fff',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              padding: '14px 16px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11.5,
+                color: 'var(--text-3)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}
+            >
+              {s.l}
+            </div>
+            <div
+              className="num"
+              style={{
+                fontSize: 21,
+                fontWeight: 600,
+                color: s.c,
+                marginTop: 4,
+                letterSpacing: '-0.015em',
+              }}
+            >
+              {fmt(s.v, 2)}{' '}
+              <span style={{ fontSize: 11.5, color: 'var(--text-3)', fontWeight: 400 }}>RON</span>
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* filter bar */}
       <div
         style={{
           display: 'flex',
-          gap: '12px',
-          alignItems: 'stretch',
-          marginBottom: '1.5rem',
+          alignItems: 'center',
+          gap: 10,
+          marginBottom: 12,
+          flexWrap: 'wrap',
         }}
       >
-        {/* Search Input */}
-        <div style={{ position: 'relative', flex: 1 }}>
+        <div className="seg">
+          <button className={filters.segment === 'all' ? 'on' : ''} onClick={() => setFilters({ ...filters, segment: 'all' })}>
+            Toate
+          </button>
+          <button className={filters.segment === 'income' ? 'on' : ''} onClick={() => setFilters({ ...filters, segment: 'income' })}>
+            Venituri
+          </button>
+          <button className={filters.segment === 'expense' ? 'on' : ''} onClick={() => setFilters({ ...filters, segment: 'expense' })}>
+            Cheltuieli
+          </button>
+          <button className={filters.segment === 'recurring' ? 'on' : ''} onClick={() => setFilters({ ...filters, segment: 'recurring' })}>
+            Recurente
+          </button>
+        </div>
+
+        <div style={{ flex: 1, position: 'relative', minWidth: 200, maxWidth: 320 }}>
           <Search
-            size={18}
+            size={14}
             style={{
               position: 'absolute',
-              left: '1rem',
+              left: 12,
               top: '50%',
               transform: 'translateY(-50%)',
-              color: tokens['text-muted'],
+              color: 'var(--text-3)',
               pointerEvents: 'none',
             }}
           />
-          <Input
+          <input
             placeholder="Caută după descriere sau sumă..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
-              paddingLeft: '2.5rem',
-              height: '44px',
-              borderRadius: '8px',
-              marginBottom: 0,
+              width: '100%',
+              height: 36,
+              paddingLeft: 32,
+              paddingRight: 12,
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              fontSize: 13,
+              fontFamily: 'inherit',
+              outline: 'none',
+              background: '#fff',
+              color: 'var(--text-1)',
             }}
           />
         </div>
 
-        {/* Filter Button */}
-        <Button
-          variant="secondary"
-          onClick={() => setIsFilterOpen(true)}
-          style={{
-            height: '44px',
-            padding: '0 20px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            position: 'relative',
-          }}
-        >
-          <Filter size={18} />
-          Filtre
-          {activeFilterCount > 0 && (
-            <span
-              style={{
-                position: 'absolute',
-                top: '-6px',
-                right: '-6px',
-                backgroundColor: tokens['accent-primary'],
-                color: 'white',
-                borderRadius: '50%',
-                width: '20px',
-                height: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-              }}
+        <span className="chip" style={{ background: '#fff' }}>
+          <Calendar size={12} />
+          <span style={{ color: 'var(--text-1)' }}>{periodLabel(filters)}</span>
+          <ChevronDown size={12} />
+        </span>
+
+        {filters.categoryIds.size > 0 && (
+          <span className="chip" style={{ background: '#fff' }}>
+            <span className="chip-dot" style={{ background: '#2547f5' }} />
+            <span style={{ color: 'var(--text-1)' }}>{filters.categoryIds.size} categorii</span>
+            <button
+              type="button"
+              onClick={() => setFilters({ ...filters, categoryIds: new Set() })}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'grid', placeItems: 'center' }}
             >
-              {activeFilterCount}
-            </span>
-          )}
-        </Button>
+              <X size={11} />
+            </button>
+          </span>
+        )}
+
+        <button className="btn btn-secondary btn-sm" onClick={() => setIsFilterOpen(true)}>
+          <Filter size={12} /> Filtre
+        </button>
       </div>
 
-      {/* Summary Bar */}
-      {filteredTransactions.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            gap: '2rem',
-            padding: '1rem 1.5rem',
-            backgroundColor: tokens['bg-elevated'],
-            borderRadius: '0.5rem',
-            marginBottom: '1rem',
-            fontSize: '0.9rem',
-          }}
-        >
-          <div>
-            <span style={{ color: tokens['text-muted'] }}>{summary.count} tranzacții</span>
-          </div>
-          <div
-            style={{
-              borderLeft: `1px solid ${tokens['border-default']}`,
-              paddingLeft: '2rem',
-            }}
-          >
-            <span style={{ color: tokens['text-muted'] }}>Total Venituri: </span>
-            <span style={{ fontWeight: 600, color: tokens['accent-success'] }}>
-              {summary.totalIncome.toFixed(2)} RON
-            </span>
-          </div>
-          <div
-            style={{
-              borderLeft: `1px solid ${tokens['border-default']}`,
-              paddingLeft: '2rem',
-            }}
-          >
-            <span style={{ color: tokens['text-muted'] }}>Total Cheltuieli: </span>
-            <span style={{ fontWeight: 600, color: tokens['accent-danger'] }}>
-              {summary.totalExpenses.toFixed(2)} RON
-            </span>
-          </div>
-          <div
-            style={{
-              borderLeft: `1px solid ${tokens['border-default']}`,
-              paddingLeft: '2rem',
-            }}
-          >
-            <span style={{ color: tokens['text-muted'] }}>Net: </span>
-            <span
-              style={{
-                fontWeight: 600,
-                color:
-                  summary.net >= 0 ? tokens['accent-success'] : tokens['accent-danger'],
-              }}
-            >
-              {summary.net >= 0 ? '+' : ''}
-              {summary.net.toFixed(2)} RON
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Transactions Table */}
-      <Card>
+      {/* table */}
+      <div
+        style={{
+          background: '#fff',
+          border: '1px solid var(--border)',
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}
+      >
         {transactionsLoading ? (
-          <p style={{ padding: '2rem', textAlign: 'center', color: tokens['text-muted'] }}>
-            Se încarcă...
-          </p>
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>Se încarcă...</div>
         ) : filteredTransactions.length === 0 ? (
-          <EmptyState
-            icon={Inbox}
-            title={hasActiveFilters ? 'Nu s-au găsit tranzacții' : 'Nu există tranzacții'}
-            description={
-              hasActiveFilters
-                ? 'Nicio tranzacție nu corespunde criteriilor de filtrare selectate.'
-                : 'Adaugă prima ta tranzacție pentru a începe să-ți urmărești finanțele.'
-            }
-            action={
-              hasActiveFilters
-                ? {
-                    label: 'Resetează Filtrele',
-                    onClick: handleResetFilters,
-                  }
-                : {
-                    label: 'Adaugă Tranzacție',
-                    onClick: handleOpenAddModal,
-                  }
-            }
-          />
+          <div style={{ padding: 32 }}>
+            <EmptyState
+              icon={Inbox}
+              title={hasActiveFilters ? 'Nu s-au găsit tranzacții' : 'Nu există tranzacții'}
+              description={
+                hasActiveFilters
+                  ? 'Nicio tranzacție nu corespunde criteriilor de filtrare.'
+                  : 'Adaugă prima ta tranzacție pentru a începe.'
+              }
+              action={
+                hasActiveFilters
+                  ? { label: 'Resetează filtrele', onClick: handleResetFilters }
+                  : {
+                      label: 'Adaugă tranzacție',
+                      onClick: () => {
+                        resetForm();
+                        setIsAddModalOpen(true);
+                      },
+                    }
+              }
+            />
+          </div>
         ) : (
           <>
-            <table className="data-table">
+            <table className="tbl">
               <thead>
                 <tr>
-                  <th style={{ width: '40px' }}>
+                  <th style={{ width: 28, paddingRight: 0 }}>
                     <input
                       type="checkbox"
                       checked={
@@ -541,108 +527,134 @@ export function Transactions() {
                       style={{ cursor: 'pointer' }}
                     />
                   </th>
-                  <th>Data</th>
-                  <th>Descriere</th>
+                  <th>Tranzacție</th>
                   <th>Categorie</th>
-                  <th>Tip</th>
-                  <th style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    Sumă
-                  </th>
+                  <th>Data</th>
+                  <th className="ta-right">Sumă</th>
+                  <th style={{ width: 30 }} />
                 </tr>
               </thead>
               <tbody>
-                {paginatedTransactions.map((transaction) => {
-                  const category = getCategoryForTransaction(transaction.categoryId);
+                {paginatedTransactions.map((t) => {
+                  const cat = getCategory(t.categoryId);
+                  const amt = Number(t.amount);
+                  const isIncome = t.type === 'income';
+                  const tDate = new Date(t.date);
                   return (
                     <tr
-                      key={transaction.id}
-                      onClick={() => handleRowClick(transaction)}
-                      style={{
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = tokens['bg-hover'];
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
+                      key={t.id}
+                      onClick={() => handleRowClick(t)}
+                      style={{ cursor: 'pointer' }}
                     >
-                      <td>
+                      <td style={{ paddingRight: 0 }} onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
-                          checked={selectedIds.has(transaction.id)}
-                          onChange={() => toggleSelection(transaction.id)}
-                          onClick={(e) => e.stopPropagation()}
+                          checked={selectedIds.has(t.id)}
+                          onChange={() => toggleSelection(t.id)}
                           style={{ cursor: 'pointer' }}
                         />
                       </td>
-                      <td>{new Date(transaction.date).toLocaleDateString('ro-RO')}</td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span>{transaction.description || '-'}</span>
-                          {transaction.isRecurring && (
-                            <span
-                              title={`Tranzacție recurentă - ${getFrequencyLabel(transaction.frequency)}`}
-                              style={{ display: 'flex', alignItems: 'center', cursor: 'help' }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 9,
+                              background: 'var(--bg-inset)',
+                              display: 'grid',
+                              placeItems: 'center',
+                              fontSize: 14,
+                            }}
+                          >
+                            {cat?.icon || (isIncome ? '💼' : '🛒')}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
                             >
-                              <Repeat
-                                size={16}
-                                style={{ color: tokens['accent-primary'], flexShrink: 0 }}
-                              />
-                            </span>
-                          )}
+                              {t.description || (isIncome ? 'Venit' : 'Cheltuială')}
+                              {t.isRecurring && (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                    fontSize: 10.5,
+                                    color: 'var(--accent)',
+                                    background: 'var(--accent-soft)',
+                                    padding: '1px 7px',
+                                    borderRadius: 999,
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  <Repeat size={10} />
+                                  recurent
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td>
-                        {category ? (
-                          <div
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              padding: '0.375rem 0.75rem',
-                              borderRadius: '0.5rem',
-                              backgroundColor: `${category.color}20`,
-                              border: `1px solid ${category.color}40`,
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontSize: '0.875rem',
-                                fontWeight: 500,
-                                color: tokens['text-primary'],
-                              }}
-                            >
-                              {category.name}
-                            </span>
-                          </div>
+                        {cat ? (
+                          <span className="chip" style={{ background: '#fff' }}>
+                            <span className="chip-dot" style={{ background: cat.color || '#a09c92' }} />
+                            {cat.name}
+                          </span>
                         ) : (
-                          '-'
+                          <span style={{ color: 'var(--text-3)', fontSize: 12 }}>—</span>
                         )}
                       </td>
                       <td>
-                        <span
-                          className={
-                            transaction.type === 'income' ? 'text-success' : 'text-danger'
-                          }
-                        >
-                          {transaction.type === 'income' ? 'Venit' : 'Cheltuială'}
-                        </span>
+                        <div style={{ fontSize: 13 }}>
+                          {tDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }} className="mono">
+                          {tDate.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
                       </td>
                       <td
+                        className="ta-right num"
                         style={{
-                          textAlign: 'right',
-                          fontVariantNumeric: 'tabular-nums',
                           fontWeight: 600,
-                          color:
-                            transaction.type === 'income'
-                              ? tokens['accent-success']
-                              : tokens['text-primary'],
+                          color: isIncome ? 'var(--income)' : 'var(--text-1)',
                         }}
                       >
-                        {transaction.type === 'income' ? '+' : '-'}
-                        {Number(transaction.amount).toFixed(2)} RON
+                        {isIncome ? '+' : '−'} {fmt(Math.abs(amt))}
+                        <span
+                          style={{
+                            color: 'var(--text-3)',
+                            fontWeight: 400,
+                            fontSize: 11,
+                            marginLeft: 3,
+                          }}
+                        >
+                          RON
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="icon-btn"
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            border: 'none',
+                            background: 'transparent',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(t);
+                          }}
+                        >
+                          <MoreHorizontal size={14} />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -650,220 +662,265 @@ export function Transactions() {
               </tbody>
             </table>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '1rem 1.5rem',
-                  borderTop: `1px solid ${tokens['border-default']}`,
-                }}
-              >
-                <div style={{ fontSize: '0.875rem', color: tokens['text-muted'] }}>
-                  Afișare {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
-                  {Math.min(currentPage * ITEMS_PER_PAGE, filteredTransactions.length)} din{' '}
-                  {filteredTransactions.length}
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Anterior
-                  </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((page) => {
-                      return (
-                        page === 1 ||
-                        page === totalPages ||
-                        Math.abs(page - currentPage) <= 1
-                      );
-                    })
-                    .map((page, index, array) => (
-                      <>
-                        {index > 0 && array[index - 1] !== page - 1 && (
-                          <span
-                            key={`ellipsis-${page}`}
-                            style={{ padding: '0.5rem', color: tokens['text-muted'] }}
-                          >
-                            ...
-                          </span>
-                        )}
-                        <Button
-                          key={page}
-                          variant={page === currentPage ? 'primary' : 'ghost'}
-                          onClick={() => setCurrentPage(page)}
-                          style={{ minWidth: '40px' }}
-                        >
-                          {page}
-                        </Button>
-                      </>
-                    ))}
-                  <Button
-                    variant="ghost"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Următor
-                  </Button>
-                </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 18px',
+                borderTop: '1px solid var(--border)',
+                fontSize: 12.5,
+                color: 'var(--text-2)',
+              }}
+            >
+              <span>
+                Afișează {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredTransactions.length)} din{' '}
+                {filteredTransactions.length} tranzacții
+              </span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  ‹ Precedent
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .map((p, idx, arr) => (
+                    <span key={p} style={{ display: 'inline-flex', gap: 4 }}>
+                      {idx > 0 && arr[idx - 1] !== p - 1 && (
+                        <button className="btn btn-secondary btn-sm" disabled>
+                          …
+                        </button>
+                      )}
+                      <button
+                        className={`btn btn-sm ${p === currentPage ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ width: 30, padding: 0, justifyContent: 'center' }}
+                        onClick={() => setCurrentPage(p)}
+                      >
+                        {p}
+                      </button>
+                    </span>
+                  ))}
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Următor ›
+                </button>
               </div>
-            )}
+            </div>
           </>
         )}
-      </Card>
+      </div>
 
-      {/* Floating Action Bar for Bulk Operations */}
+      {/* Floating bulk-action bar */}
       {selectedIds.size > 0 && (
         <div
           style={{
             position: 'fixed',
-            bottom: '2rem',
+            bottom: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: tokens['bg-elevated'],
-            border: `1px solid ${tokens['border-default']}`,
-            borderRadius: '0.75rem',
-            padding: '1rem 1.5rem',
+            background: '#fff',
+            border: '1px solid var(--border)',
+            borderRadius: 14,
+            padding: '12px 18px',
             display: 'flex',
             alignItems: 'center',
-            gap: '1rem',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+            gap: 14,
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 50,
           }}
         >
-          <span style={{ fontSize: '0.9rem', color: tokens['text-muted'] }}>
+          <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
             {selectedIds.size} selectate
           </span>
-          <div
-            style={{
-              width: '1px',
-              height: '24px',
-              backgroundColor: tokens['border-default'],
-            }}
-          />
-          <Button variant="ghost" onClick={handleBulkDeleteClick}>
-            <Trash2 size={16} style={{ marginRight: '0.5rem' }} />
-            Șterge
-          </Button>
-          <Button variant="ghost" onClick={() => setSelectedIds(new Set())}>
-            <X size={16} />
-          </Button>
+          <div style={{ width: 1, height: 22, background: 'var(--border)' }} />
+          <button className="btn btn-ghost btn-sm" onClick={handleBulkDelete}>
+            <Trash2 size={14} /> Șterge
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())}>
+            <X size={14} />
+          </button>
         </div>
       )}
 
-      {/* Edit Transaction Modal */}
+      {/* Add transaction modal */}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Adaugă tranzacție"
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="field" style={{ marginBottom: 14 }}>
+            <label>Descriere</label>
+            <input
+              placeholder="Ex: Cumpărături Lidl"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+            <div className="field">
+              <label>Sumă (RON)</label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.amount || ''}
+                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <div className="field">
+              <label>Data</label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>
+              Tip
+            </label>
+            <div className="seg" style={{ width: '100%' }}>
+              <button
+                type="button"
+                className={formData.type === 'expense' ? 'on' : ''}
+                onClick={() => setFormData({ ...formData, type: 'expense', categoryId: '' })}
+                style={{ flex: 1 }}
+              >
+                Cheltuială
+              </button>
+              <button
+                type="button"
+                className={formData.type === 'income' ? 'on' : ''}
+                onClick={() => setFormData({ ...formData, type: 'income', categoryId: '' })}
+                style={{ flex: 1 }}
+              >
+                Venit
+              </button>
+            </div>
+          </div>
+
+          <div className="field" style={{ marginBottom: 14 }}>
+            <label>Categorie</label>
+            <select
+              value={formData.categoryId}
+              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+              required
+            >
+              <option value="">Selectează categoria</option>
+              {filteredCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)} style={{ flex: 1 }}>
+              Anulează
+            </Button>
+            <Button type="submit" variant="primary" disabled={createMutation.isPending} style={{ flex: 1 }}>
+              {createMutation.isPending ? 'Se salvează...' : 'Salvează'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit transaction modal */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);
           setEditingTransaction(null);
         }}
-        title="Editează Tranzacție"
+        title="Editează tranzacție"
       >
         <form onSubmit={handleSubmit}>
-          <Input
-            label="Descriere"
-            placeholder="ex: Cumpărături Lidl"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
+          <div className="field" style={{ marginBottom: 14 }}>
+            <label>Descriere</label>
+            <input
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
 
-          <Input
-            label="Sumă"
-            type="number"
-            step="0.01"
-            placeholder="0.00"
-            value={formData.amount || ''}
-            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-            required
-          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+            <div className="field">
+              <label>Sumă (RON)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.amount || ''}
+                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <div className="field">
+              <label>Data</label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
+              />
+            </div>
+          </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                marginBottom: '0.5rem',
-                color: tokens['text-secondary'],
-              }}
-            >
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>
               Tip
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Button
+            <div className="seg" style={{ width: '100%' }}>
+              <button
                 type="button"
-                variant={formData.type === 'expense' ? 'primary' : 'secondary'}
+                className={formData.type === 'expense' ? 'on' : ''}
                 onClick={() => setFormData({ ...formData, type: 'expense', categoryId: '' })}
                 style={{ flex: 1 }}
               >
                 Cheltuială
-              </Button>
-              <Button
+              </button>
+              <button
                 type="button"
-                variant={formData.type === 'income' ? 'primary' : 'secondary'}
+                className={formData.type === 'income' ? 'on' : ''}
                 onClick={() => setFormData({ ...formData, type: 'income', categoryId: '' })}
                 style={{ flex: 1 }}
               >
                 Venit
-              </Button>
+              </button>
             </div>
           </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                marginBottom: '0.5rem',
-                color: tokens['text-secondary'],
-              }}
-            >
-              Categorie
-            </label>
+          <div className="field" style={{ marginBottom: 14 }}>
+            <label>Categorie</label>
             <select
               value={formData.categoryId}
               onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
               required
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: '0.5rem',
-                border: `1px solid ${tokens['border-default']}`,
-                backgroundColor: tokens['bg-base'],
-                color: tokens['text-primary'],
-                fontSize: '0.95rem',
-              }}
             >
               <option value="">Selectează categoria</option>
-              {filteredCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
+              {filteredCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
                 </option>
               ))}
             </select>
           </div>
 
-          <Input
-            label="Data"
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            required
-          />
-
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-            <Button
-              type="button"
-              variant="danger"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-            >
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <Button type="button" variant="danger" onClick={handleDelete} disabled={deleteMutation.isPending}>
               {deleteMutation.isPending ? 'Se șterge...' : 'Șterge'}
             </Button>
             <div style={{ flex: 1 }} />
@@ -877,92 +934,66 @@ export function Transactions() {
             >
               Anulează
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={updateMutation.isPending}
-            >
+            <Button type="submit" variant="primary" disabled={updateMutation.isPending}>
               {updateMutation.isPending ? 'Se salvează...' : 'Salvează'}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Filter Modal - Placeholder */}
+      {/* Filter modal */}
       <Modal
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        title="Filtrează Tranzacțiile"
+        title="Filtrează tranzacțiile"
         footer={
           <>
             <Button variant="ghost" onClick={handleResetFilters}>
               Resetează
             </Button>
-            <Button variant="primary" onClick={handleApplyFilters}>
-              Aplică Filtrele
+            <Button variant="primary" onClick={() => setIsFilterOpen(false)}>
+              Aplică
             </Button>
           </>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Date Range */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: tokens['text-secondary'],
-              }}
-            >
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>
               Perioadă
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
               {[
                 { value: 'current-month', label: 'Luna curentă' },
                 { value: 'last-30-days', label: 'Ultimele 30 zile' },
                 { value: 'current-year', label: 'Anul curent' },
                 { value: 'custom', label: 'Personalizat' },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setFilters({ ...filters, dateRange: option.value as any })}
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    border: `1px solid ${
-                      filters.dateRange === option.value
-                        ? tokens['accent-primary']
-                        : tokens['border-default']
-                    }`,
-                    backgroundColor:
-                      filters.dateRange === option.value
-                        ? `${tokens['accent-primary']}20`
-                        : 'transparent',
-                    color:
-                      filters.dateRange === option.value
-                        ? tokens['accent-primary']
-                        : tokens['text-primary'],
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
+              ].map((opt) => {
+                const on = filters.dateRange === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFilters({ ...filters, dateRange: opt.value as any })}
+                    style={{
+                      padding: 10,
+                      borderRadius: 10,
+                      border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+                      background: on ? 'var(--accent-soft)' : '#fff',
+                      color: on ? 'var(--accent-ink)' : 'var(--text-1)',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
             {filters.dateRange === 'custom' && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.75rem',
-                  marginTop: '0.75rem',
-                }}
-              >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
                 <Input
                   label="De la"
                   type="date"
@@ -979,251 +1010,83 @@ export function Transactions() {
             )}
           </div>
 
-          {/* Type Multiselect */}
           <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: tokens['text-secondary'],
-              }}
-            >
-              Tip Tranzacție
-            </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {[
-                { value: 'income', label: 'Venit', color: tokens['accent-success'] },
-                { value: 'expense', label: 'Cheltuială', color: tokens['accent-danger'] },
-              ].map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => {
-                    const newTypes = new Set(filters.types);
-                    if (newTypes.has(type.value as any)) {
-                      newTypes.delete(type.value as any);
-                    } else {
-                      newTypes.add(type.value as any);
-                    }
-                    setFilters({ ...filters, types: newTypes });
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    border: `1px solid ${
-                      filters.types.has(type.value as any) ? type.color : tokens['border-default']
-                    }`,
-                    backgroundColor: filters.types.has(type.value as any)
-                      ? `${type.color}20`
-                      : 'transparent',
-                    color: filters.types.has(type.value as any) ? type.color : tokens['text-primary'],
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Category Multiselect */}
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: tokens['text-secondary'],
-              }}
-            >
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>
               Categorii
             </label>
             <div
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: '0.5rem',
-                maxHeight: '200px',
+                gap: 6,
+                maxHeight: 180,
                 overflowY: 'auto',
-                padding: '0.5rem',
-                border: `1px solid ${tokens['border-default']}`,
-                borderRadius: '0.5rem',
+                padding: 8,
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                background: 'var(--bg-subtle)',
               }}
             >
-              {categories.map((category: Category) => (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    const newCategories = new Set(filters.categoryIds);
-                    if (newCategories.has(category.id)) {
-                      newCategories.delete(category.id);
-                    } else {
-                      newCategories.add(category.id);
-                    }
-                    setFilters({ ...filters, categoryIds: newCategories });
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '0.5rem',
-                    border: `1px solid ${
-                      filters.categoryIds.has(category.id)
-                        ? category.color
-                        : tokens['border-default']
-                    }`,
-                    backgroundColor: filters.categoryIds.has(category.id)
-                      ? `${category.color}30`
-                      : 'transparent',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span>{category.name}</span>
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const on = filters.categoryIds.has(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      const next = new Set(filters.categoryIds);
+                      if (next.has(cat.id)) {
+                        next.delete(cat.id);
+                      } else {
+                        next.add(cat.id);
+                      }
+                      setFilters({ ...filters, categoryIds: next });
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 10px',
+                      borderRadius: 999,
+                      border: `1px solid ${on ? cat.color : 'var(--border)'}`,
+                      background: on ? `${cat.color}1f` : '#fff',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontFamily: 'inherit',
+                      color: 'var(--text-1)',
+                    }}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Amount Range */}
           <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: tokens['text-secondary'],
-              }}
-            >
-              Interval Sumă
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>
+              Interval sumă (RON)
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Input
                 label="Minim"
                 type="number"
                 placeholder="0"
                 value={filters.minAmount || ''}
-                onChange={(e) =>
-                  setFilters({ ...filters, minAmount: parseFloat(e.target.value) || 0 })
-                }
+                onChange={(e) => setFilters({ ...filters, minAmount: parseFloat(e.target.value) || 0 })}
               />
               <Input
                 label="Maxim"
                 type="number"
                 placeholder="999999"
-                value={filters.maxAmount || ''}
-                onChange={(e) =>
-                  setFilters({ ...filters, maxAmount: parseFloat(e.target.value) || 999999 })
-                }
+                value={filters.maxAmount === 999999 ? '' : filters.maxAmount}
+                onChange={(e) => setFilters({ ...filters, maxAmount: parseFloat(e.target.value) || 999999 })}
               />
             </div>
           </div>
         </div>
       </Modal>
-
-      {/* Add Transaction Modal - Using Unified Component */}
-      <AddTransactionModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={() => setIsAddModalOpen(false)}
-      />
-
-      {/* Delete Individual Transaction Modal */}
-      {transactionToDelete && (
-        <DeleteConfirmationModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => {
-            setIsDeleteModalOpen(false);
-            setTransactionToDelete(null);
-          }}
-          onConfirm={handleConfirmDelete}
-          title="Șterge Tranzacție"
-          message="Sigur vrei să ștergi această tranzacție?"
-          itemDetails={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
-                  Descriere:
-                </span>
-                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
-                  {transactionToDelete.description || '-'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
-                  Sumă:
-                </span>
-                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
-                  {transactionToDelete.amount.toFixed(2)} RON
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
-                  Categorie:
-                </span>
-                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
-                  {getCategoryForTransaction(transactionToDelete.categoryId)?.name || '-'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
-                  Dată:
-                </span>
-                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
-                  {new Date(transactionToDelete.date).toLocaleDateString('ro-RO')}
-                </span>
-              </div>
-            </div>
-          }
-          confirmButtonText="Șterge Tranzacție"
-          isLoading={deleteMutation.isPending}
-          isRecurring={transactionToDelete.isRecurring || false}
-        />
-      )}
-
-      {/* Bulk Delete Modal */}
-      <DeleteConfirmationModal
-        isOpen={isBulkDeleteModalOpen}
-        onClose={() => setIsBulkDeleteModalOpen(false)}
-        onConfirm={handleBulkDelete}
-        title="Șterge Tranzacții"
-        message={`Sigur vrei să ștergi ${selectedIds.size} tranzacții?`}
-        itemDetails={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
-                Număr tranzacții:
-              </span>
-              <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
-                {selectedIds.size}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
-                Sumă totală:
-              </span>
-              <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
-                {transactions
-                  .filter((t) => selectedIds.has(t.id))
-                  .reduce((sum, t) => sum + Number(t.amount), 0)
-                  .toFixed(2)}{' '}
-                RON
-              </span>
-            </div>
-          </div>
-        }
-        confirmButtonText="Șterge Toate"
-        isLoading={false}
-      />
-    </div>
+    </>
   );
 }

@@ -1,15 +1,14 @@
-
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
 export function MainLayout() {
   return (
-    <div className="app-shell">
+    <div className="sasha-app">
       <Sidebar />
-      <div className="main-area">
+      <div className="main">
         <Header />
-        <main className="page-content">
+        <main className="page">
           <Outlet />
         </main>
       </div>

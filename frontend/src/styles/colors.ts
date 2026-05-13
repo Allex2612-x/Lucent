@@ -1,142 +1,109 @@
 /**
- * Sasha Finance App - Design Token System
- * Semantic color tokens for consistent theming across the application
- * 
- * Midnight Aurora — Electric Blue Edition
+ * Sasha Finance App - Design Token System (light, modern fintech)
+ * Mirrors the CSS custom properties declared in index.css.
  */
 
 export const colors = {
-  // Base backgrounds
   background: {
-    base: '#0A0E1A',      // Main app background
-    surface: '#131829',   // Card and panel backgrounds
-    elevated: '#1C2238',  // Elevated elements (modals, dropdowns)
+    base: '#f7f5f0',
+    surface: '#ffffff',
+    elevated: '#ffffff',
+    subtle: '#faf9f5',
+    inset: '#f2efe8',
+    canvas: '#efede7',
   },
-  
-  // Borders
+
   border: {
-    default: '#252B42',   // Default border color
-    strong: '#2F3656',    // Strong border color
+    default: '#e7e3d9',
+    strong: '#d8d3c5',
   },
-  
-  // Text colors
+
   text: {
-    primary: '#E8EAF2',   // Primary text - high contrast
-    secondary: '#B4BAC9', // Secondary text
-    muted: '#8B92A8',     // Muted text - low contrast
-    disabled: '#5A6178',  // Disabled text
+    primary: '#0e0e10',
+    secondary: '#56544c',
+    muted: '#8c8879',
+    inverse: '#ffffff',
   },
-  
-  // Accent colors
+
   accent: {
-    primary: '#3B82F6',   // Primary accent - buttons, links, brand (Electric Blue)
-    success: '#00D9C0',   // Success/Income - always for income
-    danger: '#FF5A6B',    // Danger/Expenses - always for expenses
-    warning: '#FFB547',   // Warning states
-    info: '#4DABF7',      // Info states
+    primary: '#2547f5',
+    primaryInk: '#1a32b5',
+    primarySoft: '#e8ecff',
+    success: '#0ab39c',
+    successSoft: '#defaf3',
+    danger: '#f5556e',
+    dangerSoft: '#fde4e7',
+    warning: '#e89b1c',
+    warningSoft: '#fbecd0',
   },
-  
-  // Chart colors - harmonious palette for data visualization
+
   chart: {
-    blue: '#3B82F6',      // Primary blue (replaces purple)
-    teal: '#00D9C0',
-    amber: '#FFB547',
-    red: '#FF5A6B',
-    violet: '#A855F7',
-    cyan: '#22D3EE',
-    orange: '#FB923C',
-    emerald: '#34D399',
+    cobalt: '#2547f5',
+    teal: '#0ab39c',
+    coral: '#f5556e',
+    amber: '#e89b1c',
+    violet: '#8b5cf6',
+    cyan: '#06b6d4',
+    pink: '#ec4899',
+    orange: '#f97316',
   },
 } as const;
 
-/**
- * Semantic color tokens for consistent usage across the app
- * These tokens map to CSS custom properties and should be used throughout the application
- */
 export const tokens = {
-  // Backgrounds
   'bg-base': colors.background.base,
   'bg-surface': colors.background.surface,
-  'bg-elevated': colors.background.elevated,
-  'bg-hover': 'rgba(139, 146, 168, 0.05)',
-  'bg-active': 'rgba(139, 146, 168, 0.1)',
-  
-  // Borders
+  'bg-elevated': colors.background.surface,
+  'bg-subtle': colors.background.subtle,
+  'bg-inset': colors.background.inset,
+  'bg-canvas': colors.background.canvas,
+  'bg-hover': colors.background.subtle,
+  'bg-active': colors.background.inset,
+
   'border-default': colors.border.default,
   'border-strong': colors.border.strong,
-  'border-hover': colors.accent.primary,
+  'border-hover': colors.border.strong,
   'border-focus': colors.accent.primary,
-  
-  // Text
+
   'text-primary': colors.text.primary,
   'text-secondary': colors.text.secondary,
   'text-muted': colors.text.muted,
-  'text-disabled': colors.text.disabled,
-  
-  // Accents
+  'text-inverse': colors.text.inverse,
+
   'accent-primary': colors.accent.primary,
-  'accent-primary-hover': '#2563EB',
-  'accent-primary-active': '#1D4ED8',
-  'accent-primary-soft': 'rgba(59, 130, 246, 0.15)',
+  'accent-primary-hover': colors.accent.primaryInk,
+  'accent-primary-soft': colors.accent.primarySoft,
   'accent-success': colors.accent.success,
-  'accent-success-soft': 'rgba(0, 217, 192, 0.15)',
+  'accent-success-soft': colors.accent.successSoft,
   'accent-danger': colors.accent.danger,
-  'accent-danger-soft': 'rgba(255, 90, 107, 0.15)',
+  'accent-danger-soft': colors.accent.dangerSoft,
   'accent-warning': colors.accent.warning,
-  'accent-warning-soft': 'rgba(255, 181, 71, 0.15)',
-  'accent-info': colors.accent.info,
-  
-  // Chart colors - harmonious palette for data visualization
-  'chart-1': colors.chart.blue,
+  'accent-warning-soft': colors.accent.warningSoft,
+  'accent-info': '#4dabf7',
+
+  'chart-1': colors.chart.cobalt,
   'chart-2': colors.chart.teal,
-  'chart-3': colors.chart.amber,
-  'chart-4': colors.chart.red,
+  'chart-3': colors.chart.coral,
+  'chart-4': colors.chart.amber,
   'chart-5': colors.chart.violet,
   'chart-6': colors.chart.cyan,
-  'chart-7': colors.chart.orange,
-  'chart-8': colors.chart.emerald,
+  'chart-7': colors.chart.pink,
+  'chart-8': colors.chart.orange,
 } as const;
 
 /**
- * Chart color palette for data visualization
- * Use this array for categorical data (pie charts, bar charts, etc.)
- * 
- * Order: Blue, Teal, Amber, Red, Violet, Cyan, Orange, Emerald
+ * Categorical palette for charts. Cobalt / teal / coral / amber lead.
  */
 export const CHART_COLORS = [
-  '#3B82F6', // Blue (primary)
-  '#00D9C0', // Teal
-  '#FFB547', // Amber
-  '#FF5A6B', // Red
-  '#A855F7', // Violet
-  '#22D3EE', // Cyan
-  '#FB923C', // Orange
-  '#34D399', // Emerald
+  '#2547f5', // cobalt
+  '#0ab39c', // teal
+  '#f5556e', // coral
+  '#e89b1c', // amber
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#ec4899', // pink
+  '#f97316', // orange
 ] as const;
 
-/**
- * Semantic colors for financial data
- * ALWAYS use these for income/expense visualization
- */
-export const SEMANTIC_COLORS = {
-  income: '#00D9C0',
-  expense: '#FF5A6B',
-  neutral: '#3B82F6',
-  warning: '#FFB547',
-} as const;
-
-/**
- * Generate CSS custom properties for use in stylesheets
- */
-export function generateCSSVariables(): string {
-  return Object.entries(tokens)
-    .map(([key, value]) => `  --${key}: ${value};`)
-    .join('\n');
-}
-
-/**
- * Helper function to get token value
- */
 export function getToken(token: keyof typeof tokens): string {
   return tokens[token];
 }

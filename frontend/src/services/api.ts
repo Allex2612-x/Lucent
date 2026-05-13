@@ -34,9 +34,8 @@ api.interceptors.response.use(
         if (res.data?.data?.accessToken) {
           // Update the access token in zustand store
           const state = useAuthStore.getState();
-          const currentUser = state.user;
-          if (currentUser) {
-            state.setAuth(currentUser, res.data.data.accessToken);
+          if (state.user) {
+            state.setAuth(state.user, res.data.data.accessToken);
           }
           
           // Update the original request with the new token
