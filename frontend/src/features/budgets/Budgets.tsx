@@ -60,6 +60,7 @@ function BudgetRing({
 
 interface BudgetCardData {
   id: string;
+  rootBudgetId: string;
   name: string;
   icon: string;
   spent: number;
@@ -271,6 +272,7 @@ export function Budgets() {
       return [
         {
           id: b.id,
+          rootBudgetId: b.id,
           name: `Buget total · ${getMonthName(b.month)}`,
           icon: '💰',
           spent: Number(b.month === selectedMonth ? spentTotalMonth : 0),
@@ -280,7 +282,8 @@ export function Budgets() {
       ];
     }
     return b.categories.map((bc: any) => ({
-      id: `${b.id}-${bc.id}`,
+      id: `${b.id}__${bc.id}`,
+      rootBudgetId: b.id,
       name: bc.category?.name || 'Categorie',
       icon: bc.category?.icon || '📁',
       spent: byCategorySpent[bc.categoryId] || 0,
@@ -312,7 +315,8 @@ export function Budgets() {
       resetForm();
       toast.success('Buget creat cu succes!');
     },
-    onError: () => toast.error('Eroare la crearea bugetului.'),
+    onError: (error: any) =>
+      toast.error(error?.response?.data?.message || 'Eroare la crearea bugetului.'),
   });
 
   const updateMutation = useMutation({
@@ -325,7 +329,8 @@ export function Budgets() {
       resetForm();
       toast.success('Buget actualizat cu succes!');
     },
-    onError: () => toast.error('Eroare la actualizare.'),
+    onError: (error: any) =>
+      toast.error(error?.response?.data?.message || 'Eroare la actualizare.'),
   });
 
   const deleteMutation = useMutation({
@@ -334,7 +339,8 @@ export function Budgets() {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
       toast.success('Buget șters.');
     },
-    onError: () => toast.error('Eroare la ștergere.'),
+    onError: (error: any) =>
+      toast.error(error?.response?.data?.message || 'Eroare la ștergere.'),
   });
 
   const resetForm = () => {
@@ -365,6 +371,10 @@ export function Budgets() {
   };
 
   const handleCreateBudget = () => {
+    if (!(formData.totalLimit > 0)) {
+      toast.error('Limita totală trebuie să fie pozitivă.');
+      return;
+    }
     if (formData.isTotal) {
       const data: BudgetData = {
         month: formData.month,
@@ -426,10 +436,9 @@ export function Budgets() {
     });
   };
 
-  const handleDeleteClick = (id: string) => {
-    const rootId = id.split('-')[0];
+  const handleDeleteClick = (rootBudgetId: string) => {
     if (window.confirm('Sigur doriți să ștergeți acest buget?')) {
-      deleteMutation.mutate(rootId);
+      deleteMutation.mutate(rootBudgetId);
     }
   };
 
@@ -617,10 +626,10 @@ export function Budgets() {
               key={c.id}
               b={c}
               onEdit={() => {
-                const root = budgets.find((b) => b.id === c.id.split('-')[0]);
+                const root = budgets.find((b) => b.id === c.rootBudgetId);
                 if (root) handleEditClick(root);
               }}
-              onDelete={() => handleDeleteClick(c.id)}
+              onDelete={() => handleDeleteClick(c.rootBudgetId)}
             />
           ))}
         </div>

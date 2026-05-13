@@ -197,7 +197,8 @@ export function Categories() {
       resetForm();
       toast.success('Categorie creată.');
     },
-    onError: () => toast.error('Eroare la creare.'),
+    onError: (error: any) =>
+      toast.error(error?.response?.data?.message || 'Eroare la creare.'),
   });
 
   const updateMutation = useMutation({
@@ -210,7 +211,8 @@ export function Categories() {
       resetForm();
       toast.success('Categorie actualizată.');
     },
-    onError: () => toast.error('Eroare la actualizare.'),
+    onError: (error: any) =>
+      toast.error(error?.response?.data?.message || 'Eroare la actualizare.'),
   });
 
   const deleteMutation = useMutation({
@@ -219,7 +221,8 @@ export function Categories() {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast.success('Categorie ștearsă.');
     },
-    onError: () => toast.error('Eroare la ștergere.'),
+    onError: (error: any) =>
+      toast.error(error?.response?.data?.message || 'Eroare la ștergere.'),
   });
 
   const resetForm = () =>

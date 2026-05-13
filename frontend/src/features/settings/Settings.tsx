@@ -152,7 +152,8 @@ export function Settings() {
       }
       toast.success('Profilul a fost actualizat cu succes!');
     },
-    onError: () => toast.error('Eroare la actualizarea profilului.'),
+    onError: (error: any) =>
+      toast.error(error?.response?.data?.message || 'Eroare la actualizarea profilului.'),
   });
 
   const updatePasswordMutation = useMutation({
@@ -170,7 +171,19 @@ export function Settings() {
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation.mutate(profileData);
+    if ((profileData.firstName ?? '').trim().length < 2) {
+      toast.error('Prenumele trebuie să aibă cel puțin 2 caractere.');
+      return;
+    }
+    if ((profileData.lastName ?? '').trim().length < 2) {
+      toast.error('Numele trebuie să aibă cel puțin 2 caractere.');
+      return;
+    }
+    updateProfileMutation.mutate({
+      firstName: profileData.firstName?.trim(),
+      lastName: profileData.lastName?.trim(),
+      currency: profileData.currency,
+    });
   };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {

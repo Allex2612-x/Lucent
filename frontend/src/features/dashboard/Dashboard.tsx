@@ -437,7 +437,8 @@ export function Dashboard() {
   }));
 
   const createMutation = useMutation({
-    mutationFn: (data: TransactionData) => transactionsService.create(data),
+    mutationFn: ({ data, force }: { data: TransactionData; force?: boolean }) =>
+      transactionsService.create(data, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
@@ -445,8 +446,31 @@ export function Dashboard() {
       resetForm();
       toast.success('Tranzacție adăugată cu succes!');
     },
-    onError: () => toast.error('Eroare la salvarea tranzacției. Încearcă din nou.'),
+    onError: (error: any) => {
+      const status = error?.response?.status;
+      const payload = error?.response?.data;
+      if (status === 409 && payload?.requiresConfirmation) {
+        const warn = payload.warning;
+        const msg = warn
+          ? `Această tranzacție depășește bugetul „${warn.categoryName}" cu ${(warn.overage ?? 0).toFixed(2)} RON. Continui oricum?`
+          : 'Această tranzacție depășește bugetul categoriei. Continui oricum?';
+        if (window.confirm(msg)) {
+          createMutation.mutate({ data: formData, force: true });
+        }
+        return;
+      }
+      const message = payload?.message || 'Eroare la salvarea tranzacției. Încearcă din nou.';
+      toast.error(message);
+    },
   });
+
+  const submitNewTransaction = () => {
+    if (!formData.categoryId || formData.amount <= 0) {
+      toast.error('Completează suma și categoria.');
+      return;
+    }
+    createMutation.mutate({ data: formData });
+  };
 
   const resetForm = () => {
     setFormData({
@@ -724,8 +748,8 @@ export function Dashboard() {
             </Button>
             <Button
               variant="primary"
-              onClick={() => createMutation.mutate(formData)}
-              disabled={createMutation.isPending || !formData.categoryId}
+              onClick={submitNewTransaction}
+              disabled={createMutation.isPending || !formData.categoryId || formData.amount <= 0}
             >
               {createMutation.isPending ? 'Se salvează...' : 'Salvează'}
             </Button>

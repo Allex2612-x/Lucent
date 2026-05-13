@@ -117,7 +117,8 @@ export function Transactions() {
   const categories: Category[] = categoriesResponse?.data?.data || [];
 
   const createMutation = useMutation({
-    mutationFn: (data: TransactionData) => transactionsService.create(data),
+    mutationFn: ({ data, force }: { data: TransactionData; force?: boolean }) =>
+      transactionsService.create(data, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
@@ -125,7 +126,21 @@ export function Transactions() {
       resetForm();
       toast.success('Tranzacție adăugată cu succes!');
     },
-    onError: () => toast.error('Eroare la adăugarea tranzacției'),
+    onError: (error: any) => {
+      const status = error?.response?.status;
+      const payload = error?.response?.data;
+      if (status === 409 && payload?.requiresConfirmation) {
+        const warn = payload.warning;
+        const msg = warn
+          ? `Această tranzacție depășește bugetul „${warn.categoryName}" cu ${(warn.overage ?? 0).toFixed(2)} RON. Continui oricum?`
+          : 'Tranzacția depășește bugetul. Continui oricum?';
+        if (window.confirm(msg)) {
+          createMutation.mutate({ data: formData, force: true });
+        }
+        return;
+      }
+      toast.error(payload?.message || 'Eroare la adăugarea tranzacției');
+    },
   });
 
   const updateMutation = useMutation({
@@ -139,7 +154,8 @@ export function Transactions() {
       resetForm();
       toast.success('Tranzacție actualizată cu succes!');
     },
-    onError: () => toast.error('Eroare la actualizarea tranzacției'),
+    onError: (error: any) =>
+      toast.error(error?.response?.data?.message || 'Eroare la actualizarea tranzacției'),
   });
 
   const deleteMutation = useMutation({
@@ -166,10 +182,18 @@ export function Transactions() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.categoryId) {
+      toast.error('Selectează o categorie.');
+      return;
+    }
+    if (!(formData.amount > 0)) {
+      toast.error('Suma trebuie să fie pozitivă.');
+      return;
+    }
     if (editingTransaction) {
       updateMutation.mutate({ id: editingTransaction.id, data: formData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate({ data: formData });
     }
   };
 
