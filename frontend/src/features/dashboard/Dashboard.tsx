@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
+import { AddTransactionModal } from '../../components/ui/AddTransactionModal';
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -77,7 +78,7 @@ interface KPICardProps {
 
 function KPICard({ icon, label, value, delta, sparklineData, sparklineColor, emphasized }: KPICardProps) {
   const cardStyle: React.CSSProperties = emphasized ? {
-    background: `linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(10, 14, 26, 0) 100%)`,
+    background: `linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(10, 14, 26, 0) 100%)`,
     border: `1px solid ${tokens['accent-primary']}`,
     gridColumn: 'span 2',
   } : {};
@@ -88,7 +89,7 @@ function KPICard({ icon, label, value, delta, sparklineData, sparklineColor, emp
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div style={{ 
             padding: '0.75rem', 
-            backgroundColor: emphasized ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-elevated)', 
+            backgroundColor: emphasized ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-elevated)', 
             borderRadius: '0.75rem',
             color: emphasized ? tokens['accent-primary'] : tokens['text-muted']
           }}>
@@ -153,13 +154,6 @@ export function Dashboard() {
   const currentYear = currentDate.getFullYear();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [formData, setFormData] = useState<TransactionData>({
-    description: '',
-    amount: 0,
-    type: 'expense',
-    categoryId: '',
-    date: new Date().toISOString().split('T')[0],
-  });
 
   // Fetch current month overview
   const { data: overviewData, isLoading: overviewLoading } = useQuery({
@@ -248,43 +242,9 @@ export function Dashboard() {
     return false; // TODO: Implement budget risk calculation
   });
 
-  // Create mutation
-  const createMutation = useMutation({
-    mutationFn: (data: TransactionData) => transactionsService.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['statistics'] });
-      setIsAddModalOpen(false);
-      resetForm();
-      toast.success('Tranzacție adăugată cu succes!');
-    },
-    onError: () => {
-      toast.error('Eroare la salvarea tranzacției. Încearcă din nou.');
-    },
-  });
-
-  const resetForm = () => {
-    setFormData({
-      description: '',
-      amount: 0,
-      type: 'expense',
-      categoryId: '',
-      date: new Date().toISOString().split('T')[0],
-    });
-  };
-
-  const handleAddTransaction = () => {
-    createMutation.mutate(formData);
-  };
-
   const handleOpenAddModal = () => {
-    resetForm();
     setIsAddModalOpen(true);
   };
-
-  const filteredCategories = categories.filter(
-    (cat: Category) => cat.type === formData.type
-  );
 
   // Get category for transaction
   const getCategoryForTransaction = (categoryId: string) => {
@@ -621,79 +581,12 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Add Transaction Modal */}
-      <Modal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        title="Adaugă Tranzacție Nouă"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>Anulează</Button>
-            <Button 
-              variant="primary" 
-              onClick={handleAddTransaction}
-              disabled={createMutation.isPending || !formData.categoryId}
-            >
-              {createMutation.isPending ? 'Se salvează...' : 'Salvează'}
-            </Button>
-          </>
-        }
-      >
-        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <Input 
-              label="Descriere" 
-              placeholder="Ex: Cumpărături supermarket"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-          <Input 
-            label="Sumă (RON)" 
-            type="number" 
-            placeholder="0.00"
-            value={formData.amount || ''}
-            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-          />
-          <Input 
-            label="Data" 
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          />
-          <Select
-            label="Tip"
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense', categoryId: '' })}
-            options={[
-              { value: 'income', label: 'Venit' },
-              { value: 'expense', label: 'Cheltuială' },
-            ]}
-          />
-          <Select
-            label="Categorie"
-            value={formData.categoryId}
-            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-            options={filteredCategories.map((cat: Category) => ({
-              value: cat.id,
-              label: cat.name,
-            }))}
-            placeholder="Selectează categoria"
-          />
-        </div>
-        {createMutation.isError && (
-          <div style={{ 
-            marginTop: '1rem', 
-            padding: '0.75rem', 
-            backgroundColor: 'rgba(244, 63, 94, 0.1)', 
-            color: tokens['accent-danger'], 
-            borderRadius: '0.5rem',
-            border: `1px solid rgba(244, 63, 94, 0.2)`
-          }}>
-            Eroare la salvarea tranzacției. Încearcă din nou.
-          </div>
-        )}
-      </Modal>
+      {/* Add Transaction Modal - Using Unified Component */}
+      <AddTransactionModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => setIsAddModalOpen(false)}
+      />
     </div>
   );
 }

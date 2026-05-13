@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { User, Lock } from 'lucide-react';
+import { tokens } from '../../styles/colors';
 
 interface UserProfile {
   id: string;
@@ -149,7 +150,7 @@ export function Settings() {
         <Card>
           <CardHeader>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <User size={20} className="text-indigo-400" />
+              <User size={20} style={{ color: tokens['accent-primary'] }} />
               <h3>Informații Profil</h3>
             </div>
           </CardHeader>
@@ -244,7 +245,7 @@ export function Settings() {
         <Card>
           <CardHeader>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Lock size={20} className="text-indigo-400" />
+              <Lock size={20} style={{ color: tokens['accent-primary'] }} />
               <h3>Schimbă Parola</h3>
             </div>
           </CardHeader>

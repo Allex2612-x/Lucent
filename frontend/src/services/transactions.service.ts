@@ -7,12 +7,33 @@ export interface TransactionFilters {
   endDate?: string;
 }
 
+export type RecurringFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
 export interface TransactionData {
   description: string;
   amount: number;
   type: 'income' | 'expense';
   categoryId: string;
   date: string;
+  isRecurring?: boolean;
+  frequency?: RecurringFrequency;
+  repetitionCount?: number;
+}
+
+export interface BudgetWarning {
+  categoryId: string;
+  categoryName: string;
+  month: number;
+  year: number;
+  currentSpent: number;
+  budgetLimit: number;
+  newTotal: number;
+  overage: number;
+  affectedMonths?: Array<{
+    month: number;
+    year: number;
+    overage: number;
+  }>;
 }
 
 export const transactionsService = {
@@ -20,15 +41,17 @@ export const transactionsService = {
     return api.get('/transactions', { params: filters });
   },
 
-  create: (data: TransactionData) => {
-    return api.post('/transactions', data);
+  create: (data: TransactionData, force?: boolean) => {
+    const params = force ? { force: 'true' } : {};
+    return api.post('/transactions', data, { params });
   },
 
   update: (id: string, data: Partial<TransactionData>) => {
     return api.patch(`/transactions/${id}`, data);
   },
 
-  delete: (id: string) => {
-    return api.delete(`/transactions/${id}`);
+  delete: (id: string, deleteFuture?: boolean) => {
+    const params = deleteFuture ? { deleteFuture: 'true' } : {};
+    return api.delete(`/transactions/${id}`, { params });
   },
 };

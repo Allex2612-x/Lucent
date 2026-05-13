@@ -3,17 +3,54 @@ import { NotFoundError } from '../../shared/errors.js';
 import { z } from 'zod';
 import { NotificationService } from '../notification/notification.service.js';
 
-export const createTransactionSchema = z.object({
-  amount: z.number().positive(),
+export const RecurringFrequencyEnum = z.enum(['daily', 'weekly', 'monthly', 'yearly']);
+
+// Base schema without refinements (can be used with .partial())
+const baseTransactionSchema = z.object({
+  amount: z.number().positive('Suma trebuie să fie pozitivă'),
   type: z.enum(['income', 'expense']),
   description: z.string().optional(),
   date: z.string().or(z.date()).transform((val) => new Date(val)),
-  categoryId: z.string().uuid(),
+  categoryId: z.string().uuid('ID categorie invalid'),
   receiptUrl: z.string().optional(),
   isRecurring: z.boolean().default(false),
+  frequency: RecurringFrequencyEnum.optional(),
+  repetitionCount: z.number().int().min(1, 'Numărul de repetări trebuie să fie cel puțin 1').max(365, 'Numărul de repetări nu poate depăși 365').optional(),
 });
 
-export const updateTransactionSchema = createTransactionSchema.partial();
+// Create schema with refinement for validation
+export const createTransactionSchema = baseTransactionSchema.refine(
+  (data) => {
+    // If isRecurring is true, frequency and repetitionCount are required
+    if (data.isRecurring) {
+      return data.frequency !== undefined && data.repetitionCount !== undefined;
+    }
+    return true;
+  },
+  {
+    message: 'Frecvența și numărul de repetări sunt obligatorii pentru tranzacții recurente',
+    path: ['isRecurring'],
+  }
+);
+
+// Update schema without refinement (safe to use .partial())
+export const updateTransactionSchema = baseTransactionSchema.partial();
+
+export interface BudgetWarningData {
+  categoryId: string;
+  categoryName: string;
+  month: number;
+  year: number;
+  currentSpent: number;
+  budgetLimit: number;
+  newTotal: number;
+  overage: number;
+  affectedMonths?: Array<{
+    month: number;
+    year: number;
+    overage: number;
+  }>;
+}
 
 export class TransactionService {
   static async getTransactions(userId: string, filters: { startDate?: string; endDate?: string }) {
@@ -61,6 +98,40 @@ export class TransactionService {
     return transaction;
   }
 
+  static async createRecurringTransactions(
+    userId: string,
+    instances: Array<{
+      amount: number;
+      type: 'income' | 'expense';
+      description: string | undefined;
+      date: Date;
+      categoryId: string;
+      isRecurring: boolean;
+      recurringGroupId: string;
+      frequency: string;
+      originalStartDate: Date;
+      sequenceNumber: number;
+    }>
+  ) {
+    // Use Prisma transaction for atomic batch creation
+    return await prisma.$transaction(async (tx) => {
+      const created = [];
+      
+      for (const instance of instances) {
+        const transaction = await tx.transaction.create({
+          data: {
+            ...instance,
+            userId,
+          },
+          include: { category: true }
+        });
+        created.push(transaction);
+      }
+      
+      return created;
+    });
+  }
+
   static async getTransactionById(userId: string, id: string) {
     const transaction = await prisma.transaction.findFirst({
       where: { id, userId },
@@ -98,10 +169,25 @@ export class TransactionService {
     return updatedTransaction;
   }
 
-  static async deleteTransaction(userId: string, id: string) {
+  static async deleteTransaction(userId: string, id: string, deleteFuture: boolean = false) {
     const transaction = await prisma.transaction.findFirst({ where: { id, userId } });
     if (!transaction) throw new NotFoundError('Transaction not found');
 
+    // If deleteFuture is true and transaction is recurring, delete all future instances
+    if (deleteFuture && transaction.isRecurring && transaction.recurringGroupId) {
+      // Delete the selected transaction and all future instances in the same recurring group
+      return await prisma.transaction.deleteMany({
+        where: {
+          userId,
+          recurringGroupId: transaction.recurringGroupId,
+          date: {
+            gte: transaction.date, // Delete transactions with date >= selected transaction date
+          },
+        },
+      });
+    }
+
+    // Otherwise, delete only the selected transaction
     return prisma.transaction.delete({ where: { id } });
   }
 }

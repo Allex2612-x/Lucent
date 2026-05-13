@@ -43,19 +43,29 @@ model Category {
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  amount      Float
-  type        String   // "income" | "expense"
-  description String?
-  date        DateTime
-  categoryId  String
-  userId      String
-  receiptUrl  String?
-  isRecurring Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id                String   @id @default(uuid())
+  amount            Float
+  type              String   // "income" | "expense"
+  description       String?
+  date              DateTime
+  categoryId        String
+  userId            String
+  receiptUrl        String?
+  isRecurring       Boolean  @default(false)
+  
+  // Recurring transaction fields
+  recurringGroupId  String?  // UUID shared by all instances in a recurring group
+  frequency         String?  // "daily" | "weekly" | "monthly" | "yearly"
+  originalStartDate DateTime? // The original start date of the recurring series
+  sequenceNumber    Int?     // Position in the recurring series (1, 2, 3, ...)
+  
+  createdAt         DateTime @default(now())
 
   category Category @relation(fields: [categoryId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId, recurringGroupId])
+  @@index([userId, date])
 }
 
 model Budget {

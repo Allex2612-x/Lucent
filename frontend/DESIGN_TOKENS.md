@@ -3,6 +3,8 @@
 ## Overview
 This document describes the design token system used throughout the Sasha finance application. All colors are defined as semantic tokens to ensure consistency and make theming easier.
 
+**Current Theme**: Midnight Aurora — Electric Blue Edition
+
 ## Color Palette
 
 ### Background Colors
@@ -18,37 +20,45 @@ This document describes the design token system used throughout the Sasha financ
 ```css
 --border: #252B42         /* Default border color */
 --border-default: #252B42 /* Alias for default border */
---border-hover: #7C5CFF   /* Border color on hover */
---border-focus: #7C5CFF   /* Border color on focus */
+--border-hover: #3B82F6   /* Border color on hover (Electric Blue) */
+--border-focus: #3B82F6   /* Border color on focus (Electric Blue) */
+--border-strong: #2F3656  /* Strong border color */
 ```
 
 ### Text Colors
 ```css
 --text-primary: #E8EAF2   /* Primary text - high contrast */
---text-secondary: #8B92A8 /* Secondary text */
+--text-secondary: #B4BAC9 /* Secondary text */
 --text-muted: #8B92A8     /* Muted text - low contrast */
+--text-disabled: #5A6178  /* Disabled text */
 ```
 
 ### Accent Colors
 ```css
---accent-primary: #7C5CFF        /* Primary accent - buttons, links, brand */
---accent-primary-hover: #6A4DE6  /* Primary accent hover state */
+--accent-primary: #3B82F6        /* Primary accent - buttons, links, brand (Electric Blue) */
+--accent-primary-hover: #2563EB  /* Primary accent hover state */
+--accent-primary-active: #1D4ED8 /* Primary accent active state */
+--accent-primary-soft: rgba(59, 130, 246, 0.15)  /* Soft primary background */
+--accent-primary-glow: rgba(59, 130, 246, 0.35)  /* Glow effect */
 --accent-success: #00D9C0        /* Success/Income - ALWAYS for income */
+--accent-success-soft: rgba(0, 217, 192, 0.15)   /* Soft success background */
 --accent-danger: #FF5A6B         /* Danger/Expenses - ALWAYS for expenses */
+--accent-danger-soft: rgba(255, 90, 107, 0.15)   /* Soft danger background */
 --accent-warning: #FFB547        /* Warning states */
+--accent-warning-soft: rgba(255, 181, 71, 0.15)  /* Soft warning background */
 --accent-info: #4DABF7           /* Info states */
 ```
 
 ### Chart Colors
 ```css
---chart-1: #7C5CFF  /* Purple */
+--chart-1: #3B82F6  /* Blue (primary) */
 --chart-2: #00D9C0  /* Teal */
 --chart-3: #FFB547  /* Amber */
 --chart-4: #FF5A6B  /* Red */
---chart-5: #4DABF7  /* Blue */
---chart-6: #B197FC  /* Violet */
---chart-7: #FFA94D  /* Orange */
---chart-8: #69DB7C  /* Green */
+--chart-5: #A855F7  /* Violet */
+--chart-6: #22D3EE  /* Cyan */
+--chart-7: #FB923C  /* Orange */
+--chart-8: #34D399  /* Emerald */
 ```
 
 ## Usage Guidelines
@@ -77,10 +87,10 @@ All primary call-to-action buttons should use `--accent-primary`:
 ```tsx
 // ✅ CORRECT
 <Button variant="primary">Adaugă Tranzacție</Button>
-// This will use --accent-primary (#7C5CFF)
+// This will use --accent-primary (#3B82F6)
 
 // ❌ WRONG
-<Button style={{ backgroundColor: '#7C5CFF' }}>Adaugă</Button>
+<Button style={{ backgroundColor: '#3B82F6' }}>Adaugă</Button>
 ```
 
 ### 3. Backgrounds
@@ -132,13 +142,17 @@ import { CHART_COLORS } from '../styles/colors';
 
 ### Importing Tokens
 ```typescript
-import { tokens, CHART_COLORS } from '../styles/colors';
+import { tokens, CHART_COLORS, SEMANTIC_COLORS } from '../styles/colors';
 
 // Use tokens object
 const primaryColor = tokens['accent-primary'];
 
 // Use chart colors array
 const categoryColor = CHART_COLORS[categoryIndex % CHART_COLORS.length];
+
+// Use semantic colors for financial data
+const incomeColor = SEMANTIC_COLORS.income;
+const expenseColor = SEMANTIC_COLORS.expense;
 ```
 
 ### Type-Safe Token Access
@@ -261,20 +275,6 @@ const invalid = tokens['invalid'];     // ❌ TypeScript error
 </div>
 ```
 
-### Replacing Old Tokens
-
-**Before (Midnight Aurora):**
-```tsx
-import { tokens } from '../styles/colors';
-// tokens['accent-primary'] was #14b8a6 (teal)
-```
-
-**After (New System):**
-```tsx
-import { tokens } from '../styles/colors';
-// tokens['accent-primary'] is now #7C5CFF (purple)
-```
-
 ## Color Contrast & Accessibility
 
 All color combinations meet WCAG AA standards:
@@ -343,7 +343,7 @@ const statusColor = percentage > 90
 | `--border` | #252B42 | Borders |
 | `--text-primary` | #E8EAF2 | Headings, body text |
 | `--text-muted` | #8B92A8 | Labels, descriptions |
-| `--accent-primary` | #7C5CFF | Primary CTAs, links |
+| `--accent-primary` | #3B82F6 | Primary CTAs, links (Electric Blue) |
 | `--accent-success` | #00D9C0 | Income, success |
 | `--accent-danger` | #FF5A6B | Expenses, errors |
 | `--accent-warning` | #FFB547 | Warnings, alerts |
@@ -357,8 +357,19 @@ For questions or issues with the design token system, please refer to:
 
 ## Changelog
 
-### v2.0.0 (Current)
-- Updated to new Sasha brand colors
+### v3.0.0 (Current - Electric Blue Edition)
+- **MAJOR UPDATE**: Migrated from Purple to Electric Blue primary accent
+- Changed primary accent from purple (#7C5CFF) to electric blue (#3B82F6)
+- Updated all hover states to use new blue tones
+- Added new soft variant tokens for all accent colors
+- Updated chart color palette (blue-first instead of purple-first)
+- Enhanced token system with additional semantic tokens
+- Improved sidebar, navbar, and notification styling
+- Updated all RGBA values to use new blue tones
+- **Known Issue**: Transaction modal "Tip" toggle needs semantic color fix (see TIP_TOGGLE_FIX.md)
+
+### v2.0.0 (Previous - Purple Edition)
+- Updated to Sasha brand colors
 - Changed primary accent from teal (#14b8a6) to purple (#7C5CFF)
 - Updated success color from emerald (#10b981) to teal (#00D9C0)
 - Updated danger color from rose (#f43f5e) to red (#FF5A6B)
@@ -367,7 +378,7 @@ For questions or issues with the design token system, please refer to:
 - Updated chart color palette
 - Simplified token structure
 
-### v1.0.0 (Previous - Midnight Aurora)
+### v1.0.0 (Initial - Midnight Aurora)
 - Initial design token system
 - Teal-based color scheme
 - Deep blue backgrounds

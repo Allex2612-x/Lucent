@@ -7,13 +7,18 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { tokens } from '../../styles/colors';
+import { toast } from 'sonner';
 
 export function Categories() {
   const queryClient = useQueryClient();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [formData, setFormData] = useState<CategoryData>({
     name: '',
     type: 'expense',
@@ -122,9 +127,17 @@ export function Categories() {
     }
   };
 
-  const handleDeleteClick = (id: string) => {
-    if (window.confirm('Sigur doriți să ștergeți această categorie?')) {
-      deleteMutation.mutate(id);
+  const handleDeleteClick = (category: Category) => {
+    setCategoryToDelete(category);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (categoryToDelete) {
+      deleteMutation.mutate(categoryToDelete.id);
+      setIsDeleteModalOpen(false);
+      setCategoryToDelete(null);
+      toast.success('Categorie ștearsă cu succes!');
     }
   };
 
@@ -205,7 +218,7 @@ export function Categories() {
         </Button>
         <Button
           variant="ghost"
-          onClick={() => handleDeleteClick(category.id)}
+          onClick={() => handleDeleteClick(category)}
           disabled={isDefault}
           style={{ 
             padding: '0.5rem', 
@@ -452,6 +465,46 @@ export function Categories() {
           </div>
         )}
       </Modal>
+
+      {/* Delete Category Modal */}
+      {categoryToDelete && (
+        <DeleteConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setCategoryToDelete(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          title="Șterge Categorie"
+          message="Sigur vrei să ștergi această categorie?"
+          itemDetails={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                  Nume:
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.25rem' }}>{categoryToDelete.icon || '📁'}</span>
+                  <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                    {categoryToDelete.name}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                  Tip:
+                </span>
+                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                  {categoryToDelete.type === 'income' ? 'Venit' : 'Cheltuială'}
+                </span>
+              </div>
+            </div>
+          }
+          warningText="Tranzacțiile asociate vor rămâne fără categorie"
+          confirmButtonText="Șterge Categorie"
+          isLoading={deleteMutation.isPending}
+        />
+      )}
     </div>
   );
 }

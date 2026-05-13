@@ -19,7 +19,8 @@ function App() {
       <BrowserRouter>
         <AppRoutes />
         <Toaster 
-          position="top-right" 
+          position="top-right"
+          style={{ zIndex: 9999 }}
           toastOptions={{
             style: {
               background: 'var(--bg-elevated)',

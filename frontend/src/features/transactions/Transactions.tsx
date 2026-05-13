@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter, Trash2, FolderOpen, Download, X } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, X, Repeat } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import { AddTransactionModal } from '../../components/ui/AddTransactionModal';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
 import { tokens } from '../../styles/colors';
@@ -20,6 +22,11 @@ interface Transaction {
   categoryId: string;
   date: string;
   createdAt: string;
+  isRecurring?: boolean;
+  recurringGroupId?: string | null;
+  frequency?: string | null;
+  originalStartDate?: string | null;
+  sequenceNumber?: number | null;
 }
 
 interface Category {
@@ -42,18 +49,17 @@ interface FilterState {
 
 const ITEMS_PER_PAGE = 20;
 
-const DESCRIPTION_SUGGESTIONS = [
-  'Cumpărături Lidl',
-  'Cumpărături Kaufland',
-  'Salariu martie',
-  'Factură curent',
-  'Factură gaz',
-  'Factură internet',
-  'Benzină',
-  'Restaurant',
-  'Cafenea',
-  'Transport public',
-];
+// Helper function to map frequency to Romanian labels
+const getFrequencyLabel = (frequency: string | null | undefined): string => {
+  if (!frequency) return '';
+  const frequencyMap: Record<string, string> = {
+    daily: 'Zilnic',
+    weekly: 'Săptămânal',
+    monthly: 'Lunar',
+    yearly: 'Anual',
+  };
+  return frequencyMap[frequency] || frequency;
+};
 
 export function Transactions() {
   const queryClient = useQueryClient();
@@ -64,6 +70,12 @@ export function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Delete modal states
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  
   const [filters, setFilters] = useState<FilterState>({
     dateRange: 'current-month',
     customStartDate: '',
@@ -73,6 +85,8 @@ export function Transactions() {
     minAmount: 0,
     maxAmount: 999999,
   });
+  
+  // Form data for Edit modal only (Add modal uses AddTransactionModal component)
   const [formData, setFormData] = useState<TransactionData>({
     description: '',
     amount: 0,
@@ -96,21 +110,6 @@ export function Transactions() {
   const transactions: Transaction[] = transactionsResponse?.data?.data || [];
   const categories: Category[] = categoriesResponse?.data?.data || [];
 
-  // Create mutation
-  const createMutation = useMutation({
-    mutationFn: (data: TransactionData) => transactionsService.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['statistics'] });
-      setIsAddModalOpen(false);
-      resetForm();
-      toast.success('Tranzacție adăugată cu succes!');
-    },
-    onError: () => {
-      toast.error('Eroare la adăugarea tranzacției');
-    },
-  });
-
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<TransactionData> }) =>
@@ -130,7 +129,8 @@ export function Transactions() {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => transactionsService.delete(id),
+    mutationFn: ({ id, deleteFuture }: { id: string; deleteFuture?: boolean }) => 
+      transactionsService.delete(id, deleteFuture),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
@@ -157,19 +157,25 @@ export function Transactions() {
     e.preventDefault();
     if (editingTransaction) {
       updateMutation.mutate({ id: editingTransaction.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
     }
   };
 
   const handleDelete = () => {
-    if (editingTransaction && window.confirm('Sigur vrei să ștergi această tranzacție?')) {
-      deleteMutation.mutate(editingTransaction.id);
+    if (editingTransaction) {
+      setTransactionToDelete(editingTransaction);
+      setIsDeleteModalOpen(true);
+    }
+  };
+
+  const handleConfirmDelete = (deleteFuture?: boolean) => {
+    if (transactionToDelete) {
+      deleteMutation.mutate({ id: transactionToDelete.id, deleteFuture });
+      setIsDeleteModalOpen(false);
+      setTransactionToDelete(null);
     }
   };
 
   const handleOpenAddModal = () => {
-    resetForm();
     setIsAddModalOpen(true);
   };
 
@@ -303,17 +309,20 @@ export function Transactions() {
     }
   };
 
+  const handleBulkDeleteClick = () => {
+    setIsBulkDeleteModalOpen(true);
+  };
+
   const handleBulkDelete = async () => {
-    if (window.confirm(`Sigur vrei să ștergi ${selectedIds.size} tranzacții?`)) {
-      try {
-        await Promise.all(Array.from(selectedIds).map((id) => transactionsService.delete(id)));
-        queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        queryClient.invalidateQueries({ queryKey: ['statistics'] });
-        setSelectedIds(new Set());
-        toast.success(`${selectedIds.size} tranzacții șterse cu succes!`);
-      } catch (error) {
-        toast.error('Eroare la ștergerea tranzacțiilor');
-      }
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => transactionsService.delete(id)));
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'], exact: false });
+      setSelectedIds(new Set());
+      setIsBulkDeleteModalOpen(false);
+      toast.success(`${selectedIds.size} tranzacții șterse cu succes!`);
+    } catch (error) {
+      toast.error('Eroare la ștergerea tranzacțiilor');
     }
   };
 
@@ -569,7 +578,22 @@ export function Transactions() {
                         />
                       </td>
                       <td>{new Date(transaction.date).toLocaleDateString('ro-RO')}</td>
-                      <td>{transaction.description || '-'}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>{transaction.description || '-'}</span>
+                          {transaction.isRecurring && (
+                            <span
+                              title={`Tranzacție recurentă - ${getFrequencyLabel(transaction.frequency)}`}
+                              style={{ display: 'flex', alignItems: 'center', cursor: 'help' }}
+                            >
+                              <Repeat
+                                size={16}
+                                style={{ color: tokens['accent-primary'], flexShrink: 0 }}
+                              />
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td>
                         {category ? (
                           <div
@@ -583,7 +607,6 @@ export function Transactions() {
                               border: `1px solid ${category.color}40`,
                             }}
                           >
-                            <span style={{ fontSize: '1rem' }}>{category.icon}</span>
                             <span
                               style={{
                                 fontSize: '0.875rem',
@@ -722,7 +745,7 @@ export function Transactions() {
               backgroundColor: tokens['border-default'],
             }}
           />
-          <Button variant="ghost" onClick={handleBulkDelete}>
+          <Button variant="ghost" onClick={handleBulkDeleteClick}>
             <Trash2 size={16} style={{ marginRight: '0.5rem' }} />
             Șterge
           </Button>
@@ -731,132 +754,6 @@ export function Transactions() {
           </Button>
         </div>
       )}
-
-      {/* Add Transaction Modal */}
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Adaugă Tranzacție"
-      >
-        <form onSubmit={handleSubmit}>
-          <Input
-            label="Descriere"
-            placeholder="ex: Cumpărături Lidl, Salariu martie, Factură curent..."
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            list="description-suggestions"
-          />
-          <datalist id="description-suggestions">
-            {DESCRIPTION_SUGGESTIONS.map((suggestion) => (
-              <option key={suggestion} value={suggestion} />
-            ))}
-          </datalist>
-
-          <Input
-            label="Sumă"
-            type="number"
-            step="0.01"
-            placeholder="0.00"
-            value={formData.amount || ''}
-            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-            required
-          />
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                marginBottom: '0.5rem',
-                color: tokens['text-secondary'],
-              }}
-            >
-              Tip
-            </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Button
-                type="button"
-                variant={formData.type === 'expense' ? 'primary' : 'secondary'}
-                onClick={() => setFormData({ ...formData, type: 'expense', categoryId: '' })}
-                style={{ flex: 1 }}
-              >
-                Cheltuială
-              </Button>
-              <Button
-                type="button"
-                variant={formData.type === 'income' ? 'primary' : 'secondary'}
-                onClick={() => setFormData({ ...formData, type: 'income', categoryId: '' })}
-                style={{ flex: 1 }}
-              >
-                Venit
-              </Button>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                marginBottom: '0.5rem',
-                color: tokens['text-secondary'],
-              }}
-            >
-              Categorie
-            </label>
-            <select
-              value={formData.categoryId}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              required
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: '0.5rem',
-                border: `1px solid ${tokens['border-default']}`,
-                backgroundColor: tokens['bg-base'],
-                color: tokens['text-primary'],
-                fontSize: '0.95rem',
-              }}
-            >
-              <option value="">Selectează categoria</option>
-              {filteredCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.icon} {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <Input
-            label="Data"
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            required
-          />
-
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsAddModalOpen(false)}
-              style={{ flex: 1 }}
-            >
-              Anulează
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={createMutation.isPending}
-              style={{ flex: 1 }}
-            >
-              {createMutation.isPending ? 'Se salvează...' : 'Salvează'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Edit Transaction Modal */}
       <Modal
@@ -946,7 +843,7 @@ export function Transactions() {
               <option value="">Selectează categoria</option>
               {filteredCategories.map((category) => (
                 <option key={category.id} value={category.id}>
-                  {category.icon} {category.name}
+                  {category.name}
                 </option>
               ))}
             </select>
@@ -1190,7 +1087,6 @@ export function Transactions() {
                     transition: 'all 0.2s',
                   }}
                 >
-                  <span>{category.icon}</span>
                   <span>{category.name}</span>
                 </button>
               ))}
@@ -1233,6 +1129,101 @@ export function Transactions() {
           </div>
         </div>
       </Modal>
+
+      {/* Add Transaction Modal - Using Unified Component */}
+      <AddTransactionModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => setIsAddModalOpen(false)}
+      />
+
+      {/* Delete Individual Transaction Modal */}
+      {transactionToDelete && (
+        <DeleteConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setTransactionToDelete(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          title="Șterge Tranzacție"
+          message="Sigur vrei să ștergi această tranzacție?"
+          itemDetails={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                  Descriere:
+                </span>
+                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                  {transactionToDelete.description || '-'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                  Sumă:
+                </span>
+                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                  {transactionToDelete.amount.toFixed(2)} RON
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                  Categorie:
+                </span>
+                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                  {getCategoryForTransaction(transactionToDelete.categoryId)?.name || '-'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                  Dată:
+                </span>
+                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                  {new Date(transactionToDelete.date).toLocaleDateString('ro-RO')}
+                </span>
+              </div>
+            </div>
+          }
+          confirmButtonText="Șterge Tranzacție"
+          isLoading={deleteMutation.isPending}
+          isRecurring={transactionToDelete.isRecurring || false}
+        />
+      )}
+
+      {/* Bulk Delete Modal */}
+      <DeleteConfirmationModal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+        onConfirm={handleBulkDelete}
+        title="Șterge Tranzacții"
+        message={`Sigur vrei să ștergi ${selectedIds.size} tranzacții?`}
+        itemDetails={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                Număr tranzacții:
+              </span>
+              <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                {selectedIds.size}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                Sumă totală:
+              </span>
+              <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                {transactions
+                  .filter((t) => selectedIds.has(t.id))
+                  .reduce((sum, t) => sum + Number(t.amount), 0)
+                  .toFixed(2)}{' '}
+                RON
+              </span>
+            </div>
+          </div>
+        }
+        confirmButtonText="Șterge Toate"
+        isLoading={false}
+      />
     </div>
   );
 }

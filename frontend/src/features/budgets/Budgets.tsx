@@ -9,7 +9,10 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import { Plus, Edit2, Trash2, PiggyBank } from 'lucide-react';
+import { tokens } from '../../styles/colors';
+import { toast } from 'sonner';
 
 interface BudgetProgressProps {
   spent: number;
@@ -44,7 +47,7 @@ function BudgetProgress({ spent, limit }: BudgetProgressProps) {
 interface BudgetCardProps {
   budget: Budget;
   onEdit: (budget: Budget) => void;
-  onDelete: (id: string) => void;
+  onDelete: (budget: Budget) => void;
 }
 
 function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
@@ -120,7 +123,7 @@ function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
             </Button>
             <Button
               variant="ghost"
-              onClick={() => onDelete(budget.id)}
+              onClick={() => onDelete(budget)}
               style={{ padding: '0.5rem', minWidth: 'auto', color: '#ef4444' }}
             >
               <Trash2 size={16} />
@@ -145,6 +148,8 @@ export function Budgets() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null);
   
   const [formData, setFormData] = useState({
     month: new Date().getMonth() + 1,
@@ -302,9 +307,17 @@ export function Budgets() {
     updateMutation.mutate({ id: editingBudget.id, data: budgetData });
   };
 
-  const handleDeleteClick = (id: string) => {
-    if (window.confirm('Sigur doriți să ștergeți acest buget?')) {
-      deleteMutation.mutate(id);
+  const handleDeleteClick = (budget: Budget) => {
+    setBudgetToDelete(budget);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (budgetToDelete) {
+      deleteMutation.mutate(budgetToDelete.id);
+      setIsDeleteModalOpen(false);
+      setBudgetToDelete(null);
+      toast.success('Buget șters cu succes!');
     }
   };
 
@@ -617,6 +630,52 @@ export function Budgets() {
           </div>
         )}
       </Modal>
+
+      {/* Delete Budget Modal */}
+      {budgetToDelete && (
+        <DeleteConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setBudgetToDelete(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          title="Șterge Buget"
+          message="Sigur vrei să ștergi acest buget?"
+          itemDetails={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                  Perioadă:
+                </span>
+                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                  {getMonthName(budgetToDelete.month)} {budgetToDelete.year}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                  Limită totală:
+                </span>
+                <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                  {Number(budgetToDelete.totalLimit).toFixed(2)} RON
+                </span>
+              </div>
+              {budgetToDelete.categories && budgetToDelete.categories.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: tokens['text-muted'], fontSize: '0.875rem' }}>
+                    Categorii:
+                  </span>
+                  <span style={{ color: tokens['text-primary'], fontWeight: 500 }}>
+                    {budgetToDelete.categories.length}
+                  </span>
+                </div>
+              )}
+            </div>
+          }
+          confirmButtonText="Șterge Buget"
+          isLoading={deleteMutation.isPending}
+        />
+      )}
     </div>
   );
 }
