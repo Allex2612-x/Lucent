@@ -1,49 +1,205 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { categoriesService, CategoryData } from '../../services/categories.service';
-import { Category } from '@sasha-licenta/shared';
-import { Card, CardHeader, CardBody } from '../../components/ui/Card';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Edit2, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { toast } from 'sonner';
+import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
-import { Modal } from '../../components/ui/Modal';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { categoriesService, CategoryData } from '../../services/categories.service';
+import { statisticsService } from '../../services/statistics.service';
+import { Category } from '@sasha-licenta/shared';
+import { CHART_COLORS } from '../../styles/colors';
+
+const fmt = (n: number, dec = 0) =>
+  n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+interface CardDatum {
+  cat: Category;
+  count: number;
+  total: number;
+}
+
+function CategoryCard({
+  c,
+  onEdit,
+  onDelete,
+  canEdit,
+}: {
+  c: CardDatum;
+  onEdit: () => void;
+  onDelete: () => void;
+  canEdit: boolean;
+}) {
+  const color = c.cat.color || '#2547f5';
+  return (
+    <div className="card" style={{ padding: 18, position: 'relative', overflow: 'hidden' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: -30,
+          right: -30,
+          width: 90,
+          height: 90,
+          borderRadius: '50%',
+          background: color,
+          opacity: 0.07,
+        }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: `${color}1a`,
+            display: 'grid',
+            placeItems: 'center',
+            fontSize: 18,
+          }}
+        >
+          {c.cat.icon || '📁'}
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {!c.cat.isDefault && (
+            <span
+              className="chip"
+              style={{
+                background: 'var(--accent-soft)',
+                color: 'var(--accent-ink)',
+                border: 'none',
+                fontSize: 10,
+              }}
+            >
+              Personalizat
+            </span>
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{c.cat.name}</div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+        {c.count} tranzacții · luna asta
+      </div>
+      <div
+        className="num"
+        style={{
+          fontSize: 22,
+          fontWeight: 500,
+          fontFamily: 'var(--font-serif)',
+          fontStyle: 'italic',
+          letterSpacing: '-0.015em',
+          marginTop: 12,
+        }}
+      >
+        {fmt(c.total)}
+        <span
+          style={{
+            fontSize: 11.5,
+            color: 'var(--text-3)',
+            fontFamily: 'var(--font-sans)',
+            fontStyle: 'normal',
+            marginLeft: 4,
+          }}
+        >
+          RON
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginTop: 12 }}>
+        <button
+          className="btn btn-secondary btn-sm"
+          style={{ flex: 1, justifyContent: 'center', opacity: canEdit ? 1 : 0.5 }}
+          onClick={canEdit ? onEdit : undefined}
+          disabled={!canEdit}
+          title={canEdit ? 'Editează' : 'Categoriile implicite nu pot fi editate'}
+        >
+          <Edit2 size={11} /> Editează
+        </button>
+        {!c.cat.isDefault && (
+          <button
+            className="btn btn-secondary btn-sm"
+            style={{ width: 32, padding: 0, justifyContent: 'center', color: 'var(--expense)' }}
+            onClick={onDelete}
+            title="Șterge"
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function Categories() {
   const queryClient = useQueryClient();
+  const now = new Date();
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState<CategoryData>({
     name: '',
     type: 'expense',
-    color: '#818cf8',
+    color: '#2547f5',
     icon: '',
   });
 
-  // Query for categories
-  const { data: categoriesResponse, isLoading, error } = useQuery({
+  const { data: categoriesResponse, isLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesService.getAll(),
   });
 
-  const categories = categoriesResponse?.data?.data || [];
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const { data: incomeStats } = useQuery({
+    queryKey: ['statistics', 'by-category-income', now.getMonth() + 1, now.getFullYear()],
+    queryFn: () => statisticsService.getByCategory({ startDate: monthStart, type: 'income' }),
+  });
+  const { data: expenseStats } = useQuery({
+    queryKey: ['statistics', 'by-category-expense', now.getMonth() + 1, now.getFullYear()],
+    queryFn: () => statisticsService.getByCategory({ startDate: monthStart, type: 'expense' }),
+  });
 
-  // Filter categories
-  const defaultCategories = categories.filter((cat: Category) => cat.isDefault === true);
-  const userCategories = categories.filter((cat: Category) => cat.isDefault === false);
+  const categories: Category[] = categoriesResponse?.data?.data || [];
 
-  // Create mutation
+  const statsByCategoryId = useMemo(() => {
+    const map: Record<string, { total: number; count: number }> = {};
+    [...(incomeStats?.data?.data || []), ...(expenseStats?.data?.data || [])].forEach((row: any) => {
+      map[row.categoryId] = { total: Number(row.total), count: Number(row.count || 0) };
+    });
+    return map;
+  }, [incomeStats, expenseStats]);
+
+  const buildCards = (type: 'income' | 'expense'): CardDatum[] =>
+    categories
+      .filter((c) => c.type === type)
+      .map((cat) => {
+        const stat = statsByCategoryId[cat.id] || { total: 0, count: 0 };
+        return { cat, total: stat.total, count: stat.count };
+      });
+
+  const incomeCards = buildCards('income');
+  const expenseCards = buildCards('expense');
+
+  const incomeTotal = incomeCards.reduce((s, c) => s + c.total, 0);
+  const expenseTotal = expenseCards.reduce((s, c) => s + c.total, 0);
+
   const createMutation = useMutation({
     mutationFn: (data: CategoryData) => categoriesService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       setIsAddModalOpen(false);
       resetForm();
+      toast.success('Categorie creată.');
     },
+    onError: () => toast.error('Eroare la creare.'),
   });
 
-  // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CategoryData> }) =>
       categoriesService.update(id, data),
@@ -52,322 +208,233 @@ export function Categories() {
       setIsEditModalOpen(false);
       setEditingCategory(null);
       resetForm();
+      toast.success('Categorie actualizată.');
     },
+    onError: () => toast.error('Eroare la actualizare.'),
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => categoriesService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('Categorie ștearsă.');
     },
+    onError: () => toast.error('Eroare la ștergere.'),
   });
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      type: 'expense',
-      color: '#818cf8',
-      icon: '',
-    });
-  };
+  const resetForm = () =>
+    setFormData({ name: '', type: 'expense', color: '#2547f5', icon: '' });
 
-  const handleAddCategory = () => {
-    if (formData.name.length < 2) {
+  const handleAdd = () => {
+    if (formData.name.trim().length < 2) {
+      toast.error('Numele trebuie să aibă cel puțin 2 caractere.');
       return;
     }
-    
-    // Check for duplicates (case-insensitive, trimmed)
-    const normalizedName = formData.name.trim().toLowerCase();
-    const duplicate = categories.find((cat: Category) => 
-      cat.name.trim().toLowerCase() === normalizedName && 
-      cat.type === formData.type
+    const normalized = formData.name.trim().toLowerCase();
+    const dup = categories.find(
+      (c) => c.name.trim().toLowerCase() === normalized && c.type === formData.type,
     );
-    
-    if (duplicate) {
-      alert(`Există deja o categorie cu numele "${formData.name}" pentru tipul selectat.`);
+    if (dup) {
+      toast.error('Există deja o categorie cu acest nume.');
       return;
     }
-    
     createMutation.mutate(formData);
   };
 
-  const handleEditClick = (category: Category) => {
+  const handleEditOpen = (category: Category) => {
     setEditingCategory(category);
     setFormData({
       name: category.name,
       type: category.type,
-      color: category.color || '#818cf8',
+      color: category.color || '#2547f5',
       icon: category.icon || '',
     });
     setIsEditModalOpen(true);
   };
 
-  const handleUpdateCategory = () => {
-    if (editingCategory && formData.name.length >= 2) {
-      // Check for duplicates (excluding current category)
-      const normalizedName = formData.name.trim().toLowerCase();
-      const duplicate = categories.find((cat: Category) => 
-        cat.id !== editingCategory.id &&
-        cat.name.trim().toLowerCase() === normalizedName && 
-        cat.type === formData.type
-      );
-      
-      if (duplicate) {
-        alert(`Există deja o categorie cu numele "${formData.name}" pentru tipul selectat.`);
-        return;
-      }
-      
-      updateMutation.mutate({ id: editingCategory.id, data: formData });
+  const handleUpdate = () => {
+    if (!editingCategory || formData.name.trim().length < 2) {
+      toast.error('Numele trebuie să aibă cel puțin 2 caractere.');
+      return;
     }
+    const normalized = formData.name.trim().toLowerCase();
+    const dup = categories.find(
+      (c) =>
+        c.id !== editingCategory.id &&
+        c.name.trim().toLowerCase() === normalized &&
+        c.type === formData.type,
+    );
+    if (dup) {
+      toast.error('Există deja o categorie cu acest nume.');
+      return;
+    }
+    updateMutation.mutate({ id: editingCategory.id, data: formData });
   };
 
-  const handleDeleteClick = (id: string) => {
+  const handleDelete = (id: string) => {
     if (window.confirm('Sigur doriți să ștergeți această categorie?')) {
       deleteMutation.mutate(id);
     }
   };
 
-  const handleOpenAddModal = () => {
-    resetForm();
-    setIsAddModalOpen(true);
-  };
-
-  const renderCategoryCard = (category: Category, isDefault: boolean) => (
-    <div
-      key={category.id}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '1.25rem',
-        backgroundColor: '#1e293b',
-        borderRadius: '0.5rem',
-        border: '1px solid #334155',
-        transition: 'border-color 0.2s',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-        {/* Color square with icon */}
-        <div
-          style={{
-            width: '3rem',
-            height: '3rem',
-            backgroundColor: category.color || '#818cf8',
-            borderRadius: '0.5rem',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.5rem',
-          }}
-        >
-          {category.icon || '📁'}
-        </div>
-        
-        {/* Name and type badge */}
-        <div>
-          <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.375rem', color: '#f8fafc' }}>
-            {category.name}
-          </div>
-          <span
-            style={{
-              display: 'inline-block',
-              padding: '0.125rem 0.625rem',
-              borderRadius: '1rem',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              backgroundColor: category.type === 'income' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-              color: category.type === 'income' ? '#10b981' : '#ef4444',
-              border: `1px solid ${category.type === 'income' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-            }}
-          >
-            {category.type === 'income' ? 'Venit' : 'Cheltuială'}
-          </span>
-        </div>
-      </div>
-
-      {/* Action buttons */}
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <Button
-          variant="ghost"
-          onClick={() => handleEditClick(category)}
-          disabled={isDefault}
-          style={{ 
-            padding: '0.5rem', 
-            minWidth: 'auto',
-            opacity: isDefault ? 0.5 : 1,
-            cursor: isDefault ? 'not-allowed' : 'pointer'
-          }}
-          title={isDefault ? 'Categoriile implicite nu pot fi editate' : 'Editează categoria'}
-        >
-          <Edit2 size={16} />
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => handleDeleteClick(category.id)}
-          disabled={isDefault}
-          style={{ 
-            padding: '0.5rem', 
-            minWidth: 'auto', 
-            color: isDefault ? '#64748b' : '#ef4444',
-            opacity: isDefault ? 0.5 : 1,
-            cursor: isDefault ? 'not-allowed' : 'pointer'
-          }}
-          title={isDefault ? 'Categoriile implicite nu pot fi șterse' : 'Șterge categoria'}
-        >
-          <Trash2 size={16} />
-        </Button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="categories-container">
-      <div className="page-header">
+    <>
+      <div className="page-head">
         <div>
-          <h1>Categorii</h1>
-          <p>Gestionează categoriile de venituri și cheltuieli.</p>
+          <div className="page-title">Categorii</div>
+          <div className="page-sub">
+            Organizează-ți banii pe categorii predefinite sau create de tine.
+          </div>
         </div>
-        <Button variant="primary" onClick={handleOpenAddModal}>
-          <Plus size={18} className="mr-2" style={{ marginRight: '0.5rem' }} /> Adaugă Categorie
-        </Button>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            resetForm();
+            setIsAddModalOpen(true);
+          }}
+        >
+          <Plus size={14} /> Categorie nouă
+        </button>
       </div>
 
       {isLoading ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
-          Se încarcă categoriile...
-        </div>
-      ) : error ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>
-          Nu s-au putut încărca datele. Încearcă din nou.
-        </div>
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>Se încarcă...</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Default Categories Section */}
-          <Card>
-            <CardHeader>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
-                Categorii Implicite
-              </h2>
-              <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
-                Categorii predefinite care nu pot fi modificate sau șterse
-              </p>
-            </CardHeader>
-            <CardBody>
-              {defaultCategories.length === 0 ? (
-                <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8' }}>
-                  Nu există categorii implicite.
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '0.75rem' }}>
-                  {defaultCategories.map((cat: Category) => renderCategoryCard(cat, true))}
-                </div>
-              )}
-            </CardBody>
-          </Card>
+        <>
+          {/* Income section */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <ArrowUp size={14} style={{ color: 'var(--income)' }} />
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Venituri
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                {incomeCards.length} categorii · {fmt(incomeTotal)} RON total
+              </div>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+              {incomeCards.map((c) => (
+                <CategoryCard
+                  key={c.cat.id}
+                  c={c}
+                  canEdit={!c.cat.isDefault}
+                  onEdit={() => handleEditOpen(c.cat)}
+                  onDelete={() => handleDelete(c.cat.id)}
+                />
+              ))}
+              <button
+                style={{
+                  border: '1.5px dashed var(--border-strong)',
+                  borderRadius: 14,
+                  minHeight: 200,
+                  background: 'transparent',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  color: 'var(--text-2)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+                onClick={() => {
+                  resetForm();
+                  setFormData((s) => ({ ...s, type: 'income' }));
+                  setIsAddModalOpen(true);
+                }}
+              >
+                <Plus size={22} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>Adaugă categorie venit</span>
+              </button>
+            </div>
+          </div>
 
-          {/* User Categories Section */}
-          <Card>
-            <CardHeader>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
-                Categoriile Mele
-              </h2>
-              <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
-                Categorii personalizate create de tine
-              </p>
-            </CardHeader>
-            <CardBody>
-              {userCategories.length === 0 ? (
-                <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8' }}>
-                  Nu ai creat încă categorii personalizate.
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '0.75rem' }}>
-                  {userCategories.map((cat: Category) => renderCategoryCard(cat, false))}
-                </div>
-              )}
-            </CardBody>
-          </Card>
-        </div>
+          {/* Expense section */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <ArrowDown size={14} style={{ color: 'var(--expense)' }} />
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Cheltuieli
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                {expenseCards.length} categorii · {fmt(expenseTotal)} RON total
+              </div>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+              {expenseCards.map((c) => (
+                <CategoryCard
+                  key={c.cat.id}
+                  c={c}
+                  canEdit={!c.cat.isDefault}
+                  onEdit={() => handleEditOpen(c.cat)}
+                  onDelete={() => handleDelete(c.cat.id)}
+                />
+              ))}
+              <button
+                style={{
+                  border: '1.5px dashed var(--border-strong)',
+                  borderRadius: 14,
+                  minHeight: 200,
+                  background: 'transparent',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  color: 'var(--text-2)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+                onClick={() => {
+                  resetForm();
+                  setFormData((s) => ({ ...s, type: 'expense' }));
+                  setIsAddModalOpen(true);
+                }}
+              >
+                <Plus size={22} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>Adaugă categorie cheltuială</span>
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
-      {/* Add Category Modal */}
+      {/* Add modal */}
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Adaugă Categorie Nouă"
+        title="Adaugă categorie nouă"
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>
               Anulează
             </Button>
-            <Button
-              variant="primary"
-              onClick={handleAddCategory}
-              disabled={createMutation.isPending || formData.name.length < 2}
-            >
+            <Button variant="primary" onClick={handleAdd} disabled={createMutation.isPending}>
               {createMutation.isPending ? 'Se salvează...' : 'Salvează'}
             </Button>
           </>
         }
       >
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <Input
-            label="Nume"
-            placeholder="Ex: Transport, Mâncare, Salariu"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            error={formData.name.length > 0 && formData.name.length < 2 ? 'Numele trebuie să aibă minim 2 caractere' : undefined}
-          />
-          <Select
-            label="Tip"
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' })}
-            options={[
-              { value: 'income', label: 'Venit' },
-              { value: 'expense', label: 'Cheltuială' },
-            ]}
-          />
-          <div className="input-wrapper">
-            <label className="input-label">Culoare</label>
-            <input
-              type="color"
-              value={formData.color}
-              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              style={{
-                width: '100%',
-                height: '3rem',
-                border: '1px solid #334155',
-                borderRadius: '0.5rem',
-                backgroundColor: '#0f172a',
-                cursor: 'pointer',
-              }}
-            />
-          </div>
-          <Input
-            label="Iconiță (opțional)"
-            placeholder="Ex: 🚗, 🍔, 💰"
-            value={formData.icon}
-            onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-          />
-        </div>
-        {createMutation.isError && (
-          <div
-            style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              color: '#ef4444',
-              borderRadius: '0.5rem',
-            }}
-          >
-            Eroare la salvarea categoriei. Încearcă din nou.
-          </div>
-        )}
+        <CategoryFormFields formData={formData} setFormData={setFormData} />
       </Modal>
 
-      {/* Edit Category Modal */}
+      {/* Edit modal */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => {
@@ -375,7 +442,7 @@ export function Categories() {
           setEditingCategory(null);
           resetForm();
         }}
-        title="Editează Categorie"
+        title="Editează categoria"
         footer={
           <>
             <Button
@@ -388,70 +455,89 @@ export function Categories() {
             >
               Anulează
             </Button>
-            <Button
-              variant="primary"
-              onClick={handleUpdateCategory}
-              disabled={updateMutation.isPending || formData.name.length < 2}
-            >
+            <Button variant="primary" onClick={handleUpdate} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? 'Se actualizează...' : 'Actualizează'}
             </Button>
           </>
         }
       >
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <Input
-            label="Nume"
-            placeholder="Ex: Transport, Mâncare, Salariu"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            error={formData.name.length > 0 && formData.name.length < 2 ? 'Numele trebuie să aibă minim 2 caractere' : undefined}
-          />
-          <Select
-            label="Tip"
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' })}
-            options={[
-              { value: 'income', label: 'Venit' },
-              { value: 'expense', label: 'Cheltuială' },
-            ]}
-          />
-          <div className="input-wrapper">
-            <label className="input-label">Culoare</label>
-            <input
-              type="color"
-              value={formData.color}
-              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+        <CategoryFormFields formData={formData} setFormData={setFormData} />
+      </Modal>
+    </>
+  );
+}
+
+function CategoryFormFields({
+  formData,
+  setFormData,
+}: {
+  formData: CategoryData;
+  setFormData: React.Dispatch<React.SetStateAction<CategoryData>>;
+}) {
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      <Input
+        label="Nume"
+        placeholder="Ex: Transport, Mâncare, Salariu"
+        value={formData.name}
+        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+      />
+      <Select
+        label="Tip"
+        value={formData.type}
+        onChange={(e) =>
+          setFormData({ ...formData, type: e.target.value as 'income' | 'expense' })
+        }
+        options={[
+          { value: 'income', label: 'Venit' },
+          { value: 'expense', label: 'Cheltuială' },
+        ]}
+      />
+      <div className="field">
+        <label>Culoare</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {CHART_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => setFormData({ ...formData, color })}
               style={{
-                width: '100%',
-                height: '3rem',
-                border: '1px solid #334155',
-                borderRadius: '0.5rem',
-                backgroundColor: '#0f172a',
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: color,
+                border:
+                  formData.color === color
+                    ? '2px solid var(--text-1)'
+                    : '1px solid var(--border)',
                 cursor: 'pointer',
+                padding: 0,
               }}
+              title={color}
             />
-          </div>
-          <Input
-            label="Iconiță (opțional)"
-            placeholder="Ex: 🚗, 🍔, 💰"
-            value={formData.icon}
-            onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+          ))}
+          <input
+            type="color"
+            value={formData.color}
+            onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+            style={{
+              width: 32,
+              height: 32,
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              cursor: 'pointer',
+              background: '#fff',
+            }}
+            title="Personalizat"
           />
         </div>
-        {updateMutation.isError && (
-          <div
-            style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              color: '#ef4444',
-              borderRadius: '0.5rem',
-            }}
-          >
-            Eroare la actualizarea categoriei. Încearcă din nou.
-          </div>
-        )}
-      </Modal>
+      </div>
+      <Input
+        label="Iconiță (opțional)"
+        placeholder="Ex: 🚗 🍔 💰"
+        value={formData.icon}
+        onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+      />
     </div>
   );
 }

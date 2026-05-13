@@ -2,155 +2,333 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Card, CardHeader, CardBody } from '../../components/ui/Card';
+import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal } from 'lucide-react';
+import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
-import { Modal } from '../../components/ui/Modal';
-import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Wallet, 
-  TrendingUp, 
-  CreditCard, 
-  ArrowRight,
-  Percent,
-  AlertTriangle,
-  TrendingDown
-} from 'lucide-react';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
 import { statisticsService } from '../../services/statistics.service';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
 import { budgetsService } from '../../services/budgets.service';
 import { Category } from '@sasha-licenta/shared';
-import { tokens } from '../../styles/colors';
+import { CHART_COLORS } from '../../styles/colors';
 
-const MONTH_NAMES = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
+const fmt = (n: number, dec = 2) =>
+  n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 
-// Mini sparkline component
-function MiniSparkline({ data, color }: { data: number[]; color: string }) {
-  if (!data || data.length === 0) return null;
-  
-  const chartData = data.map((value, index) => ({ value, index }));
-  
+const MONTH_NAMES = [
+  'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+  'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+];
+
+function HeroAmount({
+  value,
+  currency = 'RON',
+  delta,
+  deltaPositive,
+  deltaInverse,
+}: {
+  value: number;
+  currency?: string;
+  delta?: string | null;
+  deltaPositive?: boolean;
+  deltaInverse?: boolean;
+}) {
+  const [intPart, decPart = '00'] = fmt(value).split(',');
+  const showDelta = delta !== undefined && delta !== null;
+  const positive = deltaInverse ? !deltaPositive : !!deltaPositive;
   return (
-    <div style={{ width: '100%', height: '40px', marginTop: '0.5rem' }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-          <Line 
-            type="monotone" 
-            dataKey="value" 
-            stroke={color} 
-            strokeWidth={2} 
-            dot={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <div>
+      <div
+        className="serif num"
+        style={{ fontSize: 40, letterSpacing: '-0.025em', lineHeight: 1, fontStyle: 'italic' }}
+      >
+        <span>{intPart}</span>
+        <span style={{ color: 'var(--text-3)' }}>,{decPart}</span>
+        <span
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontStyle: 'normal',
+            fontSize: 14,
+            color: 'var(--text-3)',
+            marginLeft: 8,
+            letterSpacing: '0.04em',
+          }}
+        >
+          {currency}
+        </span>
+      </div>
+      {showDelta && (
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
+          <span
+            style={{
+              color: positive ? 'var(--income)' : 'var(--expense)',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 2,
+            }}
+          >
+            {positive ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+            {delta}
+          </span>
+          <span style={{ color: 'var(--text-3)' }}>vs luna trecută</span>
+        </div>
+      )}
     </div>
   );
 }
 
-// KPI Card Component
-interface KPICardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  delta?: {
-    value: number;
-    isPositive: boolean;
-    label: string;
-  };
-  sparklineData?: number[];
-  sparklineColor?: string;
-  emphasized?: boolean;
+function Sparkline({ points, color }: { points: number[]; color: string }) {
+  if (!points || points.length < 2) {
+    return <div style={{ height: 56 }} />;
+  }
+  const W = 280;
+  const H = 56;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const step = W / (points.length - 1);
+  const path = points
+    .map(
+      (v, i) =>
+        `${i === 0 ? 'M' : 'L'} ${(i * step).toFixed(1)} ${(
+          H - ((v - min) / range) * (H - 6) - 3
+        ).toFixed(1)}`,
+    )
+    .join(' ');
+  const area = path + ` L ${W} ${H} L 0 ${H} Z`;
+  const id = `grad-${color.replace('#', '')}`;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: 56, display: 'block' }}>
+      <defs>
+        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor={color} stopOpacity="0.5" />
+          <stop offset="1" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${id})`} />
+      <path
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
-function KPICard({ icon, label, value, delta, sparklineData, sparklineColor, emphasized }: KPICardProps) {
-  const cardStyle: React.CSSProperties = emphasized ? {
-    background: `linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(10, 14, 26, 0) 100%)`,
-    border: `1px solid ${tokens['accent-primary']}`,
-    gridColumn: 'span 2',
-  } : {};
+function KpiCard({
+  label,
+  value,
+  delta,
+  deltaPositive,
+  deltaInverse,
+  sparkColor,
+  points,
+}: {
+  label: string;
+  value: number;
+  delta?: string | null;
+  deltaPositive?: boolean;
+  deltaInverse?: boolean;
+  sparkColor: string;
+  points: number[];
+}) {
+  return (
+    <div className="card" style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text-2)', fontWeight: 500 }}>{label}</div>
+        <MoreHorizontal size={16} style={{ color: 'var(--text-3)' }} />
+      </div>
+      <HeroAmount value={value} delta={delta} deltaPositive={deltaPositive} deltaInverse={deltaInverse} />
+      <Sparkline points={points} color={sparkColor} />
+    </div>
+  );
+}
+
+interface EvolutionPoint {
+  name: string;
+  income: number;
+  expenses: number;
+}
+
+function EvolutionChart({ data }: { data: EvolutionPoint[] }) {
+  if (data.length === 0) {
+    return (
+      <div style={{ height: 240, display: 'grid', placeItems: 'center', color: 'var(--text-3)' }}>
+        Nu există date pentru afișare.
+      </div>
+    );
+  }
+  const W = 720;
+  const H = 240;
+  const padL = 44;
+  const padR = 12;
+  const padT = 12;
+  const padB = 28;
+
+  const income = data.map((d) => d.income);
+  const expense = data.map((d) => d.expenses);
+  const all = [...income, ...expense];
+  const maxRaw = Math.max(...all, 0);
+  const max = Math.max(1000, Math.ceil(maxRaw / 1000) * 1000);
+  const minRaw = Math.min(...all, 0);
+  const min = Math.min(0, Math.floor(minRaw / 1000) * 1000);
+
+  const xStep = data.length > 1 ? (W - padL - padR) / (data.length - 1) : 0;
+  const y = (v: number) => padT + (1 - (v - min) / (max - min)) * (H - padT - padB);
+  const lineFor = (arr: number[]) =>
+    arr
+      .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(padL + i * xStep).toFixed(1)} ${y(v).toFixed(1)}`)
+      .join(' ');
+  const areaFor = (arr: number[]) =>
+    lineFor(arr) +
+    ` L ${(padL + (arr.length - 1) * xStep).toFixed(1)} ${H - padB} L ${padL} ${H - padB} Z`;
+
+  const gridSteps = 4;
+  const gridLines = Array.from({ length: gridSteps + 1 }, (_, i) =>
+    Math.round(min + ((max - min) / gridSteps) * i),
+  );
 
   return (
-    <Card style={cardStyle}>
-      <CardBody style={{ padding: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <div style={{ 
-            padding: '0.75rem', 
-            backgroundColor: emphasized ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-elevated)', 
-            borderRadius: '0.75rem',
-            color: emphasized ? tokens['accent-primary'] : tokens['text-muted']
-          }}>
-            {icon}
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 240, display: 'block' }}>
+      <defs>
+        <linearGradient id="ev-inc" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#0ab39c" stopOpacity="0.18" />
+          <stop offset="1" stopColor="#0ab39c" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="ev-exp" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#f5556e" stopOpacity="0.16" />
+          <stop offset="1" stopColor="#f5556e" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {gridLines.map((v) => (
+        <g key={v}>
+          <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#e7e3d9" strokeDasharray="2 4" />
+          <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="10.5" fill="#8c8879" fontFamily="var(--font-mono)">
+            {v.toLocaleString('ro-RO')}
+          </text>
+        </g>
+      ))}
+      <path d={areaFor(income)} fill="url(#ev-inc)" />
+      <path d={areaFor(expense)} fill="url(#ev-exp)" />
+      <path d={lineFor(income)} fill="none" stroke="#0ab39c" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={lineFor(expense)} fill="none" stroke="#f5556e" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {[
+        { a: income, c: '#0ab39c' },
+        { a: expense, c: '#f5556e' },
+      ].map(({ a, c }, k) => (
+        <circle
+          key={k}
+          cx={padL + (a.length - 1) * xStep}
+          cy={y(a[a.length - 1])}
+          r="4"
+          fill="#fff"
+          stroke={c}
+          strokeWidth="2"
+        />
+      ))}
+      {data.map((d, i) =>
+        i % Math.max(1, Math.floor(data.length / 6)) === 0 ? (
+          <text
+            key={`${d.name}-${i}`}
+            x={padL + i * xStep}
+            y={H - 8}
+            textAnchor="middle"
+            fontSize="10.5"
+            fill="#8c8879"
+          >
+            {d.name}
+          </text>
+        ) : null,
+      )}
+    </svg>
+  );
+}
+
+interface DonutSlice {
+  name: string;
+  value: number;
+  color: string;
+}
+
+function CategoryDonut({ data, monthLabel }: { data: DonutSlice[]; monthLabel: string }) {
+  if (data.length === 0) {
+    return (
+      <div style={{ height: 170, display: 'grid', placeItems: 'center', color: 'var(--text-3)' }}>
+        Nu există cheltuieli.
+      </div>
+    );
+  }
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const R = 80;
+  const r = 56;
+  const cx = 100;
+  const cy = 100;
+  let acc = -Math.PI / 2;
+  const arcs = data.map((d) => {
+    const a = (d.value / total) * Math.PI * 2;
+    const x1 = cx + R * Math.cos(acc);
+    const y1 = cy + R * Math.sin(acc);
+    const x2 = cx + R * Math.cos(acc + a);
+    const y2 = cy + R * Math.sin(acc + a);
+    const xi2 = cx + r * Math.cos(acc + a);
+    const yi2 = cy + r * Math.sin(acc + a);
+    const xi1 = cx + r * Math.cos(acc);
+    const yi1 = cy + r * Math.sin(acc);
+    const large = a > Math.PI ? 1 : 0;
+    const path = `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${r} ${r} 0 ${large} 0 ${xi1} ${yi1} Z`;
+    acc += a;
+    return { ...d, path };
+  });
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+      <svg viewBox="0 0 200 200" width="170" height="170" style={{ flex: '0 0 170px' }}>
+        {arcs.map((a, i) => (
+          <path key={i} d={a.path} fill={a.color} />
+        ))}
+        <text x="100" y="92" textAnchor="middle" fontSize="11" fill="#8c8879" letterSpacing="0.04em">
+          CHELTUIELI
+        </text>
+        <text x="100" y="115" textAnchor="middle" fontSize="22" fontFamily="var(--font-serif)" fontStyle="italic" fill="#0e0e10">
+          {fmt(total, 0)}
+        </text>
+        <text x="100" y="130" textAnchor="middle" fontSize="10" fill="#8c8879">
+          RON · {monthLabel}
+        </text>
+      </svg>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {data.map((d, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: d.color, flexShrink: 0 }} />
+            <span style={{ color: 'var(--text-2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {d.name}
+            </span>
+            <span className="num" style={{ fontWeight: 500 }}>{fmt(d.value, 0)}</span>
+            <span
+              className="mono"
+              style={{ color: 'var(--text-3)', fontSize: 11.5, width: 38, textAlign: 'right' }}
+            >
+              {Math.round((d.value / total) * 100)}%
+            </span>
           </div>
-          {delta && (
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.25rem',
-              fontSize: '0.85rem',
-              color: delta.isPositive ? tokens['accent-success'] : tokens['accent-danger'],
-              fontWeight: 500
-            }}>
-              {delta.isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-              {Math.abs(delta.value).toFixed(1)}%
-            </div>
-          )}
-        </div>
-        <div>
-          <p style={{ 
-            fontSize: '0.875rem', 
-            color: tokens['text-muted'], 
-            marginBottom: '0.5rem',
-            fontWeight: 500
-          }}>
-            {label}
-          </p>
-          <h2 style={{ 
-            fontSize: emphasized ? '2.5rem' : '2rem', 
-            fontWeight: 700, 
-            color: tokens['text-primary'],
-            margin: 0,
-            lineHeight: 1
-          }}>
-            {value}
-          </h2>
-          {delta && (
-            <p style={{ 
-              fontSize: '0.75rem', 
-              color: tokens['text-muted'], 
-              marginTop: '0.5rem',
-              marginBottom: 0
-            }}>
-              {delta.label}
-            </p>
-          )}
-        </div>
-        {sparklineData && sparklineColor && (
-          <MiniSparkline data={sparklineData} color={sparklineColor} />
-        )}
-      </CardBody>
-    </Card>
+        ))}
+      </div>
+    </div>
   );
 }
 
 export function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentYear = currentDate.getFullYear();
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const monthLabel = `${MONTH_NAMES[currentMonth - 1]} ${currentYear}`;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState<TransactionData>({
@@ -161,94 +339,103 @@ export function Dashboard() {
     date: new Date().toISOString().split('T')[0],
   });
 
-  // Fetch current month overview
   const { data: overviewData, isLoading: overviewLoading } = useQuery({
     queryKey: ['statistics', 'overview', currentMonth, currentYear],
     queryFn: () => statisticsService.getOverview({ month: currentMonth, year: currentYear }),
   });
 
-  // Fetch previous month for delta calculation
   const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
   const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-  
   const { data: prevOverviewData } = useQuery({
     queryKey: ['statistics', 'overview', prevMonth, prevYear],
     queryFn: () => statisticsService.getOverview({ month: prevMonth, year: prevYear }),
   });
 
-  // Fetch last 7 days for sparklines
-  const { data: trendData, isLoading: trendLoading } = useQuery({
+  const { data: trendData } = useQuery({
     queryKey: ['statistics', 'monthly-trend'],
-    queryFn: () => statisticsService.getMonthlyTrend({ months: 7 }),
+    queryFn: () => statisticsService.getMonthlyTrend({ months: 12 }),
   });
 
-  // Fetch recent transactions
   const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
     queryKey: ['transactions', 'recent'],
     queryFn: () => transactionsService.getAll(),
     select: (data) => data.data.data.slice(0, 5),
   });
 
-  // Fetch categories
+  const { data: categoryStats } = useQuery({
+    queryKey: ['statistics', 'by-category', currentMonth, currentYear],
+    queryFn: () =>
+      statisticsService.getByCategory({
+        startDate: `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`,
+        type: 'expense',
+      }),
+  });
+
   const { data: categoriesResponse } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesService.getAll(),
   });
 
-  // Fetch budgets at risk
-  const { data: budgetsData } = useQuery({
-    queryKey: ['budgets', 'at-risk'],
-    queryFn: async () => {
-      const response = await budgetsService.getAll();
-      return response.data.data;
-    },
+  const { data: budgetsResponse } = useQuery({
+    queryKey: ['budgets'],
+    queryFn: () => budgetsService.getAll(),
   });
 
   const overview = overviewData?.data?.data;
   const prevOverview = prevOverviewData?.data?.data;
   const recentTransactions = transactionsData || [];
-  const categories = categoriesResponse?.data?.data || [];
+  const categories: Category[] = categoriesResponse?.data?.data || [];
+  const budgets = budgetsResponse?.data?.data || [];
 
-  // Calculate deltas
-  const calculateDelta = (current: number, previous: number) => {
-    if (previous === 0) return { value: 0, isPositive: current >= 0 };
-    const delta = ((current - previous) / previous) * 100;
-    return { value: delta, isPositive: delta >= 0 };
+  const balance = overview?.balance ?? 0;
+  const totalIncome = overview?.totalIncome ?? 0;
+  const totalExpenses = overview?.totalExpenses ?? 0;
+
+  const calcDelta = (current: number, previous: number) => {
+    if (!previous) return null;
+    const pct = ((current - previous) / Math.abs(previous)) * 100;
+    return {
+      label: `${Math.abs(pct).toFixed(1).replace('.', ',')}%`,
+      positive: pct >= 0,
+    };
   };
 
-  const balanceDelta = prevOverview ? calculateDelta(overview?.balance || 0, prevOverview.balance) : null;
-  const incomeDelta = prevOverview ? calculateDelta(overview?.totalIncome || 0, prevOverview.totalIncome) : null;
-  const expensesDelta = prevOverview ? calculateDelta(overview?.totalExpenses || 0, prevOverview.totalExpenses) : null;
+  const balanceDelta = prevOverview ? calcDelta(balance, prevOverview.balance) : null;
+  const incomeDelta = prevOverview ? calcDelta(totalIncome, prevOverview.totalIncome) : null;
+  const expenseDelta = prevOverview ? calcDelta(totalExpenses, prevOverview.totalExpenses) : null;
 
-  // Calculate savings rate
-  const savingsRate = overview?.totalIncome > 0 
-    ? ((overview.totalIncome - overview.totalExpenses) / overview.totalIncome) * 100 
-    : 0;
-
-  // Prepare sparkline data (last 7 months)
-  const sparklineData = trendData?.data?.data?.slice(-7) || [];
-  const balanceSparkline = sparklineData.map((item: any) => item.balance);
-  const incomeSparkline = sparklineData.map((item: any) => item.income);
-  const expensesSparkline = sparklineData.map((item: any) => item.expenses);
-
-  // Filter chart data to show only months with data
-  const chartData = (trendData?.data?.data || [])
-    .filter((item: any) => item.income > 0 || item.expenses > 0)
-    .map((item: any) => ({
-      name: MONTH_NAMES[item.month - 1],
-      income: item.income,
-      expenses: item.expenses,
-      balance: item.balance,
+  const trendPoints = (trendData?.data?.data || []) as Array<{
+    month: number;
+    year: number;
+    income: number;
+    expenses: number;
+    balance: number;
+  }>;
+  const evolutionData: EvolutionPoint[] = trendPoints
+    .filter((p) => p.income > 0 || p.expenses > 0)
+    .map((p) => ({
+      name: `${MONTH_NAMES[p.month - 1].slice(0, 3)}`,
+      income: p.income,
+      expenses: p.expenses,
     }));
 
-  // Find budgets at risk (>80% consumed)
-  const budgetsAtRisk = (budgetsData || []).filter((budget: any) => {
-    // This would need actual spent calculation from backend
-    // For now, we'll show a placeholder
-    return false; // TODO: Implement budget risk calculation
-  });
+  const sparkBalance = trendPoints.map((p) => p.balance);
+  const sparkIncome = trendPoints.map((p) => p.income);
+  const sparkExpense = trendPoints.map((p) => p.expenses);
 
-  // Create mutation
+  const donutSlices: DonutSlice[] = (categoryStats?.data?.data || []).map((row: any, idx: number) => ({
+    name: row.categoryName,
+    value: Number(row.total),
+    color: row.categoryColor || CHART_COLORS[idx % CHART_COLORS.length],
+  }));
+
+  const budgetItems: Array<{ name: string; spent: number; limit: number; color: string }> = budgets.slice(0, 3).map((b: any) => ({
+    name: b.isTotal ? `Buget total ${b.month}/${b.year}` : b.categories?.[0]?.category?.name || 'Buget',
+    spent: Number(b.spent ?? 0),
+    limit: Number(b.totalLimit ?? 0),
+    color: b.categories?.[0]?.category?.color || CHART_COLORS[0],
+  }));
+
   const createMutation = useMutation({
     mutationFn: (data: TransactionData) => transactionsService.create(data),
     onSuccess: () => {
@@ -258,9 +445,7 @@ export function Dashboard() {
       resetForm();
       toast.success('Tranzacție adăugată cu succes!');
     },
-    onError: () => {
-      toast.error('Eroare la salvarea tranzacției. Încearcă din nou.');
-    },
+    onError: () => toast.error('Eroare la salvarea tranzacției. Încearcă din nou.'),
   });
 
   const resetForm = () => {
@@ -273,365 +458,273 @@ export function Dashboard() {
     });
   };
 
-  const handleAddTransaction = () => {
-    createMutation.mutate(formData);
-  };
+  const filteredCategories = categories.filter((cat) => cat.type === formData.type);
+  const getCategory = (id: string) => categories.find((c) => c.id === id);
 
-  const handleOpenAddModal = () => {
-    resetForm();
-    setIsAddModalOpen(true);
-  };
-
-  const filteredCategories = categories.filter(
-    (cat: Category) => cat.type === formData.type
-  );
-
-  // Get category for transaction
-  const getCategoryForTransaction = (categoryId: string) => {
-    return categories.find((cat: Category) => cat.id === categoryId);
-  };
+  const userGreeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bună dimineața';
+    if (hour < 18) return 'Bună ziua';
+    return 'Bună seara';
+  })();
 
   return (
-    <div className="dashboard-container">
-      <div className="page-header">
-        <div className="page-header-content">
-          <h1 style={{ fontSize: '2rem' }}>Dashboard Personal</h1>
-          <p>Supervizează-ți finanțele dintr-o singură privire</p>
+    <>
+      <div className="page-head">
+        <div>
+          <div className="page-title">{userGreeting}</div>
+          <div className="page-sub">Iată un rezumat al banilor tăi pentru perioada selectată.</div>
         </div>
-        <div className="page-header-actions">
-          <Button variant="primary" onClick={handleOpenAddModal} className="btn-compact">
-            Adaugă Tranzacție
-          </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div className="seg">
+            <button>7z</button>
+            <button className="on">30z</button>
+            <button>90z</button>
+            <button>An</button>
+          </div>
+          <button className="btn btn-secondary">
+            <Download size={14} /> Export
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              resetForm();
+              setIsAddModalOpen(true);
+            }}
+          >
+            <Plus size={14} /> Tranzacție
+          </button>
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(4, 1fr)', 
-        gap: '1.5rem',
-        marginBottom: '2rem'
-      }}>
-        <KPICard
-          icon={<Wallet size={24} />}
-          label="Sold Curent"
-          value={overviewLoading ? '...' : `${(overview?.balance || 0).toFixed(2)} RON`}
-          delta={balanceDelta ? {
-            value: balanceDelta.value,
-            isPositive: balanceDelta.isPositive,
-            label: 'față de luna trecută'
-          } : undefined}
-          sparklineData={balanceSparkline}
-          sparklineColor={tokens['accent-primary']}
-          emphasized
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18, marginBottom: 18 }}>
+        <KpiCard
+          label="Sold curent"
+          value={overviewLoading ? 0 : balance}
+          delta={balanceDelta?.label ?? null}
+          deltaPositive={balanceDelta?.positive}
+          sparkColor="#2547f5"
+          points={sparkBalance}
         />
-        
-        <KPICard
-          icon={<ArrowUpRight size={24} />}
-          label="Venituri"
-          value={overviewLoading ? '...' : `${(overview?.totalIncome || 0).toFixed(2)} RON`}
-          delta={incomeDelta ? {
-            value: incomeDelta.value,
-            isPositive: incomeDelta.isPositive,
-            label: 'față de luna trecută'
-          } : undefined}
-          sparklineData={incomeSparkline}
-          sparklineColor={tokens['accent-success']}
+        <KpiCard
+          label="Venituri (luna curentă)"
+          value={overviewLoading ? 0 : totalIncome}
+          delta={incomeDelta?.label ?? null}
+          deltaPositive={incomeDelta?.positive}
+          sparkColor="#0ab39c"
+          points={sparkIncome}
         />
-        
-        <KPICard
-          icon={<ArrowDownRight size={24} />}
-          label="Cheltuieli"
-          value={overviewLoading ? '...' : `${(overview?.totalExpenses || 0).toFixed(2)} RON`}
-          delta={expensesDelta ? {
-            value: expensesDelta.value,
-            isPositive: !expensesDelta.isPositive, // Inverted: lower expenses is positive
-            label: 'față de luna trecută'
-          } : undefined}
-          sparklineData={expensesSparkline}
-          sparklineColor={tokens['accent-danger']}
-        />
-        
-        <KPICard
-          icon={<Percent size={24} />}
-          label="Rată Economisire"
-          value={overviewLoading ? '...' : `${savingsRate.toFixed(1)}%`}
-          delta={undefined}
-          sparklineData={undefined}
-          sparklineColor={undefined}
+        <KpiCard
+          label="Cheltuieli (luna curentă)"
+          value={overviewLoading ? 0 : totalExpenses}
+          delta={expenseDelta?.label ?? null}
+          deltaPositive={expenseDelta?.positive}
+          deltaInverse
+          sparkColor="#f5556e"
+          points={sparkExpense}
         />
       </div>
 
-      {/* Budgets at Risk Alert */}
-      {budgetsAtRisk.length > 0 && (
-        <Card style={{ 
-          marginBottom: '2rem',
-          background: 'rgba(245, 158, 11, 0.1)',
-          border: '1px solid rgba(245, 158, 11, 0.3)'
-        }}>
-          <CardBody style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ 
-                padding: '0.75rem', 
-                backgroundColor: 'rgba(245, 158, 11, 0.2)', 
-                borderRadius: '0.75rem',
-                color: tokens['accent-warning']
-              }}>
-                <AlertTriangle size={24} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', color: tokens['text-primary'] }}>
-                  Bugete în Pericol
-                </h3>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.9rem', color: tokens['text-muted'] }}>
-                  Ai {budgetsAtRisk.length} buget(e) cu peste 80% consumat
-                </p>
-              </div>
-              <Button variant="secondary" onClick={() => navigate('/budgets')}>
-                Vezi Bugete
-              </Button>
+      {/* Chart row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 18, marginBottom: 18 }}>
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <div className="card-title">Evoluție venituri & cheltuieli</div>
+              <div className="card-sub">12 luni · trend lunar</div>
             </div>
-          </CardBody>
-        </Card>
-      )}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 12 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span className="chip-dot" style={{ background: '#0ab39c' }} /> Venituri
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span className="chip-dot" style={{ background: '#f5556e' }} /> Cheltuieli
+              </span>
+            </div>
+          </div>
+          <EvolutionChart data={evolutionData} />
+        </div>
 
-      {/* Charts Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '2fr 1fr', 
-        gap: '1.5rem',
-        marginBottom: '2rem'
-      }}>
-        {/* Evolution Chart */}
-        <Card style={{ padding: '0' }}>
-          <CardHeader style={{ 
-            padding: '1.5rem', 
-            borderBottom: `1px solid ${tokens['border-default']}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <TrendingUp size={20} style={{ color: tokens['accent-primary'] }} />
-              <h3 style={{ margin: 0 }}>Evoluție Sold</h3>
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <div className="card-title">Distribuție pe categorii</div>
+              <div className="card-sub">Cheltuieli · {monthLabel}</div>
             </div>
-            <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%', 
-                  backgroundColor: tokens['accent-success'] 
-                }} />
-                <span style={{ color: tokens['text-muted'] }}>Venituri</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%', 
-                  backgroundColor: tokens['accent-danger'] 
-                }} />
-                <span style={{ color: tokens['text-muted'] }}>Cheltuieli</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%', 
-                  backgroundColor: tokens['accent-primary'] 
-                }} />
-                <span style={{ color: tokens['text-muted'] }}>Sold Net</span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardBody style={{ padding: '1.5rem' }}>
-            {trendLoading ? (
-              <p style={{ color: tokens['text-muted'] }}>Se încarcă...</p>
-            ) : chartData.length === 0 ? (
-              <p style={{ color: tokens['text-muted'] }}>Nu există date pentru afișare.</p>
-            ) : (
-              <div style={{ width: '100%', height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={tokens['border-default']} vertical={false} />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke={tokens['text-muted']} 
-                      tick={{ fill: tokens['text-muted'], fontSize: 12 }} 
-                      axisLine={false} 
-                      tickLine={false} 
-                    />
-                    <YAxis 
-                      stroke={tokens['text-muted']} 
-                      tick={{ fill: tokens['text-muted'], fontSize: 12 }} 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tickFormatter={(val) => `${val}`} 
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: tokens['bg-elevated'], 
-                        borderColor: tokens['border-default'], 
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem'
-                      }}
-                      itemStyle={{ color: tokens['text-primary'] }}
-                      formatter={(value: any) => `${Number(value).toFixed(2)} RON`}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="income" 
-                      stroke={tokens['accent-success']} 
-                      strokeWidth={2} 
-                      dot={{ fill: tokens['accent-success'], r: 3 }} 
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="expenses" 
-                      stroke={tokens['accent-danger']} 
-                      strokeWidth={2} 
-                      dot={{ fill: tokens['accent-danger'], r: 3 }} 
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="balance" 
-                      stroke={tokens['accent-primary']} 
-                      strokeWidth={3} 
-                      dot={{ fill: tokens['accent-primary'], r: 4 }} 
-                      activeDot={{ r: 6, fill: tokens['accent-secondary'] }} 
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardBody>
-        </Card>
+          </div>
+          <CategoryDonut data={donutSlices} monthLabel={monthLabel} />
+        </div>
+      </div>
 
-        {/* Recent Transactions */}
-        <Card style={{ padding: '0' }}>
-          <CardHeader style={{ 
-            padding: '1.5rem', 
-            borderBottom: `1px solid ${tokens['border-default']}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CreditCard size={20} style={{ color: tokens['accent-primary'] }} />
-              <h3 style={{ margin: 0 }}>Ultimele Tranzacții</h3>
+      {/* Recent + budgets */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 18 }}>
+        <div className="card" style={{ padding: 0 }}>
+          <div
+            style={{
+              padding: '18px 20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            <div>
+              <div className="card-title">Tranzacții recente</div>
+              <div className="card-sub">Ultimele 5 mișcări</div>
             </div>
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/transactions')}
-              style={{ 
-                padding: '0.5rem 0.75rem',
-                fontSize: '0.875rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}
-            >
-              Vezi Toate
-              <ArrowRight size={16} />
-            </Button>
-          </CardHeader>
-          <CardBody style={{ padding: '0' }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/transactions')}>
+              Vezi toate →
+            </button>
+          </div>
+          <div>
             {transactionsLoading ? (
-              <p style={{ padding: '1.5rem', color: tokens['text-muted'] }}>Se încarcă...</p>
+              <div style={{ padding: 24, color: 'var(--text-3)' }}>Se încarcă...</div>
             ) : recentTransactions.length === 0 ? (
-              <p style={{ padding: '1.5rem', color: tokens['text-muted'] }}>Nu există tranzacții.</p>
+              <div style={{ padding: 24, color: 'var(--text-3)' }}>Nu există tranzacții încă.</div>
             ) : (
-              <div>
-                {recentTransactions.map((tx: any) => {
-                  const category = getCategoryForTransaction(tx.categoryId);
-                  return (
-                    <div 
-                      key={tx.id} 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        gap: '1rem',
-                        padding: '1rem 1.5rem',
-                        borderBottom: `1px solid ${tokens['border-default']}`,
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = tokens['bg-hover']}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      onClick={() => {
-                        // TODO: Open transaction detail/edit modal
-                        toast.info('Funcționalitate în dezvoltare');
+              recentTransactions.map((t: any, i: number) => {
+                const cat = getCategory(t.categoryId);
+                const amt = Number(t.amount);
+                const isIncome = t.type === 'income';
+                return (
+                  <div
+                    key={t.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '36px 1fr auto',
+                      gap: 14,
+                      alignItems: 'center',
+                      padding: '14px 20px',
+                      borderBottom: i < recentTransactions.length - 1 ? '1px solid var(--border)' : 'none',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: 'var(--bg-inset)',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: 16,
                       }}
                     >
-                      {/* Category Icon */}
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '0.5rem',
-                        backgroundColor: category?.color || tokens['bg-elevated'],
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.25rem',
-                        flexShrink: 0
-                      }}>
-                        {category?.icon || '📁'}
+                      {cat?.icon || (isIncome ? '💼' : '🛒')}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontWeight: 500,
+                          fontSize: 13.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        {t.description || (isIncome ? 'Venit' : 'Cheltuială')}
                       </div>
-                      
-                      {/* Description and Date */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h4 style={{ 
-                          margin: 0, 
-                          fontWeight: 500, 
-                          fontSize: '0.95rem',
-                          color: tokens['text-primary'],
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {tx.description}
-                        </h4>
-                        <span style={{ 
-                          fontSize: '0.8rem', 
-                          color: tokens['text-muted'] 
-                        }}>
-                          {new Date(tx.date).toLocaleDateString('ro-RO', { 
-                            day: 'numeric', 
-                            month: 'short' 
-                          })}
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          color: 'var(--text-3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          marginTop: 2,
+                        }}
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <span className="chip-dot" style={{ background: cat?.color || '#a09c92' }} />
+                          {cat?.name || 'Fără categorie'}
+                        </span>
+                        <span style={{ color: 'var(--text-3)' }}>·</span>
+                        <span>
+                          {new Date(t.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
                         </span>
                       </div>
-                      
-                      {/* Amount */}
-                      <div style={{ 
-                        fontWeight: 600, 
-                        fontSize: '0.95rem',
-                        color: tx.type === 'income' ? tokens['accent-success'] : tokens['accent-danger'],
-                        flexShrink: 0
-                      }}>
-                        {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)} RON
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
+                    <div
+                      className="num"
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        color: isIncome ? 'var(--income)' : 'var(--text-1)',
+                      }}
+                    >
+                      {isIncome ? '+' : '−'} {fmt(Math.abs(amt))}
+                      <span style={{ color: 'var(--text-3)', fontWeight: 400, marginLeft: 4, fontSize: 11.5 }}>
+                        RON
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
             )}
-          </CardBody>
-        </Card>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <div className="card-title">Bugete — {monthLabel}</div>
+              <div className="card-sub">Progres pe categorii</div>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/budgets')}>
+              Gestionează →
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {budgetItems.length === 0 ? (
+              <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Nu ai configurat bugete pentru această perioadă.</div>
+            ) : (
+              budgetItems.map((b, i) => {
+                const pct = b.limit ? Math.min((b.spent / b.limit) * 100, 130) : 0;
+                const over = b.spent > b.limit && b.limit > 0;
+                return (
+                  <div key={i}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'baseline',
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 500 }}>{b.name}</span>
+                      <span className="num" style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                        <b style={{ color: over ? 'var(--expense)' : 'var(--text-1)' }}>{fmt(b.spent, 0)}</b>
+                        <span style={{ color: 'var(--text-3)' }}> / {fmt(b.limit, 0)} RON</span>
+                      </span>
+                    </div>
+                    <div className="pbar">
+                      <span style={{ width: `${Math.min(pct, 100)}%`, background: over ? 'var(--expense)' : b.color }} />
+                    </div>
+                    {over && (
+                      <div style={{ fontSize: 11, color: 'var(--expense)', marginTop: 4 }}>
+                        Depășit cu {fmt(b.spent - b.limit, 0)} RON
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Add Transaction Modal */}
-      <Modal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        title="Adaugă Tranzacție Nouă"
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Adaugă tranzacție nouă"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>Anulează</Button>
-            <Button 
-              variant="primary" 
-              onClick={handleAddTransaction}
+            <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>
+              Anulează
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => createMutation.mutate(formData)}
               disabled={createMutation.isPending || !formData.categoryId}
             >
               {createMutation.isPending ? 'Se salvează...' : 'Salvează'}
@@ -639,24 +732,25 @@ export function Dashboard() {
           </>
         }
       >
-        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
           <div style={{ gridColumn: '1 / -1' }}>
-            <Input 
-              label="Descriere" 
+            <Input
+              label="Descriere"
               placeholder="Ex: Cumpărături supermarket"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
-          <Input 
-            label="Sumă (RON)" 
-            type="number" 
+          <Input
+            label="Sumă (RON)"
+            type="number"
+            step="0.01"
             placeholder="0.00"
             value={formData.amount || ''}
             onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
           />
-          <Input 
-            label="Data" 
+          <Input
+            label="Data"
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -664,7 +758,13 @@ export function Dashboard() {
           <Select
             label="Tip"
             value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense', categoryId: '' })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                type: e.target.value as 'income' | 'expense',
+                categoryId: '',
+              })
+            }
             options={[
               { value: 'income', label: 'Venit' },
               { value: 'expense', label: 'Cheltuială' },
@@ -674,26 +774,14 @@ export function Dashboard() {
             label="Categorie"
             value={formData.categoryId}
             onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-            options={filteredCategories.map((cat: Category) => ({
+            options={filteredCategories.map((cat) => ({
               value: cat.id,
-              label: cat.name,
+              label: `${cat.icon || ''} ${cat.name}`.trim(),
             }))}
             placeholder="Selectează categoria"
           />
         </div>
-        {createMutation.isError && (
-          <div style={{ 
-            marginTop: '1rem', 
-            padding: '0.75rem', 
-            backgroundColor: 'rgba(244, 63, 94, 0.1)', 
-            color: tokens['accent-danger'], 
-            borderRadius: '0.5rem',
-            border: `1px solid rgba(244, 63, 94, 0.2)`
-          }}>
-            Eroare la salvarea tranzacției. Încearcă din nou.
-          </div>
-        )}
       </Modal>
-    </div>
+    </>
   );
 }
