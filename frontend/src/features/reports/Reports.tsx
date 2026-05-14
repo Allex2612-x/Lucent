@@ -1,6 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, FileText, Sheet } from 'lucide-react';
+import {
+  ArrowUp,
+  ArrowDown,
+  ArrowLeftRight,
+  Calendar,
+  Cog,
+  FileText,
+  Sheet,
+  Sparkles,
+  Eye,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { statisticsService } from '../../services/statistics.service';
 import { categoriesService } from '../../services/categories.service';
@@ -16,66 +26,32 @@ const ROMANIAN_MONTHS = [
   'iul', 'aug', 'sep', 'oct', 'noi', 'dec',
 ];
 
-function MiniBar({ data, color }: { data: number[]; color: string }) {
-  if (!data || data.length === 0) {
-    return <div style={{ height: 40 }} />;
-  }
-  const max = Math.max(...data, 1);
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 40 }}>
-      {data.map((v, i) => (
-        <div
-          key={i}
-          style={{
-            flex: 1,
-            background: color,
-            opacity: 0.25 + 0.75 * (v / max),
-            borderRadius: 2,
-            height: `${(v / max) * 100 || 4}%`,
-            minHeight: 2,
-            transformOrigin: 'bottom',
-            animation: 'growBar 0.45s cubic-bezier(.2,.8,.2,1) both',
-            animationDelay: `${i * 28}ms`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 type ReportType = 'income' | 'expense' | 'all';
 type Preset = 'this-month' | 'last-30' | 'this-quarter' | 'ytd' | 'last-year' | 'custom';
 
-function toIsoDate(d: Date): string {
+function toIsoDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function rangeForPreset(preset: Preset): { start: string; end: string } {
+function rangeForPreset(preset: Preset) {
   const now = new Date();
   const today = toIsoDate(now);
   if (preset === 'this-month') {
-    return {
-      start: toIsoDate(new Date(now.getFullYear(), now.getMonth(), 1)),
-      end: today,
-    };
+    return { start: toIsoDate(new Date(now.getFullYear(), now.getMonth(), 1)), end: today };
   }
   if (preset === 'last-30') {
-    const start = new Date(now);
-    start.setDate(now.getDate() - 30);
-    return { start: toIsoDate(start), end: today };
+    const s = new Date(now);
+    s.setDate(now.getDate() - 30);
+    return { start: toIsoDate(s), end: today };
   }
   if (preset === 'this-quarter') {
-    const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
     return {
-      start: toIsoDate(new Date(now.getFullYear(), qStartMonth, 1)),
+      start: toIsoDate(new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)),
       end: today,
     };
   }
   if (preset === 'ytd') {
-    return {
-      start: toIsoDate(new Date(now.getFullYear(), 0, 1)),
-      end: today,
-    };
+    return { start: toIsoDate(new Date(now.getFullYear(), 0, 1)), end: today };
   }
   if (preset === 'last-year') {
     return {
@@ -86,60 +62,100 @@ function rangeForPreset(preset: Preset): { start: string; end: string } {
   return { start: today, end: today };
 }
 
+function MiniLine({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length === 0) return <div style={{ height: 38 }} />;
+  const W = 160;
+  const H = 38;
+  const padY = 4;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const step = data.length > 1 ? W / (data.length - 1) : 0;
+  const y = (v: number) => padY + (1 - (v - min) / range) * (H - 2 * padY);
+  const pts = data.map((v, i) => `${(i * step).toFixed(1)},${y(v).toFixed(1)}`);
+  const line = `M ${pts.join(' L ')}`;
+  const last = data[data.length - 1]!;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: H, display: 'block' }}>
+      <path d={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+      {data.map((v, i) => (
+        <circle key={i} cx={(i * step).toFixed(1)} cy={y(v).toFixed(1)} r={1.5} fill={color} opacity={0.5} />
+      ))}
+      <circle cx={((data.length - 1) * step).toFixed(1)} cy={y(last).toFixed(1)} r={2.5} fill="#fff" stroke={color} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
 export function Reports() {
   const now = new Date();
 
+  // ===== Builder state =====
   const [reportType, setReportType] = useState<ReportType>('expense');
   const [preset, setPreset] = useState<Preset>('ytd');
-  const initial = rangeForPreset('ytd');
-  const [startDate, setStartDate] = useState<string>(initial.start);
-  const [endDate, setEndDate] = useState<string>(initial.end);
+  const ytd = rangeForPreset('ytd');
+  const [startDate, setStartDate] = useState(ytd.start);
+  const [endDate, setEndDate] = useState(ytd.end);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
+  const [categoriesInitialized, setCategoriesInitialized] = useState(false);
+  const [include, setInclude] = useState({
+    table: true,
+    sparklines: true,
+    donut: false,
+    aiComments: false,
+  });
 
   const applyPreset = (p: Preset) => {
     setPreset(p);
     if (p !== 'custom') {
-      const range = rangeForPreset(p);
-      setStartDate(range.start);
-      setEndDate(range.end);
+      const r = rangeForPreset(p);
+      setStartDate(r.start);
+      setEndDate(r.end);
     }
   };
 
-  const startDateFull = startDate || undefined;
-  const endDateFull = endDate || undefined;
-
+  // ===== Data =====
   const { data: categoriesResponse } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesService.getAll(),
   });
-  const categories: Category[] = categoriesResponse?.data?.data || [];
+  const allCategories: Category[] = categoriesResponse?.data?.data || [];
 
-  // When "Complet" is selected, omit the `type` filter — backend then returns
-  // both income and expense aggregated per category.
+  // Initialize selection to "all" the first time categories are loaded
+  useEffect(() => {
+    if (!categoriesInitialized && allCategories.length > 0) {
+      setSelectedCategoryIds(new Set(allCategories.map((c) => c.id)));
+      setCategoriesInitialized(true);
+    }
+  }, [allCategories, categoriesInitialized]);
+
+  // Categories available for the chosen report type
+  const eligibleCategories = useMemo(() => {
+    if (reportType === 'all') return allCategories;
+    return allCategories.filter((c) => c.type === reportType);
+  }, [allCategories, reportType]);
+
   const fetchType: 'income' | 'expense' | undefined =
     reportType === 'all' ? undefined : reportType;
-  const { data: categoryData, isLoading: categoryLoading } = useQuery({
-    queryKey: ['statistics', 'by-category', startDateFull, endDateFull, fetchType ?? 'all'],
+
+  const { data: categoryData, isLoading: categoryLoading, refetch: refetchCategory } = useQuery({
+    queryKey: ['statistics', 'by-category', startDate, endDate, fetchType ?? 'all'],
     queryFn: () =>
       statisticsService.getByCategory({
-        startDate: startDateFull,
-        endDate: endDateFull,
+        startDate,
+        endDate,
         type: fetchType,
       }),
   });
 
-  const { data: trendData } = useQuery({
-    queryKey: ['statistics', 'monthly-trend', startDateFull, endDateFull],
-    queryFn: () =>
-      statisticsService.getMonthlyTrend({ startDate: startDateFull, endDate: endDateFull }),
+  const { data: trendData, refetch: refetchTrend } = useQuery({
+    queryKey: ['statistics', 'monthly-trend', startDate, endDate],
+    queryFn: () => statisticsService.getMonthlyTrend({ startDate, endDate }),
   });
 
-  const trendPoints: Array<{
-    month: number;
-    year: number;
-    income: number;
-    expenses: number;
-  }> = trendData?.data?.data || [];
+  const trendPoints: Array<{ month: number; year: number; income: number; expenses: number }> =
+    trendData?.data?.data || [];
 
+  // ===== Derived rows =====
   const rows = useMemo(() => {
     const list = (categoryData?.data?.data || []) as Array<{
       categoryId: string;
@@ -150,90 +166,186 @@ export function Reports() {
       count: number;
       percentage: number;
     }>;
-    const total = list.reduce((s, r) => s + Number(r.total), 0);
-    return list.map((r, idx) => {
-      const cat = categories.find((c) => c.id === r.categoryId);
-      const spark = trendPoints
-        .map((p) =>
-          fetchType === 'income'
-            ? p.income
-            : fetchType === 'expense'
-            ? p.expenses
-            : p.income + p.expenses,
-        )
-        .slice(-12);
+    const filtered = list.filter((r) => selectedCategoryIds.has(r.categoryId));
+    const total = filtered.reduce((s, r) => s + Number(r.total), 0);
+    return filtered.map((r, idx) => {
+      const cat = allCategories.find((c) => c.id === r.categoryId);
+      const series =
+        fetchType === 'income'
+          ? trendPoints.map((p) => p.income)
+          : fetchType === 'expense'
+          ? trendPoints.map((p) => p.expenses)
+          : trendPoints.map((p) => p.income + p.expenses);
       return {
         catId: r.categoryId,
         cat: r.categoryName,
         icon: cat?.icon || r.categoryIcon || '📁',
         color: cat?.color || r.categoryColor || CHART_COLORS[idx % CHART_COLORS.length],
+        type: cat?.type ?? 'expense',
         count: Number(r.count || 0),
         subtotal: Number(r.total),
-        share: total > 0 ? (Number(r.total) / total) * 100 : Number(r.percentage || 0),
-        spark,
+        share: total > 0 ? (Number(r.total) / total) * 100 : 0,
+        spark: series.slice(-12),
       };
     });
-  }, [categoryData, categories, trendPoints, fetchType]);
+  }, [categoryData, allCategories, trendPoints, fetchType, selectedCategoryIds]);
 
   const total = rows.reduce((s, r) => s + r.subtotal, 0);
   const count = rows.reduce((s, r) => s + r.count, 0);
   const avg = count > 0 ? total / count : 0;
+  const topCategory = [...rows].sort((a, b) => b.subtotal - a.subtotal)[0];
 
+  // ===== Period helpers =====
   const periodDays = useMemo(() => {
     if (!startDate || !endDate) return 0;
-    const s = new Date(startDate);
-    const e = new Date(endDate);
-    const diff = Math.floor((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return Math.max(1, diff);
+    return Math.max(1, Math.floor((+new Date(endDate) - +new Date(startDate)) / 86_400_000) + 1);
   }, [startDate, endDate]);
-  const periodMonths = useMemo(() => Math.max(1, periodDays / 30), [periodDays]);
+  const periodMonths = Math.max(1, Math.round(periodDays / 30));
+  const periodWeeks = Math.max(1, Math.round(periodDays / 7));
 
-  const handleExportPDF = async () => {
+  const reportTitle = useMemo(() => {
+    const label = reportType === 'income' ? 'Raport venituri' : reportType === 'expense' ? 'Raport cheltuieli' : 'Raport complet';
+    const ms = new Date(startDate).getMonth();
+    const me = new Date(endDate).getMonth();
+    const ys = new Date(startDate).getFullYear();
+    const ye = new Date(endDate).getFullYear();
+    if (ys === ye) {
+      return `${label} · ${ROMANIAN_MONTHS[ms]}–${ROMANIAN_MONTHS[me]} ${ys}`;
+    }
+    return `${label} · ${ROMANIAN_MONTHS[ms]} ${ys}–${ROMANIAN_MONTHS[me]} ${ye}`;
+  }, [reportType, startDate, endDate]);
+
+  // ===== Actions =====
+  const regenerate = async () => {
+    await Promise.all([refetchCategory(), refetchTrend()]);
+    toast.success('Raport regenerat.');
+  };
+
+  const download = async (format: 'pdf' | 'excel') => {
     try {
-      const response = await api.get('/reports/export/pdf', {
-        params: { startDate: startDateFull, endDate: endDateFull },
+      const response = await api.get(`/reports/export/${format}`, {
+        params: { startDate, endDate },
         responseType: 'blob',
       });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const mime =
+        format === 'pdf'
+          ? 'application/pdf'
+          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+      const blob = new Blob([response.data], { type: mime });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `raport-financiar-${startDate}_${endDate}.pdf`);
+      link.setAttribute('download', `raport-financiar-${startDate}_${endDate}.${ext}`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
+      toast.success(`Raport ${format.toUpperCase()} descărcat.`);
     } catch {
-      toast.error('Eroare la exportul PDF.');
+      toast.error(`Eroare la exportul ${format.toUpperCase()}.`);
     }
   };
 
-  const handleExportExcel = async () => {
-    try {
-      const response = await api.get('/reports/export/excel', {
-        params: { startDate: startDateFull, endDate: endDateFull },
-        responseType: 'blob',
-      });
-      const blob = new Blob([response.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `raport-financiar-${startDate}_${endDate}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch {
-      toast.error('Eroare la exportul Excel.');
-    }
+  const toggleCategory = (id: string) =>
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const selectAllCategories = () =>
+    setSelectedCategoryIds(new Set(eligibleCategories.map((c) => c.id)));
+  const invertCategoriesSelection = () => {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set<string>();
+      for (const c of eligibleCategories) if (!prev.has(c.id)) next.add(c.id);
+      return next;
+    });
   };
 
-  const formatDateDisplay = (iso: string) => {
-    if (!iso) return '';
-    const [y, m, d] = iso.split('-').map(Number);
-    return `${d} ${ROMANIAN_MONTHS[m! - 1] || ''} ${y}`;
+  // When report type changes, prune selection to eligible categories
+  useEffect(() => {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set<string>();
+      for (const c of eligibleCategories) if (prev.has(c.id)) next.add(c.id);
+      // if everything got pruned, default to all eligible
+      if (next.size === 0 && eligibleCategories.length > 0) {
+        for (const c of eligibleCategories) next.add(c.id);
+      }
+      return next;
+    });
+  }, [reportType, eligibleCategories.length]);
+
+  // ===== Render =====
+  const stepLabelStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 11,
+    fontWeight: 600,
+    color: 'var(--text-2)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    marginBottom: 10,
+  };
+  const stepNumberStyle: React.CSSProperties = {
+    width: 18,
+    height: 18,
+    borderRadius: '50%',
+    background: 'var(--accent)',
+    color: '#fff',
+    display: 'grid',
+    placeItems: 'center',
+    fontSize: 10,
+    fontWeight: 700,
+  };
+
+  const typeButton = (
+    type: ReportType,
+    label: string,
+    Icon: typeof ArrowUp,
+    color: string,
+  ) => {
+    const on = reportType === type;
+    return (
+      <button
+        type="button"
+        onClick={() => setReportType(type)}
+        style={{
+          flex: 1,
+          padding: '14px 8px',
+          borderRadius: 12,
+          border: `1px solid ${on ? color : 'var(--border)'}`,
+          background: on ? `${color}14` : '#fff',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 6,
+          transition: 'all .12s',
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            background: on ? color : 'var(--bg-inset)',
+            color: on ? '#fff' : 'var(--text-3)',
+            display: 'grid',
+            placeItems: 'center',
+          }}
+        >
+          <Icon size={16} />
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: on ? color : 'var(--text-1)' }}>
+          {label}
+        </div>
+      </button>
+    );
   };
 
   return (
@@ -241,377 +353,668 @@ export function Reports() {
       <div className="page-head">
         <div>
           <div className="page-title">Rapoarte</div>
-          <div className="page-sub">Generează, vizualizează și exportă rapoarte detaliate.</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary" onClick={handleExportPDF} title="Descarcă raportul ca PDF">
-            <FileText size={14} /> PDF
-          </button>
-          <button className="btn btn-primary" onClick={handleExportExcel} title="Descarcă raportul ca Excel">
-            <Sheet size={14} /> Excel
-          </button>
+          <div className="page-sub">
+            Configurează un raport în 4 pași, vizualizează rezultatul, exportă în formatul dorit.
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="card" style={{ marginBottom: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 18, alignItems: 'flex-start' }}>
+        {/* ===== LEFT — BUILDER ===== */}
         <div
+          className="card"
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'auto 1fr',
-            gap: 24,
-            alignItems: 'center',
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--text-3)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 6,
-              }}
-            >
-              Tip raport
-            </div>
-            <div className="seg">
-              <button className={reportType === 'income' ? 'on' : ''} onClick={() => setReportType('income')}>
-                Venituri
-              </button>
-              <button className={reportType === 'expense' ? 'on' : ''} onClick={() => setReportType('expense')}>
-                Cheltuieli
-              </button>
-              <button className={reportType === 'all' ? 'on' : ''} onClick={() => setReportType('all')}>
-                Complet
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--text-3)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 6,
-              }}
-            >
-              Perioadă
-            </div>
-
-            {/* Preset chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {(
-                [
-                  { value: 'this-month', label: 'Luna curentă' },
-                  { value: 'last-30', label: 'Ultimele 30 zile' },
-                  { value: 'this-quarter', label: 'Trimestrul curent' },
-                  { value: 'ytd', label: 'Anul curent' },
-                  { value: 'last-year', label: 'Anul trecut' },
-                  { value: 'custom', label: 'Personalizat' },
-                ] as Array<{ value: Preset; label: string }>
-              ).map((opt) => {
-                const on = preset === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => applyPreset(opt.value)}
-                    style={{
-                      padding: '5px 11px',
-                      borderRadius: 999,
-                      border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
-                      background: on ? 'var(--accent-soft)' : '#fff',
-                      color: on ? 'var(--accent-ink)' : 'var(--text-2)',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span
-                className="chip"
-                style={{ background: '#fff', padding: '4px 10px', gap: 6 }}
-              >
-                <Calendar size={12} />
-                <input
-                  type="date"
-                  value={startDate}
-                  max={endDate || undefined}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    setPreset('custom');
-                  }}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    fontFamily: 'inherit',
-                    fontSize: 12,
-                    color: 'var(--text-1)',
-                    outline: 'none',
-                  }}
-                />
-              </span>
-              <span style={{ color: 'var(--text-3)' }}>→</span>
-              <span
-                className="chip"
-                style={{ background: '#fff', padding: '4px 10px', gap: 6 }}
-              >
-                <Calendar size={12} />
-                <input
-                  type="date"
-                  value={endDate}
-                  min={startDate || undefined}
-                  max={toIsoDate(now)}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    setPreset('custom');
-                  }}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    fontFamily: 'inherit',
-                    fontSize: 12,
-                    color: 'var(--text-1)',
-                    outline: 'none',
-                  }}
-                />
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                {formatDateDisplay(startDate)} → {formatDateDisplay(endDate)} · {periodDays}{' '}
-                {periodDays === 1 ? 'zi' : 'zile'}
-              </span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Hero summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 18 }}>
-        <div className="card" style={{ padding: 20 }}>
-          <div
-            style={{
-              fontSize: 11.5,
-              color: 'var(--text-3)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
-          >
-            Total{' '}
-            {reportType === 'income' ? 'venituri' : reportType === 'expense' ? 'cheltuieli' : 'operațiuni'}
-          </div>
-          <div
-            className="serif num"
-            style={{ fontSize: 36, fontStyle: 'italic', letterSpacing: '-0.02em', marginTop: 6 }}
-          >
-            {fmt(total)}{' '}
-            <span
-              style={{
-                fontSize: 14,
-                color: 'var(--text-3)',
-                fontFamily: 'var(--font-sans)',
-                fontStyle: 'normal',
-              }}
-            >
-              RON
-            </span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
-            {periodDays} {periodDays === 1 ? 'zi' : 'zile'} ·{' '}
-            {periodMonths < 1.2 ? '~1 lună' : `~${periodMonths.toFixed(0)} luni`}
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 20 }}>
-          <div
-            style={{
-              fontSize: 11.5,
-              color: 'var(--text-3)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
-          >
-            Număr tranzacții
-          </div>
-          <div className="serif num" style={{ fontSize: 36, fontStyle: 'italic', marginTop: 6 }}>
-            {count}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
-            ~{periodMonths > 0 ? Math.round(count / periodMonths) : 0} pe lună
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 20 }}>
-          <div
-            style={{
-              fontSize: 11.5,
-              color: 'var(--text-3)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
-          >
-            Medie pe tranzacție
-          </div>
-          <div
-            className="serif num"
-            style={{ fontSize: 36, fontStyle: 'italic', marginTop: 6 }}
-          >
-            {fmt(avg)}{' '}
-            <span
-              style={{
-                fontSize: 14,
-                color: 'var(--text-3)',
-                fontFamily: 'var(--font-sans)',
-                fontStyle: 'normal',
-              }}
-            >
-              RON
-            </span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
-            calculată din {count} tranzacții
-          </div>
-        </div>
-      </div>
-
-      {/* Detail table */}
-      <div
-        style={{
-          background: '#fff',
-          border: '1px solid var(--border)',
-          borderRadius: 14,
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
+            padding: 0,
+            position: 'sticky',
+            top: 18,
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border)',
+            flexDirection: 'column',
+            maxHeight: 'calc(100vh - 96px)',
           }}
         >
-          <div>
-            <div className="card-title">Detaliu pe categorii</div>
-            <div className="card-sub">
-              {rows.length} categorii ·{' '}
-              {reportType === 'income' ? 'venituri' : reportType === 'expense' ? 'cheltuieli' : 'sumar'}{' '}
-              {formatDateDisplay(startDate)} – {formatDateDisplay(endDate)}
+          {/* Builder header */}
+          <div
+            style={{
+              padding: '16px 18px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 9,
+                background: 'var(--bg-inset)',
+                color: 'var(--text-2)',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Cog size={15} />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Generator raport</div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                Configurează ce vrei să exporți
+              </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-secondary btn-sm">Sortează: Sumă ↓</button>
-          </div>
-        </div>
 
-        {categoryLoading ? (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
-            Se încarcă...
-          </div>
-        ) : rows.length === 0 ? (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
-            Nu există date pentru perioada selectată.
-          </div>
-        ) : (
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Categorie</th>
-                <th>Tranzacții</th>
-                <th>Evoluție lunară</th>
-                <th className="ta-right">% din total</th>
-                <th className="ta-right">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.catId}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div
-                        style={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 8,
-                          background: `${r.color}1a`,
-                          display: 'grid',
-                          placeItems: 'center',
-                          fontSize: 14,
-                        }}
-                      >
-                        {r.icon}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{r.cat}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                          {(() => {
-                            const cat = categories.find((c) => c.id === r.catId);
-                            return cat?.type === 'income' ? 'venituri' : 'cheltuieli';
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="num" style={{ color: 'var(--text-2)' }}>
-                    {r.count}
-                  </td>
-                  <td style={{ width: 200 }}>
-                    <MiniBar data={r.spark} color={r.color} />
-                  </td>
-                  <td className="ta-right" style={{ width: 180 }}>
-                    <div
+          {/* Steps scrollable area */}
+          <div style={{ overflowY: 'auto', flex: 1, padding: 18 }}>
+            {/* Step 1: Tip raport */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={stepLabelStyle}>
+                <span style={stepNumberStyle}>1</span>Tip raport
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {typeButton('income', 'Venituri', ArrowUp, '#0ab39c')}
+                {typeButton('expense', 'Cheltuieli', ArrowDown, '#f5556e')}
+                {typeButton('all', 'Complet', ArrowLeftRight, '#2547f5')}
+              </div>
+            </div>
+
+            {/* Step 2: Perioadă */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={stepLabelStyle}>
+                <span style={stepNumberStyle}>2</span>Perioadă
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {(
+                  [
+                    { value: 'this-month', label: 'Luna curentă' },
+                    { value: 'last-30', label: 'Ultimele 30 zile' },
+                    { value: 'this-quarter', label: 'Trimestrul curent' },
+                    { value: 'ytd', label: 'Anul curent' },
+                    { value: 'last-year', label: 'Anul trecut' },
+                    { value: 'custom', label: 'Personalizat' },
+                  ] as Array<{ value: Preset; label: string }>
+                ).map((opt) => {
+                  const on = preset === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => applyPreset(opt.value)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        justifyContent: 'flex-end',
+                        padding: '4px 10px',
+                        borderRadius: 999,
+                        border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+                        background: on ? 'var(--accent-soft)' : '#fff',
+                        color: on ? 'var(--accent-ink)' : 'var(--text-2)',
+                        fontSize: 11.5,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
                       }}
                     >
-                      <div className="pbar" style={{ width: 80 }}>
-                        <span style={{ width: `${Math.min(r.share, 100)}%`, background: r.color }} />
-                      </div>
-                      <span className="num" style={{ width: 42, textAlign: 'right' }}>
-                        {r.share.toFixed(1)}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="ta-right num" style={{ fontWeight: 600 }}>
-                    {fmt(r.subtotal)}{' '}
-                    <span style={{ color: 'var(--text-3)', fontWeight: 400, fontSize: 11 }}>
-                      RON
-                    </span>
-                  </td>
-                </tr>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span
+                  className="chip"
+                  style={{ background: '#fff', padding: '3px 8px', flex: 1, gap: 6 }}
+                >
+                  <Calendar size={11} />
+                  <input
+                    type="date"
+                    value={startDate}
+                    max={endDate || undefined}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setPreset('custom');
+                    }}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                      fontSize: 11.5,
+                      color: 'var(--text-1)',
+                      outline: 'none',
+                      flex: 1,
+                      width: '100%',
+                    }}
+                  />
+                </span>
+                <span style={{ color: 'var(--text-3)' }}>→</span>
+                <span
+                  className="chip"
+                  style={{ background: '#fff', padding: '3px 8px', flex: 1, gap: 6 }}
+                >
+                  <Calendar size={11} />
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate || undefined}
+                    max={toIsoDate(now)}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setPreset('custom');
+                    }}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontFamily: 'inherit',
+                      fontSize: 11.5,
+                      color: 'var(--text-1)',
+                      outline: 'none',
+                      flex: 1,
+                      width: '100%',
+                    }}
+                  />
+                </span>
+              </div>
+              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-3)' }}>
+                {periodDays} zile · {periodMonths} {periodMonths === 1 ? 'lună' : 'luni'} · ~{periodWeeks} săpt.
+              </div>
+            </div>
+
+            {/* Step 3: Categorii */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={stepLabelStyle as any}>
+                  <span style={stepNumberStyle}>3</span>Categorii
+                </div>
+                <span style={{ fontSize: 10.5, color: 'var(--text-3)' }}>
+                  {selectedCategoryIds.size}/{eligibleCategories.length} selectate
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 11.5 }}>
+                <button
+                  type="button"
+                  onClick={selectAllCategories}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent)',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontFamily: 'inherit',
+                    fontSize: 11.5,
+                    fontWeight: 500,
+                  }}
+                >
+                  Selectează toate
+                </button>
+                <button
+                  type="button"
+                  onClick={invertCategoriesSelection}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-2)',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontFamily: 'inherit',
+                    fontSize: 11.5,
+                    fontWeight: 500,
+                  }}
+                >
+                  Inversează
+                </button>
+              </div>
+              <div
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                  background: 'var(--bg-subtle)',
+                }}
+              >
+                {eligibleCategories.length === 0 ? (
+                  <div style={{ padding: 12, fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
+                    Nicio categorie disponibilă.
+                  </div>
+                ) : (
+                  eligibleCategories.map((cat) => {
+                    const checked = selectedCategoryIds.has(cat.id);
+                    const stat = (categoryData?.data?.data ?? []).find((r: any) => r.categoryId === cat.id);
+                    const tx = stat ? Number(stat.count || 0) : 0;
+                    return (
+                      <label
+                        key={cat.id}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'auto 1fr auto',
+                          gap: 8,
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          fontSize: 12.5,
+                          cursor: 'pointer',
+                          borderBottom: '1px solid var(--border)',
+                          background: checked ? '#fff' : 'transparent',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleCategory(cat.id)}
+                          style={{ accentColor: 'var(--accent)' }}
+                        />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <span>{cat.icon || '📁'}</span>
+                          <span>{cat.name}</span>
+                        </span>
+                        <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                          {tx} tx
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Step 4: Include */}
+            <div style={{ marginBottom: 8 }}>
+              <div style={stepLabelStyle}>
+                <span style={stepNumberStyle}>4</span>Include
+              </div>
+              {[
+                { key: 'table' as const, label: 'Tabel detaliat', sub: 'Toate tranzacțiile' },
+                { key: 'sparklines' as const, label: 'Grafice evoluție', sub: 'Sparkline per categorie' },
+                { key: 'donut' as const, label: 'Donut distribuție', sub: '% per categorie' },
+                { key: 'aiComments' as const, label: 'Comentarii AI', sub: 'Insight-uri din Gemini' },
+              ].map((opt, i, arr) => (
+                <label
+                  key={opt.key}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'auto 1fr',
+                    gap: 10,
+                    alignItems: 'flex-start',
+                    padding: '10px 0',
+                    borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={include[opt.key]}
+                    onChange={() => setInclude((prev) => ({ ...prev, [opt.key]: !prev[opt.key] }))}
+                    style={{ accentColor: 'var(--accent)', marginTop: 2 }}
+                  />
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 500 }}>{opt.label}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{opt.sub}</div>
+                  </div>
+                </label>
               ))}
-              <tr style={{ background: 'var(--bg-subtle)' }}>
-                <td style={{ fontWeight: 600 }}>Total general</td>
-                <td className="num" style={{ fontWeight: 600 }}>
-                  {count}
-                </td>
-                <td />
-                <td className="ta-right num" style={{ fontWeight: 600 }}>
-                  100%
-                </td>
-                <td className="ta-right num" style={{ fontWeight: 700, fontSize: 14 }}>
-                  {fmt(total)}{' '}
-                  <span style={{ color: 'var(--text-3)', fontWeight: 400, fontSize: 11 }}>RON</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        )}
+            </div>
+          </div>
+
+          {/* Builder footer */}
+          <div
+            style={{
+              padding: 16,
+              borderTop: '1px solid var(--border)',
+              background: 'var(--bg-subtle)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={regenerate}
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', height: 40 }}
+            >
+              <Sparkles size={14} /> Generează raport
+            </button>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 14,
+                marginTop: 10,
+                fontSize: 11.5,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => download('pdf')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  fontSize: 11.5,
+                  fontWeight: 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <FileText size={11} /> PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => download('excel')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  fontSize: 11.5,
+                  fontWeight: 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Sheet size={11} /> Excel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== RIGHT — PREVIEW ===== */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Preview header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <span
+                className="chip"
+                style={{
+                  background: 'var(--income-soft)',
+                  color: 'var(--income)',
+                  border: 'none',
+                  marginBottom: 6,
+                }}
+              >
+                <span className="chip-dot" style={{ background: 'var(--income)' }} />
+                Previzualizare raport · proaspăt generat
+              </span>
+              <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }}>
+                {reportTitle}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-secondary btn-sm" onClick={regenerate}>
+                <Sparkles size={12} /> Regenerează
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={() => download('pdf')}>
+                <Eye size={12} /> Previzualizare PDF
+              </button>
+            </div>
+          </div>
+
+          {/* KPI row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Total {reportType === 'income' ? 'venituri' : reportType === 'expense' ? 'cheltuieli' : 'operațiuni'}
+              </div>
+              <div
+                className="serif num"
+                style={{ fontSize: 26, fontStyle: 'italic', letterSpacing: '-0.02em', marginTop: 4 }}
+              >
+                {fmt(total)}{' '}
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-sans)', fontStyle: 'normal' }}>
+                  RON
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                în {periodDays} zile selectate
+              </div>
+            </div>
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Tranzacții
+              </div>
+              <div className="serif num" style={{ fontSize: 26, fontStyle: 'italic', marginTop: 4 }}>
+                {count}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                ~{Math.round(count / periodMonths)} pe lună
+              </div>
+            </div>
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Medie / tranzacție
+              </div>
+              <div className="serif num" style={{ fontSize: 26, fontStyle: 'italic', marginTop: 4 }}>
+                {fmt(avg)}{' '}
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-sans)', fontStyle: 'normal' }}>
+                  RON
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                în linie cu media
+              </div>
+            </div>
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Cea mai mare categorie
+              </div>
+              <div
+                className="serif"
+                style={{
+                  fontSize: 22,
+                  fontStyle: 'italic',
+                  marginTop: 4,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  color: topCategory?.color ?? 'var(--text-1)',
+                }}
+              >
+                {topCategory?.cat ?? '—'}
+              </div>
+              <div
+                className="num"
+                style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}
+              >
+                {topCategory ? `${fmt(topCategory.subtotal, 0)} RON` : 'fără date'}
+              </div>
+            </div>
+          </div>
+
+          {/* Detail table */}
+          {include.table && (
+            <div
+              style={{
+                background: '#fff',
+                border: '1px solid var(--border)',
+                borderRadius: 14,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '14px 18px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <div>
+                  <div className="card-title">Detaliu pe categorii</div>
+                  <div className="card-sub">
+                    {rows.length} categorii · sortate după sumă
+                  </div>
+                </div>
+                <button className="btn btn-secondary btn-sm">Sortează: Sumă ↓</button>
+              </div>
+
+              {categoryLoading ? (
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
+                  Se încarcă...
+                </div>
+              ) : rows.length === 0 ? (
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
+                  Nu există date pentru perioada și categoriile selectate.
+                </div>
+              ) : (
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Categorie</th>
+                      <th style={{ width: 60 }}>TX</th>
+                      {include.sparklines && <th style={{ width: 180 }}>Evoluție lunară</th>}
+                      <th className="ta-right" style={{ width: 170 }}>% din total</th>
+                      <th className="ta-right" style={{ width: 140 }}>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows
+                      .sort((a, b) => b.subtotal - a.subtotal)
+                      .map((r) => (
+                        <tr key={r.catId}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 8,
+                                  background: `${r.color}1a`,
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  fontSize: 13,
+                                }}
+                              >
+                                {r.icon}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 500, fontSize: 13 }}>{r.cat}</div>
+                                <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>
+                                  {r.type === 'income' ? 'venituri' : 'cheltuieli'}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="num" style={{ color: 'var(--text-2)' }}>{r.count}</td>
+                          {include.sparklines && (
+                            <td>
+                              <MiniLine data={r.spark} color={r.color} />
+                            </td>
+                          )}
+                          <td className="ta-right">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                              <div className="pbar" style={{ width: 70 }}>
+                                <span style={{ width: `${Math.min(r.share, 100)}%`, background: r.color }} />
+                              </div>
+                              <span className="num" style={{ width: 42, textAlign: 'right' }}>
+                                {r.share.toFixed(1)}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="ta-right num" style={{ fontWeight: 600 }}>
+                            {fmt(r.subtotal)}{' '}
+                            <span style={{ color: 'var(--text-3)', fontWeight: 400, fontSize: 11 }}>RON</span>
+                          </td>
+                        </tr>
+                      ))}
+                    <tr style={{ background: 'var(--bg-subtle)' }}>
+                      <td style={{ fontWeight: 600 }}>Total general</td>
+                      <td className="num" style={{ fontWeight: 600 }}>{count}</td>
+                      {include.sparklines && <td />}
+                      <td className="ta-right num" style={{ fontWeight: 600 }}>100%</td>
+                      <td className="ta-right num" style={{ fontWeight: 700, fontSize: 14 }}>
+                        {fmt(total)}{' '}
+                        <span style={{ color: 'var(--text-3)', fontWeight: 400, fontSize: 11 }}>RON</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {include.donut && rows.length > 0 && (
+            <div className="card" style={{ padding: 18 }}>
+              <div className="card-title" style={{ marginBottom: 12 }}>
+                Distribuție pe categorii
+              </div>
+              <DonutChart rows={rows} />
+            </div>
+          )}
+
+          {include.aiComments && (
+            <div
+              className="card"
+              style={{
+                padding: 16,
+                background:
+                  'linear-gradient(135deg, rgba(37,71,245,0.04) 0%, rgba(10,179,156,0.04) 100%)',
+                border: '1px solid rgba(37,71,245,0.18)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Sparkles size={14} style={{ color: 'var(--accent)' }} />
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Comentarii AI</div>
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                Deschide drawer-ul „Asistent AI" din topbar (butonul cu gradient) pentru insight-urile generate de Gemini pe baza acestor date.
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
+  );
+}
+
+// Minimal SVG donut for the optional include.donut section
+function DonutChart({ rows }: { rows: Array<{ catId: string; cat: string; color: string; subtotal: number }> }) {
+  const total = rows.reduce((s, r) => s + r.subtotal, 0);
+  if (total === 0) return null;
+  const R = 70;
+  const r = 48;
+  const cx = 88;
+  const cy = 88;
+  let acc = -Math.PI / 2;
+  const arcs = rows.map((d) => {
+    const a = (d.subtotal / total) * Math.PI * 2;
+    const x1 = cx + R * Math.cos(acc);
+    const y1 = cy + R * Math.sin(acc);
+    const x2 = cx + R * Math.cos(acc + a);
+    const y2 = cy + R * Math.sin(acc + a);
+    const xi2 = cx + r * Math.cos(acc + a);
+    const yi2 = cy + r * Math.sin(acc + a);
+    const xi1 = cx + r * Math.cos(acc);
+    const yi1 = cy + r * Math.sin(acc);
+    const large = a > Math.PI ? 1 : 0;
+    const path = `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${r} ${r} 0 ${large} 0 ${xi1} ${yi1} Z`;
+    acc += a;
+    return { ...d, path };
+  });
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+      <svg viewBox="0 0 176 176" width={160} height={160} style={{ flexShrink: 0 }}>
+        {arcs.map((a) => (
+          <path key={a.catId} d={a.path} fill={a.color} />
+        ))}
+      </svg>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {rows.map((d) => (
+          <div key={d.catId} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: d.color }} />
+            <span style={{ flex: 1, color: 'var(--text-2)' }}>{d.cat}</span>
+            <span className="mono" style={{ color: 'var(--text-3)' }}>
+              {((d.subtotal / total) * 100).toFixed(1)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
