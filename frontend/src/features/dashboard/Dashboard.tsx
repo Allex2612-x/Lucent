@@ -871,7 +871,7 @@ export function Dashboard() {
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>Insight săptămânal</div>
                 <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
-                  Generat de Claude · {insightsQuery.data?.cached ? 'cache 24h' : 'proaspăt'}
+                  Generat de Gemini · {insightsQuery.data?.cached ? 'cache 24h' : 'proaspăt'}
                 </div>
               </div>
               <button

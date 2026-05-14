@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '../../shared/prisma.js';
 
 export interface WeeklyInsight {
@@ -17,14 +17,14 @@ interface CacheEntry {
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const cache = new Map<string, CacheEntry>();
 
-let client: Anthropic | null = null;
-function getClient(): Anthropic {
+let client: GoogleGenerativeAI | null = null;
+function getClient(): GoogleGenerativeAI {
   if (!client) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY nu este configurat în mediul backend.');
+      throw new Error('GEMINI_API_KEY nu este configurat în mediul backend.');
     }
-    client = new Anthropic({ apiKey });
+    client = new GoogleGenerativeAI(apiKey);
   }
   return client;
 }
@@ -124,7 +124,7 @@ export async function getWeeklyInsight(userId: string, forceRefresh = false): Pr
   const weekEnd = new Date(thisWeekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
 
-  const systemPrompt = `Ești asistentul financiar al unei aplicații românești de gestiune a banilor (Sasha).
+  const systemPrompt = `Ești asistentul financiar al unei aplicații românești de gestiune a banilor (FARO).
 Generezi un insight săptămânal scurt, prietenos și util, în limba română.
 
 Reguli:
@@ -139,21 +139,24 @@ Reguli:
   let content: string;
   try {
     const c = getClient();
-    const message = await c.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 400,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: stats }],
+    const model = c.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: systemPrompt,
+      generationConfig: {
+        maxOutputTokens: 400,
+        temperature: 0.7,
+      },
     });
-    const block = message.content[0];
-    if (!block || block.type !== 'text') {
-      throw new Error('Răspuns gol de la Claude.');
+    const result = await model.generateContent(stats);
+    const text = result.response.text();
+    if (!text || !text.trim()) {
+      throw new Error('Răspuns gol de la Gemini.');
     }
-    content = block.text.trim();
+    content = text.trim();
   } catch (err: any) {
     // Fall back to a simple deterministic insight so the UI still shows something.
     content =
-      'Nu am putut genera insight-ul săptămânal automat acum (probabil cheia API nu este configurată). Verifică ANTHROPIC_API_KEY pe backend sau încearcă din nou.';
+      'Nu am putut genera insight-ul săptămânal automat acum (probabil cheia API nu este configurată). Verifică GEMINI_API_KEY pe backend sau încearcă din nou.';
   }
 
   const insight: WeeklyInsight = {
