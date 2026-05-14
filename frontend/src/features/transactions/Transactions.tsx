@@ -183,16 +183,24 @@ export function Transactions() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => transactionsService.delete(id),
-    onSuccess: () => {
+    mutationFn: ({ id, deleteFuture }: { id: string; deleteFuture?: boolean }) =>
+      transactionsService.delete(id, deleteFuture),
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
       setIsEditModalOpen(false);
       setEditingTransaction(null);
-      toast.success('Tranzacție ștearsă cu succes!');
+      setShowDeleteScopeModal(false);
+      toast.success(
+        variables.deleteFuture
+          ? 'Tranzacția și toate cele viitoare au fost șterse.'
+          : 'Tranzacție ștearsă cu succes!',
+      );
     },
     onError: () => toast.error('Eroare la ștergerea tranzacției'),
   });
+
+  const [showDeleteScopeModal, setShowDeleteScopeModal] = useState(false);
 
   const resetForm = () => {
     setFormData({
@@ -239,8 +247,15 @@ export function Transactions() {
   };
 
   const handleDelete = () => {
-    if (editingTransaction && window.confirm('Sigur vrei să ștergi această tranzacție?')) {
-      deleteMutation.mutate(editingTransaction.id);
+    if (!editingTransaction) return;
+    if (editingTransaction.isRecurring) {
+      // Open scope picker — let the user choose between just this one or the
+      // full future series.
+      setShowDeleteScopeModal(true);
+      return;
+    }
+    if (window.confirm('Sigur vrei să ștergi această tranzacție?')) {
+      deleteMutation.mutate({ id: editingTransaction.id, deleteFuture: false });
     }
   };
 
@@ -1502,6 +1517,83 @@ export function Transactions() {
                 onChange={(e) => setFilters({ ...filters, maxAmount: parseFloat(e.target.value) || 999999 })}
               />
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Recurring delete scope picker */}
+      <Modal
+        isOpen={showDeleteScopeModal}
+        onClose={() => setShowDeleteScopeModal(false)}
+        title="Ștergi seria recurentă?"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+            Această tranzacție face parte dintr-o serie recurentă
+            {editingTransaction?.description ? ` („${editingTransaction.description}")` : ''}. Ce vrei
+            să ștergi?
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (editingTransaction)
+                deleteMutation.mutate({ id: editingTransaction.id, deleteFuture: false });
+            }}
+            disabled={deleteMutation.isPending}
+            style={{
+              textAlign: 'left',
+              padding: 14,
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              background: '#fff',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              color: 'var(--text-1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Doar această tranzacție</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              Instanțele viitoare ale seriei rămân nemodificate.
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (editingTransaction)
+                deleteMutation.mutate({ id: editingTransaction.id, deleteFuture: true });
+            }}
+            disabled={deleteMutation.isPending}
+            style={{
+              textAlign: 'left',
+              padding: 14,
+              border: '1px solid var(--expense)',
+              borderRadius: 12,
+              background: 'rgba(245,85,110,0.04)',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              color: 'var(--text-1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--expense)' }}>
+              Această tranzacție și toate cele viitoare
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+              Șterge toate instanțele din serie cu data ≥ aceasta. Tranzacțiile anterioare rămân.
+            </div>
+          </button>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+            <Button variant="ghost" onClick={() => setShowDeleteScopeModal(false)}>
+              Anulează
+            </Button>
           </div>
         </div>
       </Modal>
