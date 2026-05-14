@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -351,6 +351,19 @@ export function Transactions() {
     searchTerm.length > 0;
 
   const [isExporting, setIsExporting] = useState(false);
+  const [isPeriodOpen, setIsPeriodOpen] = useState(false);
+  const periodRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isPeriodOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (periodRef.current && !periodRef.current.contains(e.target as Node)) {
+        setIsPeriodOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [isPeriodOpen]);
 
   const handleExport = async (format: 'pdf' | 'excel' = 'excel') => {
     setIsExporting(true);
@@ -535,11 +548,104 @@ export function Transactions() {
           />
         </div>
 
-        <span className="chip" style={{ background: '#fff' }}>
-          <Calendar size={12} />
-          <span style={{ color: 'var(--text-1)' }}>{periodLabel(filters)}</span>
-          <ChevronDown size={12} />
-        </span>
+        <div ref={periodRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            className="chip"
+            onClick={() => setIsPeriodOpen((v) => !v)}
+            style={{
+              background: '#fff',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              borderColor: isPeriodOpen ? 'var(--accent)' : undefined,
+            }}
+          >
+            <Calendar size={12} />
+            <span style={{ color: 'var(--text-1)' }}>{periodLabel(filters)}</span>
+            <ChevronDown
+              size={12}
+              style={{
+                transition: 'transform .15s',
+                transform: isPeriodOpen ? 'rotate(180deg)' : 'rotate(0)',
+              }}
+            />
+          </button>
+          {isPeriodOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 6px)',
+                left: 0,
+                minWidth: 200,
+                background: '#fff',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                boxShadow: 'var(--shadow-lg)',
+                padding: 6,
+                zIndex: 20,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {(
+                [
+                  { value: 'current-month', label: 'Luna curentă' },
+                  { value: 'last-30-days', label: 'Ultimele 30 zile' },
+                  { value: 'current-year', label: 'Anul curent' },
+                ] as Array<{ value: FilterState['dateRange']; label: string }>
+              ).map((opt) => {
+                const on = filters.dateRange === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setFilters({ ...filters, dateRange: opt.value });
+                      setCurrentPage(1);
+                      setIsPeriodOpen(false);
+                    }}
+                    style={{
+                      textAlign: 'left',
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: on ? 'var(--bg-subtle)' : 'transparent',
+                      color: 'var(--text-1)',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontFamily: 'inherit',
+                      fontWeight: on ? 600 : 500,
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPeriodOpen(false);
+                  setIsFilterOpen(true);
+                }}
+                style={{
+                  textAlign: 'left',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--accent)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontFamily: 'inherit',
+                  fontWeight: 500,
+                }}
+              >
+                Interval personalizat…
+              </button>
+            </div>
+          )}
+        </div>
 
         {filters.categoryIds.size > 0 && (
           <span className="chip" style={{ background: '#fff' }}>
