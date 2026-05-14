@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Download, FileText, Sheet } from 'lucide-react';
+import { Calendar, FileText, Sheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { statisticsService } from '../../services/statistics.service';
 import { categoriesService } from '../../services/categories.service';
@@ -178,14 +178,11 @@ export function Reports() {
           <div className="page-sub">Generează, vizualizează și exportă rapoarte detaliate.</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary" onClick={handleExportPDF}>
+          <button className="btn btn-secondary" onClick={handleExportPDF} title="Descarcă raportul ca PDF">
             <FileText size={14} /> PDF
           </button>
-          <button className="btn btn-secondary" onClick={handleExportExcel}>
+          <button className="btn btn-primary" onClick={handleExportExcel} title="Descarcă raportul ca Excel">
             <Sheet size={14} /> Excel
-          </button>
-          <button className="btn btn-primary" onClick={handleExportPDF}>
-            <Download size={14} /> Exportă
           </button>
         </div>
       </div>
@@ -195,7 +192,7 @@ export function Reports() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'auto 1fr auto',
+            gridTemplateColumns: 'auto 1fr',
             gap: 24,
             alignItems: 'center',
           }}
@@ -283,9 +280,6 @@ export function Reports() {
             </div>
           </div>
 
-          <button className="btn btn-primary btn-sm" onClick={handleExportPDF}>
-            Generează
-          </button>
         </div>
       </div>
 
