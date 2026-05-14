@@ -33,6 +33,9 @@ function MiniBar({ data, color }: { data: number[]; color: string }) {
             borderRadius: 2,
             height: `${(v / max) * 100 || 4}%`,
             minHeight: 2,
+            transformOrigin: 'bottom',
+            animation: 'growBar 0.45s cubic-bezier(.2,.8,.2,1) both',
+            animationDelay: `${i * 28}ms`,
           }}
         />
       ))}

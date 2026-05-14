@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Bell, Plus, Search, Sparkles } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { notificationsService } from '../../services/notifications.service';
 import { NotificationDropdown } from './NotificationDropdown';
 import { AiAssistantDrawer } from './AiAssistantDrawer';
+import { SearchPalette } from './SearchPalette';
 
 const ROUTE_CRUMBS: Record<string, string> = {
   '/': 'Dashboard',
@@ -17,9 +18,37 @@ const ROUTE_CRUMBS: Record<string, string> = {
 
 export function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+
+  // Global ⌘K / Ctrl+K shortcut opens the search palette
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((v) => !v);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Click-outside for the quick-add menu
+  useEffect(() => {
+    if (!isAddMenuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setIsAddMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [isAddMenuOpen]);
 
   const { data: unreadCount } = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -58,11 +87,16 @@ export function Header() {
         FARO <span className="crumb-sep">/</span> <b>{currentLabel}</b>
       </div>
 
-      <div className="search">
+      <button
+        type="button"
+        className="search"
+        onClick={() => setIsSearchOpen(true)}
+        style={{ cursor: 'pointer', textAlign: 'left' }}
+      >
         <Search size={14} />
         <span>Caută tranzacții, categorii…</span>
         <kbd>⌘K</kbd>
-      </div>
+      </button>
 
       <button
         onClick={() => setIsAssistantOpen(true)}
@@ -103,11 +137,67 @@ export function Header() {
         )}
       </div>
 
-      <button className="icon-btn" title="Adaugă">
-        <Plus size={17} />
-      </button>
+      <div ref={addMenuRef} style={{ position: 'relative' }}>
+        <button
+          className="icon-btn"
+          title="Adaugă"
+          onClick={() => setIsAddMenuOpen((v) => !v)}
+        >
+          <Plus size={17} />
+        </button>
+        {isAddMenuOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 6px)',
+              right: 0,
+              minWidth: 200,
+              background: '#fff',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              boxShadow: 'var(--shadow-lg)',
+              padding: 6,
+              zIndex: 30,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {[
+              { label: '➕ Tranzacție nouă', href: '/transactions' },
+              { label: '📊 Buget nou', href: '/budgets' },
+              { label: '🏷 Categorie nouă', href: '/categories' },
+            ].map((opt) => (
+              <button
+                key={opt.href}
+                type="button"
+                onClick={() => {
+                  navigate(opt.href);
+                  setIsAddMenuOpen(false);
+                }}
+                style={{
+                  textAlign: 'left',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-1)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontFamily: 'inherit',
+                  fontWeight: 500,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-subtle)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <AiAssistantDrawer open={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} />
+      <SearchPalette open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </div>
   );
 }

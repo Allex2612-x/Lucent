@@ -1097,6 +1097,11 @@ input, select, textarea { font-family: inherit; color: inherit; }
   to { transform: rotate(360deg); }
 }
 
+@keyframes growBar {
+  from { transform: scaleY(0); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
 /* responsive */
 @media (max-width: 880px) {
   .sb, .sidebar { width: 64px; flex: 0 0 64px; padding: 18px 8px; }

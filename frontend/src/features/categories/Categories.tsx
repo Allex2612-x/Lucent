@@ -68,7 +68,19 @@ function CategoryCard({
           {c.cat.icon || '📁'}
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          {!c.cat.isDefault && (
+          {c.cat.isDefault ? (
+            <span
+              className="chip"
+              style={{
+                background: 'var(--bg-inset)',
+                color: 'var(--text-3)',
+                border: 'none',
+                fontSize: 10,
+              }}
+            >
+              Predefinită
+            </span>
+          ) : (
             <span
               className="chip"
               style={{
@@ -78,7 +90,7 @@ function CategoryCard({
                 fontSize: 10,
               }}
             >
-              Personalizat
+              Personalizată
             </span>
           )}
         </div>
@@ -112,15 +124,29 @@ function CategoryCard({
         </span>
       </div>
       <div style={{ display: 'flex', gap: 4, marginTop: 12 }}>
-        <button
-          className="btn btn-secondary btn-sm"
-          style={{ flex: 1, justifyContent: 'center', opacity: canEdit ? 1 : 0.5 }}
-          onClick={canEdit ? onEdit : undefined}
-          disabled={!canEdit}
-          title={canEdit ? 'Editează' : 'Categoriile implicite nu pot fi editate'}
-        >
-          <Edit2 size={11} /> Editează
-        </button>
+        {canEdit ? (
+          <button
+            className="btn btn-secondary btn-sm"
+            style={{ flex: 1, justifyContent: 'center' }}
+            onClick={onEdit}
+            title="Editează"
+          >
+            <Edit2 size={11} /> Editează
+          </button>
+        ) : (
+          <div
+            style={{
+              flex: 1,
+              fontSize: 11.5,
+              color: 'var(--text-3)',
+              textAlign: 'center',
+              padding: '8px 10px',
+              fontStyle: 'italic',
+            }}
+          >
+            categorie sistem
+          </div>
+        )}
         {!c.cat.isDefault && (
           <button
             className="btn btn-secondary btn-sm"
@@ -245,6 +271,13 @@ export function Categories() {
   };
 
   const handleEditOpen = (category: Category) => {
+    if (category.isDefault) {
+      // Defensive: the UI already hides the Edit button on default categories,
+      // and the backend rejects the request — this guard catches any callers
+      // that bypass both.
+      toast.error('Categoriile predefinite nu pot fi editate.');
+      return;
+    }
     setEditingCategory(category);
     setFormData({
       name: category.name,
