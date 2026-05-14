@@ -113,9 +113,12 @@ export function Reports() {
   });
   const categories: Category[] = categoriesResponse?.data?.data || [];
 
-  const fetchType = reportType === 'all' ? 'expense' : reportType;
+  // When "Complet" is selected, omit the `type` filter — backend then returns
+  // both income and expense aggregated per category.
+  const fetchType: 'income' | 'expense' | undefined =
+    reportType === 'all' ? undefined : reportType;
   const { data: categoryData, isLoading: categoryLoading } = useQuery({
-    queryKey: ['statistics', 'by-category', startDateFull, endDateFull, fetchType],
+    queryKey: ['statistics', 'by-category', startDateFull, endDateFull, fetchType ?? 'all'],
     queryFn: () =>
       statisticsService.getByCategory({
         startDate: startDateFull,
@@ -150,7 +153,15 @@ export function Reports() {
     const total = list.reduce((s, r) => s + Number(r.total), 0);
     return list.map((r, idx) => {
       const cat = categories.find((c) => c.id === r.categoryId);
-      const spark = trendPoints.map((p) => (fetchType === 'income' ? p.income : p.expenses)).slice(-12);
+      const spark = trendPoints
+        .map((p) =>
+          fetchType === 'income'
+            ? p.income
+            : fetchType === 'expense'
+            ? p.expenses
+            : p.income + p.expenses,
+        )
+        .slice(-12);
       return {
         catId: r.categoryId,
         cat: r.categoryName,
@@ -396,7 +407,8 @@ export function Reports() {
               letterSpacing: '0.06em',
             }}
           >
-            Total {reportType === 'income' ? 'venituri' : 'cheltuieli'}
+            Total{' '}
+            {reportType === 'income' ? 'venituri' : reportType === 'expense' ? 'cheltuieli' : 'operațiuni'}
           </div>
           <div
             className="serif num"
@@ -543,7 +555,10 @@ export function Reports() {
                       <div>
                         <div style={{ fontWeight: 500 }}>{r.cat}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                          {reportType === 'income' ? 'venituri' : 'cheltuieli'}
+                          {(() => {
+                            const cat = categories.find((c) => c.id === r.catId);
+                            return cat?.type === 'income' ? 'venituri' : 'cheltuieli';
+                          })()}
                         </div>
                       </div>
                     </div>

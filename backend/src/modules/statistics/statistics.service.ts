@@ -127,18 +127,19 @@ export class StatisticsService {
       userId,
     };
 
-    // Add date filters if provided
+    // Add date filters if provided — respect the exact day, not the whole
+    // calendar month (frontend now sends day-level dates).
     if (params?.startDate || params?.endDate) {
       whereClause.date = {};
       if (params.startDate) {
-        // Start from the beginning of the month
         const start = new Date(params.startDate);
-        whereClause.date.gte = new Date(start.getFullYear(), start.getMonth(), 1);
+        start.setHours(0, 0, 0, 0);
+        whereClause.date.gte = start;
       }
       if (params.endDate) {
-        // Include the entire end month (last day at 23:59:59.999)
         const end = new Date(params.endDate);
-        whereClause.date.lte = new Date(end.getFullYear(), end.getMonth() + 1, 0, 23, 59, 59, 999);
+        end.setHours(23, 59, 59, 999);
+        whereClause.date.lte = end;
       }
     }
 
