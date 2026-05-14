@@ -3,10 +3,19 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { UnauthorizedError } from '../shared/errors.js';
 
+// Augment Express.User so `req.user` (declared by passport's typings) carries
+// our app-specific shape. Without this, AuthRequest's local override clashes
+// with passport's global declaration once passport types are loaded.
+declare global {
+  namespace Express {
+    interface User {
+      userId: string;
+    }
+  }
+}
+
 export interface AuthRequest extends Request {
-  user?: {
-    userId: string;
-  };
+  user?: Express.User;
 }
 
 export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
