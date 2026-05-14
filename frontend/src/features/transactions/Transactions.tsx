@@ -22,7 +22,8 @@ import { transactionsService, TransactionData } from '../../services/transaction
 import { categoriesService } from '../../services/categories.service';
 import { api } from '../../services/api';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Upload as UploadIcon } from 'lucide-react';
+import { ImportCsvModal } from './ImportCsvModal';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -392,6 +393,7 @@ export function Transactions() {
     searchTerm.length > 0;
 
   const [isExporting, setIsExporting] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
   const periodRef = useRef<HTMLDivElement>(null);
 
@@ -474,6 +476,13 @@ export function Transactions() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             className="btn btn-secondary"
+            onClick={() => setIsImportOpen(true)}
+            title="Import CSV de la bancă"
+          >
+            <UploadIcon size={14} /> Import CSV
+          </button>
+          <button
+            className="btn btn-secondary"
             onClick={() => handleExport('excel')}
             disabled={isExporting}
             title="Export Excel"
@@ -491,6 +500,12 @@ export function Transactions() {
           </button>
         </div>
       </div>
+
+      <ImportCsvModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        categories={categories}
+      />
 
       {/* summary strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>

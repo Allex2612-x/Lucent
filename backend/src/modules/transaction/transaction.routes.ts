@@ -8,6 +8,7 @@ router.use(requireAuth);
 
 router.get('/', TransactionController.getAll);
 router.post('/', TransactionController.create);
+router.post('/import', TransactionController.bulkImport);
 router.get('/:id', TransactionController.getById);
 router.patch('/:id', TransactionController.update);
 router.delete('/:id', TransactionController.delete);

@@ -54,4 +54,25 @@ export const transactionsService = {
     const params = deleteFuture ? { deleteFuture: 'true' } : {};
     return api.delete(`/transactions/${id}`, { params });
   },
+
+  bulkImport: (
+    transactions: Array<{
+      amount: number;
+      type: 'income' | 'expense';
+      description?: string;
+      date: string;
+      categoryId: string;
+    }>,
+  ) => {
+    return api.post<{
+      success: boolean;
+      data: {
+        total: number;
+        succeededCount: number;
+        failedCount: number;
+        succeeded: Array<{ index: number; id: string }>;
+        failed: Array<{ index: number; reason: string }>;
+      };
+    }>('/transactions/import', { transactions });
+  },
 };
