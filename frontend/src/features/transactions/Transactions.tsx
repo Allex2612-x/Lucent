@@ -20,6 +20,7 @@ import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
+import { api } from '../../services/api';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -349,6 +350,59 @@ export function Transactions() {
     filters.maxAmount < 999999 ||
     searchTerm.length > 0;
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async (format: 'pdf' | 'excel' = 'excel') => {
+    setIsExporting(true);
+    try {
+      const now = new Date();
+      let startDate: string;
+      let endDate: string;
+      if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
+        startDate = filters.customStartDate;
+        endDate = filters.customEndDate;
+      } else if (filters.dateRange === 'last-30-days') {
+        const start = new Date(now);
+        start.setDate(now.getDate() - 30);
+        startDate = start.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+      } else if (filters.dateRange === 'current-year') {
+        startDate = `${now.getFullYear()}-01-01`;
+        endDate = `${now.getFullYear()}-12-31`;
+      } else {
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const lastDay = String(new Date(y, now.getMonth() + 1, 0).getDate()).padStart(2, '0');
+        startDate = `${y}-${m}-01`;
+        endDate = `${y}-${m}-${lastDay}`;
+      }
+
+      const response = await api.get(`/reports/export/${format}`, {
+        params: { startDate, endDate },
+        responseType: 'blob',
+      });
+      const mime =
+        format === 'pdf'
+          ? 'application/pdf'
+          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+      const blob = new Blob([response.data], { type: mime });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `sasha-tranzactii-${startDate}_${endDate}.${ext}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Tranzacții exportate.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Eroare la export.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const summaryCards = [
     { l: 'Total perioadă', v: summary.total, c: 'var(--text-1)', sub: `${summary.count} tranzacții` },
     { l: 'Venituri', v: summary.income, c: 'var(--income)', sub: `${summary.incomeCount} intrări` },
@@ -364,8 +418,13 @@ export function Transactions() {
           <div className="page-sub">Toate veniturile și cheltuielile tale, într-un singur loc.</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary">
-            <Download size={14} /> Export
+          <button
+            className="btn btn-secondary"
+            onClick={() => handleExport('excel')}
+            disabled={isExporting}
+            title="Export Excel"
+          >
+            <Download size={14} /> {isExporting ? 'Se exportă...' : 'Export'}
           </button>
           <button
             className="btn btn-primary"

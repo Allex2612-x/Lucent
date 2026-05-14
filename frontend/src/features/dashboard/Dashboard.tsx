@@ -11,6 +11,7 @@ import { statisticsService } from '../../services/statistics.service';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
 import { budgetsService } from '../../services/budgets.service';
+import { api } from '../../services/api';
 import { Category } from '@sasha-licenta/shared';
 import { CHART_COLORS } from '../../styles/colors';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -430,12 +431,35 @@ export function Dashboard() {
     color: row.categoryColor || CHART_COLORS[idx % CHART_COLORS.length],
   }));
 
-  const budgetItems: Array<{ name: string; spent: number; limit: number; color: string }> = budgets.slice(0, 3).map((b: any) => ({
-    name: b.isTotal ? `Buget total ${b.month}/${b.year}` : b.categories?.[0]?.category?.name || 'Buget',
-    spent: Number(b.spent ?? 0),
-    limit: Number(b.totalLimit ?? 0),
-    color: b.categories?.[0]?.category?.color || CHART_COLORS[0],
-  }));
+  const spentByCategoryId: Record<string, number> = (categoryStats?.data?.data || []).reduce(
+    (acc: Record<string, number>, row: any) => {
+      acc[row.categoryId] = Number(row.total);
+      return acc;
+    },
+    {},
+  );
+
+  const budgetItems: Array<{ name: string; spent: number; limit: number; color: string }> = budgets
+    .filter((b: any) => b.month === currentMonth && b.year === currentYear)
+    .flatMap((b: any) => {
+      if (b.isTotal || !b.categories || b.categories.length === 0) {
+        return [
+          {
+            name: `Buget total · ${MONTH_NAMES[b.month - 1]}`,
+            spent: totalExpenses,
+            limit: Number(b.totalLimit ?? 0),
+            color: CHART_COLORS[0],
+          },
+        ];
+      }
+      return b.categories.map((bc: any) => ({
+        name: bc.category?.name || 'Categorie',
+        spent: spentByCategoryId[bc.categoryId] || 0,
+        limit: Number(bc.limitAmount ?? 0),
+        color: bc.category?.color || CHART_COLORS[0],
+      }));
+    })
+    .slice(0, 3);
 
   const createMutation = useMutation({
     mutationFn: ({ data, force }: { data: TransactionData; force?: boolean }) =>
@@ -486,6 +510,35 @@ export function Dashboard() {
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
   const getCategory = (id: string) => categories.find((c) => c.id === id);
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+      const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+      const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      const response = await api.get('/reports/export/pdf', {
+        params: { startDate, endDate },
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `sasha-dashboard-${currentYear}-${String(currentMonth).padStart(2, '0')}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Raport exportat.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Eroare la exportul raportului.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const currentUser = useAuthStore((s) => s.user);
   const firstName = currentUser?.firstName?.trim() || '';
   const { greeting, motto } = (() => {
@@ -511,8 +564,8 @@ export function Dashboard() {
             <button>90z</button>
             <button>An</button>
           </div>
-          <button className="btn btn-secondary">
-            <Download size={14} /> Export
+          <button className="btn btn-secondary" onClick={handleExport} disabled={isExporting}>
+            <Download size={14} /> {isExporting ? 'Se exportă...' : 'Export'}
           </button>
           <button
             className="btn btn-primary"
