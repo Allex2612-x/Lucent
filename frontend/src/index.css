@@ -1092,6 +1092,11 @@ input, select, textarea { font-family: inherit; color: inherit; }
 }
 .toggle.on::after { left: 18px; }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* responsive */
 @media (max-width: 880px) {
   .sb, .sidebar { width: 64px; flex: 0 0 64px; padding: 18px 8px; }

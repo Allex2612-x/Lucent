@@ -22,8 +22,9 @@ import { transactionsService, TransactionData } from '../../services/transaction
 import { categoriesService } from '../../services/categories.service';
 import { api } from '../../services/api';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
-import { Sparkles, Upload as UploadIcon } from 'lucide-react';
+import { Sparkles, Upload as UploadIcon, Camera, Loader2 } from 'lucide-react';
 import { ImportCsvModal } from './ImportCsvModal';
+import { runReceiptOcr } from '../../utils/receiptOcr';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -395,6 +396,35 @@ export function Transactions() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState<number | null>(null);
+  const ocrFileRef = useRef<HTMLInputElement>(null);
+
+  const handleReceipt = async (file: File) => {
+    setOcrProgress(0);
+    try {
+      const result = await runReceiptOcr(file, setOcrProgress);
+      setFormData((prev) => ({
+        ...prev,
+        type: 'expense',
+        amount: result.amount ?? prev.amount,
+        description: result.merchant ?? prev.description,
+        date: result.date ?? prev.date,
+      }));
+      if (result.amount || result.merchant) {
+        toast.success(
+          `Bon procesat${result.merchant ? ` — ${result.merchant}` : ''}${
+            result.amount ? ` · ${result.amount.toFixed(2)} RON` : ''
+          }`,
+        );
+      } else {
+        toast.message('Bonul a fost scanat dar nu am putut extrage suma. Completează manual.');
+      }
+    } catch (error) {
+      toast.error('Nu am putut citi bonul. Încearcă altă poză.');
+    } finally {
+      setOcrProgress(null);
+    }
+  };
   const periodRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1001,6 +1031,55 @@ export function Transactions() {
         title="Adaugă tranzacție"
       >
         <form onSubmit={handleSubmit}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: 12,
+              background: 'var(--accent-soft)',
+              borderRadius: 12,
+              marginBottom: 14,
+              border: '1px solid rgba(37,71,245,0.18)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => ocrFileRef.current?.click()}
+              disabled={ocrProgress !== null}
+              className="btn btn-secondary btn-sm"
+              style={{ flexShrink: 0 }}
+            >
+              {ocrProgress !== null ? (
+                <>
+                  <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                  {Math.round(ocrProgress * 100)}%
+                </>
+              ) : (
+                <>
+                  <Camera size={13} /> Scanează bon
+                </>
+              )}
+            </button>
+            <div style={{ fontSize: 11.5, color: 'var(--text-2)', lineHeight: 1.4 }}>
+              {ocrProgress !== null
+                ? 'Se procesează imaginea local pe dispozitivul tău... (poate dura câteva secunde)'
+                : 'Încarcă poza unui bon fiscal — extragem automat suma, magazinul și data.'}
+            </div>
+            <input
+              ref={ocrFileRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleReceipt(file);
+                e.target.value = '';
+              }}
+            />
+          </div>
+
           <div className="field" style={{ marginBottom: 14 }}>
             <label>Descriere</label>
             <input
