@@ -102,6 +102,9 @@ export function Transactions() {
     type: 'expense',
     categoryId: '',
     date: new Date().toISOString().split('T')[0],
+    isRecurring: false,
+    frequency: undefined,
+    repetitionCount: undefined,
   });
 
   const { data: transactionsResponse, isLoading: transactionsLoading } = useQuery({
@@ -178,6 +181,9 @@ export function Transactions() {
       type: 'expense',
       categoryId: '',
       date: new Date().toISOString().split('T')[0],
+      isRecurring: false,
+      frequency: undefined,
+      repetitionCount: undefined,
     });
   };
 
@@ -191,10 +197,23 @@ export function Transactions() {
       toast.error('Suma trebuie să fie pozitivă.');
       return;
     }
+    if (formData.isRecurring) {
+      if (!formData.frequency) {
+        toast.error('Alege frecvența pentru tranzacția recurentă.');
+        return;
+      }
+      if (!formData.repetitionCount || formData.repetitionCount < 1) {
+        toast.error('Introdu numărul de repetări (cel puțin 1).');
+        return;
+      }
+    }
+    const payload: TransactionData = formData.isRecurring
+      ? formData
+      : { ...formData, isRecurring: false, frequency: undefined, repetitionCount: undefined };
     if (editingTransaction) {
-      updateMutation.mutate({ id: editingTransaction.id, data: formData });
+      updateMutation.mutate({ id: editingTransaction.id, data: payload });
     } else {
-      createMutation.mutate({ data: formData });
+      createMutation.mutate({ data: payload });
     }
   };
 
@@ -212,6 +231,9 @@ export function Transactions() {
       type: transaction.type,
       categoryId: transaction.categoryId,
       date: new Date(transaction.date).toISOString().split('T')[0],
+      isRecurring: false,
+      frequency: undefined,
+      repetitionCount: undefined,
     });
     setIsEditModalOpen(true);
   };
@@ -1015,6 +1037,75 @@ export function Transactions() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div
+            style={{
+              padding: 14,
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              background: 'var(--bg-subtle)',
+              marginBottom: 14,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Repeat size={13} style={{ color: 'var(--accent)' }} /> Tranzacție recurentă
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                  Generează automat tranzacții la intervale regulate.
+                </div>
+              </div>
+              <button
+                type="button"
+                className={`toggle${formData.isRecurring ? ' on' : ''}`}
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    isRecurring: !formData.isRecurring,
+                    frequency: !formData.isRecurring ? 'monthly' : undefined,
+                    repetitionCount: !formData.isRecurring ? 12 : undefined,
+                  })
+                }
+                aria-pressed={!!formData.isRecurring}
+                aria-label="Tranzacție recurentă"
+              />
+            </div>
+            {formData.isRecurring && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                <div className="field">
+                  <label>Frecvență</label>
+                  <select
+                    value={formData.frequency ?? 'monthly'}
+                    onChange={(e) =>
+                      setFormData({ ...formData, frequency: e.target.value as TransactionData['frequency'] })
+                    }
+                  >
+                    <option value="daily">Zilnic</option>
+                    <option value="weekly">Săptămânal</option>
+                    <option value="monthly">Lunar</option>
+                    <option value="yearly">Anual</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Număr de repetări</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={formData.repetitionCount ?? ''}
+                    placeholder="ex: 12"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        repetitionCount: parseInt(e.target.value, 10) || undefined,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>

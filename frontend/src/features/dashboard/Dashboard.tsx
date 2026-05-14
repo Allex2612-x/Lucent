@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal } from 'lucide-react';
+import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal, Repeat } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -339,6 +339,9 @@ export function Dashboard() {
     type: 'expense',
     categoryId: '',
     date: new Date().toISOString().split('T')[0],
+    isRecurring: false,
+    frequency: undefined,
+    repetitionCount: undefined,
   });
 
   const { data: overviewData, isLoading: overviewLoading } = useQuery({
@@ -494,7 +497,20 @@ export function Dashboard() {
       toast.error('Completează suma și categoria.');
       return;
     }
-    createMutation.mutate({ data: formData });
+    if (formData.isRecurring) {
+      if (!formData.frequency) {
+        toast.error('Alege frecvența pentru tranzacția recurentă.');
+        return;
+      }
+      if (!formData.repetitionCount || formData.repetitionCount < 1) {
+        toast.error('Introdu numărul de repetări (cel puțin 1).');
+        return;
+      }
+    }
+    const payload: TransactionData = formData.isRecurring
+      ? formData
+      : { ...formData, isRecurring: false, frequency: undefined, repetitionCount: undefined };
+    createMutation.mutate({ data: payload });
   };
 
   const resetForm = () => {
@@ -504,6 +520,9 @@ export function Dashboard() {
       type: 'expense',
       categoryId: '',
       date: new Date().toISOString().split('T')[0],
+      isRecurring: false,
+      frequency: undefined,
+      repetitionCount: undefined,
     });
   };
 
@@ -862,6 +881,75 @@ export function Dashboard() {
             }))}
             placeholder="Selectează categoria"
           />
+
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              padding: 14,
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              background: 'var(--bg-subtle)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Repeat size={13} style={{ color: 'var(--accent)' }} /> Tranzacție recurentă
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                  Generează automat tranzacții la intervale regulate.
+                </div>
+              </div>
+              <button
+                type="button"
+                className={`toggle${formData.isRecurring ? ' on' : ''}`}
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    isRecurring: !formData.isRecurring,
+                    frequency: !formData.isRecurring ? 'monthly' : undefined,
+                    repetitionCount: !formData.isRecurring ? 12 : undefined,
+                  })
+                }
+                aria-pressed={!!formData.isRecurring}
+                aria-label="Tranzacție recurentă"
+              />
+            </div>
+            {formData.isRecurring && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                <Select
+                  label="Frecvență"
+                  value={formData.frequency ?? 'monthly'}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      frequency: e.target.value as TransactionData['frequency'],
+                    })
+                  }
+                  options={[
+                    { value: 'daily', label: 'Zilnic' },
+                    { value: 'weekly', label: 'Săptămânal' },
+                    { value: 'monthly', label: 'Lunar' },
+                    { value: 'yearly', label: 'Anual' },
+                  ]}
+                />
+                <Input
+                  label="Număr de repetări"
+                  type="number"
+                  min={1}
+                  max={365}
+                  placeholder="ex: 12"
+                  value={formData.repetitionCount ?? ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      repetitionCount: parseInt(e.target.value, 10) || undefined,
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
     </>
