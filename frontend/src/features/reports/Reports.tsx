@@ -359,8 +359,8 @@ export function Reports() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 18, alignItems: 'flex-start' }}>
-        {/* ===== LEFT — BUILDER ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 18, alignItems: 'flex-start' }}>
+        {/* ===== RIGHT — BUILDER (order:2 in grid) ===== */}
         <div
           className="card"
           style={{
@@ -370,6 +370,7 @@ export function Reports() {
             display: 'flex',
             flexDirection: 'column',
             maxHeight: 'calc(100vh - 96px)',
+            order: 2,
           }}
         >
           {/* Builder header */}
@@ -716,8 +717,8 @@ export function Reports() {
           </div>
         </div>
 
-        {/* ===== RIGHT — PREVIEW ===== */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* ===== LEFT — PREVIEW (order:1 in grid) ===== */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, order: 1 }}>
           {/* Preview header */}
           <div
             style={{
