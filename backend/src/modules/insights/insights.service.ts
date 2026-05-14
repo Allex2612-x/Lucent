@@ -137,6 +137,7 @@ Reguli:
 - Nu repeta cifrele brute — interpretează-le.`;
 
   let content: string;
+  console.log('[insights] generating for user', userId, '— key set:', !!process.env.GEMINI_API_KEY);
   try {
     const c = getClient();
     const model = c.getGenerativeModel({
@@ -153,7 +154,9 @@ Reguli:
       throw new Error('Răspuns gol de la Gemini.');
     }
     content = text.trim();
+    console.log('[insights] OK, generated', content.length, 'chars');
   } catch (err: any) {
+    console.error('[insights] generation failed:', err?.message || err);
     // Fall back to a simple deterministic insight so the UI still shows something.
     content =
       'Nu am putut genera insight-ul săptămânal automat acum (probabil cheia API nu este configurată). Verifică GEMINI_API_KEY pe backend sau încearcă din nou.';
