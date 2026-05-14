@@ -1,12 +1,27 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/requireAuth.js';
 import { CategoryService, createCategorySchema, updateCategorySchema } from './category.service.js';
+import { suggestCategory } from './category-suggester.js';
 
 export class CategoryController {
   static async getAll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const categories = await CategoryService.getCategories(req.user!.userId);
       res.json({ success: true, data: categories });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async suggest(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const description = (req.query.description as string | undefined) ?? '';
+      const typeRaw = req.query.type as string | undefined;
+      const type =
+        typeRaw === 'income' || typeRaw === 'expense' ? (typeRaw as 'income' | 'expense') : undefined;
+      const categories = await CategoryService.getCategories(req.user!.userId);
+      const suggestion = suggestCategory(description, type, categories as any);
+      res.json({ success: true, data: suggestion });
     } catch (error) {
       next(error);
     }

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal, Repeat } from 'lucide-react';
+import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal, Repeat, Sparkles } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -15,6 +15,7 @@ import { api } from '../../services/api';
 import { Category } from '@sasha-licenta/shared';
 import { CHART_COLORS } from '../../styles/colors';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -343,6 +344,20 @@ export function Dashboard() {
     frequency: undefined,
     repetitionCount: undefined,
   });
+  const [userPickedCategory, setUserPickedCategory] = useState(false);
+  const addSuggestion = useCategorySuggestion(formData.description, formData.type, {
+    enabled: isAddModalOpen,
+  });
+  useEffect(() => {
+    if (
+      isAddModalOpen &&
+      addSuggestion &&
+      !userPickedCategory &&
+      formData.categoryId !== addSuggestion.categoryId
+    ) {
+      setFormData((prev) => ({ ...prev, categoryId: addSuggestion.categoryId }));
+    }
+  }, [addSuggestion, isAddModalOpen, userPickedCategory]);
 
   const { data: overviewData, isLoading: overviewLoading } = useQuery({
     queryKey: ['statistics', 'overview', currentMonth, currentYear],
@@ -524,6 +539,7 @@ export function Dashboard() {
       frequency: undefined,
       repetitionCount: undefined,
     });
+    setUserPickedCategory(false);
   };
 
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
@@ -871,16 +887,47 @@ export function Dashboard() {
               { value: 'expense', label: 'Cheltuială' },
             ]}
           />
-          <Select
-            label="Categorie"
-            value={formData.categoryId}
-            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-            options={filteredCategories.map((cat) => ({
-              value: cat.id,
-              label: `${cat.icon || ''} ${cat.name}`.trim(),
-            }))}
-            placeholder="Selectează categoria"
-          />
+          <div className="input-wrapper" style={{ marginBottom: 0 }}>
+            <label
+              className="input-label"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span>Categorie</span>
+              {addSuggestion && formData.categoryId === addSuggestion.categoryId && (
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    color: 'var(--accent-ink)',
+                    background: 'var(--accent-soft)',
+                    padding: '2px 7px',
+                    borderRadius: 999,
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                  title={`Sugerat după "${addSuggestion.matchedKeyword}"`}
+                >
+                  <Sparkles size={10} /> sugerat automat
+                </span>
+              )}
+            </label>
+            <select
+              className="input-field"
+              value={formData.categoryId}
+              onChange={(e) => {
+                setFormData({ ...formData, categoryId: e.target.value });
+                setUserPickedCategory(true);
+              }}
+            >
+              <option value="">Selectează categoria</option>
+              {filteredCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {`${cat.icon || ''} ${cat.name}`.trim()}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div
             style={{

@@ -7,6 +7,7 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/', CategoryController.getAll);
+router.get('/suggest', CategoryController.suggest);
 router.post('/', CategoryController.create);
 router.patch('/:id', CategoryController.update);
 router.delete('/:id', CategoryController.delete);

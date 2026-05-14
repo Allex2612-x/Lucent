@@ -21,6 +21,8 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
 import { api } from '../../services/api';
+import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
+import { Sparkles } from 'lucide-react';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -106,6 +108,22 @@ export function Transactions() {
     frequency: undefined,
     repetitionCount: undefined,
   });
+  const [userPickedCategory, setUserPickedCategory] = useState(false);
+  const addSuggestion = useCategorySuggestion(formData.description, formData.type, {
+    enabled: isAddModalOpen,
+  });
+
+  // Auto-apply suggestion only if the user hasn't manually picked one yet.
+  useEffect(() => {
+    if (
+      isAddModalOpen &&
+      addSuggestion &&
+      !userPickedCategory &&
+      formData.categoryId !== addSuggestion.categoryId
+    ) {
+      setFormData((prev) => ({ ...prev, categoryId: addSuggestion.categoryId }));
+    }
+  }, [addSuggestion, isAddModalOpen, userPickedCategory]);
 
   const { data: transactionsResponse, isLoading: transactionsLoading } = useQuery({
     queryKey: ['transactions'],
@@ -185,6 +203,7 @@ export function Transactions() {
       frequency: undefined,
       repetitionCount: undefined,
     });
+    setUserPickedCategory(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1024,10 +1043,35 @@ export function Transactions() {
           </div>
 
           <div className="field" style={{ marginBottom: 14 }}>
-            <label>Categorie</label>
+            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Categorie</span>
+              {addSuggestion && formData.categoryId === addSuggestion.categoryId && (
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    color: 'var(--accent-ink)',
+                    background: 'var(--accent-soft)',
+                    padding: '2px 7px',
+                    borderRadius: 999,
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    textTransform: 'none',
+                    letterSpacing: 0,
+                  }}
+                  title={`Sugerat după "${addSuggestion.matchedKeyword}"`}
+                >
+                  <Sparkles size={10} /> sugerat automat
+                </span>
+              )}
+            </label>
             <select
               value={formData.categoryId}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, categoryId: e.target.value });
+                setUserPickedCategory(true);
+              }}
               required
             >
               <option value="">Selectează categoria</option>
