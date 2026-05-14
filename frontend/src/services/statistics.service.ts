@@ -17,6 +17,20 @@ export interface MonthlyTrendParams {
   endDate?: string;
 }
 
+export interface AnomalyTransaction {
+  id: string;
+  amount: number;
+  date: string;
+  description: string | null;
+  categoryId: string;
+  categoryName: string;
+  categoryIcon: string | null;
+  categoryColor: string | null;
+  zScore: number;
+  meanAmount: number;
+  sampleSize: number;
+}
+
 export const statisticsService = {
   getOverview: (params?: OverviewParams) => {
     return api.get('/statistics', { params });
@@ -28,5 +42,9 @@ export const statisticsService = {
 
   getMonthlyTrend: (params?: MonthlyTrendParams) => {
     return api.get('/statistics/monthly-trend', { params });
+  },
+
+  getAnomalies: () => {
+    return api.get<{ success: boolean; data: AnomalyTransaction[] }>('/statistics/anomalies');
   },
 };

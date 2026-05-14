@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal, Repeat, Sparkles } from 'lucide-react';
+import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal, Repeat, Sparkles, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -391,6 +391,14 @@ export function Dashboard() {
       }),
   });
 
+  const { data: anomaliesData } = useQuery({
+    queryKey: ['statistics', 'anomalies'],
+    queryFn: () => statisticsService.getAnomalies(),
+    select: (res) => res.data?.data ?? [],
+  });
+  const [dismissedAnomalies, setDismissedAnomalies] = useState<Set<string>>(new Set());
+  const visibleAnomalies = (anomaliesData ?? []).filter((a) => !dismissedAnomalies.has(a.id));
+
   const { data: categoriesResponse } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesService.getAll(),
@@ -642,6 +650,140 @@ export function Dashboard() {
           points={sparkExpense}
         />
       </div>
+
+      {visibleAnomalies.length > 0 && (
+        <div
+          className="card"
+          style={{
+            marginBottom: 18,
+            border: '1px solid rgba(232,155,28,0.3)',
+            background:
+              'linear-gradient(135deg, rgba(232,155,28,0.06) 0%, rgba(232,155,28,0.02) 100%)',
+            padding: 18,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                background: 'var(--warn-soft)',
+                color: 'var(--warn)',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <AlertTriangle size={20} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                    {visibleAnomalies.length === 1
+                      ? '1 tranzacție neobișnuită'
+                      : `${visibleAnomalies.length} tranzacții neobișnuite`}{' '}
+                    detectate
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                    Sume considerabil peste media istorică a categoriei (Z-score ≥ 2).
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                {visibleAnomalies.slice(0, 3).map((a) => (
+                  <div
+                    key={a.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '32px 1fr auto auto',
+                      gap: 12,
+                      alignItems: 'center',
+                      padding: '10px 12px',
+                      background: '#fff',
+                      borderRadius: 10,
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 9,
+                        background: `${a.categoryColor || '#a09c92'}1a`,
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: 14,
+                      }}
+                    >
+                      {a.categoryIcon || '⚠️'}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {a.description || a.categoryName}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                        Media „{a.categoryName}":{' '}
+                        <span className="num">{fmt(a.meanAmount, 0)} RON</span> ·{' '}
+                        {new Date(a.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
+                      </div>
+                    </div>
+                    <div
+                      className="num"
+                      style={{ fontWeight: 600, fontSize: 14, color: 'var(--expense)' }}
+                    >
+                      {fmt(a.amount, 0)}
+                      <span style={{ color: 'var(--text-3)', fontWeight: 400, fontSize: 11, marginLeft: 3 }}>
+                        RON
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDismissedAnomalies((prev) => {
+                          const next = new Set(prev);
+                          next.add(a.id);
+                          return next;
+                        })
+                      }
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-3)',
+                        padding: 4,
+                        borderRadius: 6,
+                      }}
+                      title="Ignoră"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {visibleAnomalies.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/transactions')}
+                    className="btn btn-ghost btn-sm"
+                    style={{ alignSelf: 'flex-start', color: 'var(--accent)' }}
+                  >
+                    Vezi toate {visibleAnomalies.length} →
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Chart row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 18, marginBottom: 18 }}>

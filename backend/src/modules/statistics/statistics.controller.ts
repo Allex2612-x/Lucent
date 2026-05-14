@@ -6,8 +6,18 @@ import {
   byCategorySchema,
   monthlyTrendSchema,
 } from './statistics.service.js';
+import { detectAnomalies } from './anomaly-detector.js';
 
 export class StatisticsController {
+  static async getAnomalies(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const anomalies = await detectAnomalies(req.user!.userId);
+      res.json({ success: true, data: anomalies });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getOverview(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const validatedParams = overviewSchema.parse(req.query);

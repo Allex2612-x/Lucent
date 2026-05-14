@@ -9,5 +9,6 @@ router.use(requireAuth);
 router.get('/', StatisticsController.getOverview);
 router.get('/by-category', StatisticsController.getByCategory);
 router.get('/monthly-trend', StatisticsController.getMonthlyTrend);
+router.get('/anomalies', StatisticsController.getAnomalies);
 
 export default router;
