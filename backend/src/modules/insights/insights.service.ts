@@ -265,3 +265,201 @@ Reguli stricte:
   tipCache.set(userId, { generatedAt: Date.now(), tip });
   return tip;
 }
+
+export interface AskAnswer {
+  answer: string;
+  generatedAt: string;
+}
+
+/**
+ * Free-form Q&A with the user's data as context. No cache — every question
+ * is a fresh call, so callers should debounce or rate-limit if they care.
+ */
+export async function askQuestion(userId: string, question: string): Promise<AskAnswer> {
+  if (!question || question.trim().length < 3) {
+    throw new Error('Întrebarea trebuie să aibă cel puțin 3 caractere.');
+  }
+
+  const now = new Date();
+  const monthAgo = new Date(now);
+  monthAgo.setDate(now.getDate() - 60);
+
+  // Last 60 days of transactions = enough context for most questions about
+  // recent spending without blowing past Gemini's input window.
+  const recent = await prisma.transaction.findMany({
+    where: { userId, date: { gte: monthAgo } },
+    include: { category: true },
+    orderBy: { date: 'desc' },
+    take: 500,
+  });
+
+  const summary = (() => {
+    const byMonth = new Map<string, { income: number; expense: number }>();
+    const byCategory = new Map<string, number>();
+    for (const t of recent) {
+      const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
+      const bucket = byMonth.get(key) ?? { income: 0, expense: 0 };
+      if (t.type === 'income') bucket.income += Number(t.amount);
+      else bucket.expense += Number(t.amount);
+      byMonth.set(key, bucket);
+      if (t.type === 'expense') {
+        const n = t.category?.name ?? 'Necunoscut';
+        byCategory.set(n, (byCategory.get(n) ?? 0) + Number(t.amount));
+      }
+    }
+    const monthLines = [...byMonth.entries()]
+      .sort()
+      .map(([k, v]) => `  ${k}: venituri ${fmtNumber(v.income)} RON, cheltuieli ${fmtNumber(v.expense)} RON`)
+      .join('\n');
+    const catLines = [...byCategory.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([n, v]) => `  ${n}: ${fmtNumber(v)} RON`)
+      .join('\n');
+    return `Date utilizator (ultimele 60 zile):
+
+Pe lună:
+${monthLines || '  (fără date)'}
+
+Top categorii cheltuieli:
+${catLines || '  (fără date)'}
+
+Tranzacții totale în perioadă: ${recent.length}`;
+  })();
+
+  const systemPrompt = `Ești asistentul financiar FARO. Răspunzi întrebări concrete ale utilizatorului despre banii lui, folosind datele furnizate în context.
+
+Reguli:
+- Răspunde în română, scurt și direct (1–3 propoziții, max ~60 cuvinte).
+- Folosește cifrele exacte din context atunci când le ai.
+- Dacă întrebarea cere date pe care nu le ai, spune onest că nu le ai disponibile și sugerează ce-ar putea adăuga utilizatorul.
+- Fără emoji, fără markdown, fără salutări inutile.
+- Nu inventa cifre care nu sunt în context.`;
+
+  console.log('[insights/ask] question:', question.slice(0, 80));
+  try {
+    const c = getClient();
+    const model = c.getGenerativeModel({
+      model: 'gemini-2.5-flash-lite',
+      systemInstruction: systemPrompt,
+      generationConfig: { maxOutputTokens: 250, temperature: 0.5 },
+    });
+    const result = await model.generateContent(`${summary}\n\nÎntrebarea utilizatorului: ${question.trim()}`);
+    const text = result.response.text().trim();
+    if (!text) throw new Error('Răspuns gol de la Gemini.');
+    return { answer: text, generatedAt: new Date().toISOString() };
+  } catch (err: any) {
+    console.error('[insights/ask] failed:', err?.message || err);
+    throw err;
+  }
+}
+
+export interface Recommendation {
+  id: string;
+  icon: string;
+  title: string;
+  body: string;
+  tag: 'Acțiune' | 'Buget' | 'Raport' | 'Reminder';
+}
+
+/**
+ * Deterministic recommendations derived from the user's data. No AI call so
+ * this is free and instant; the rules cover the same cases the design mockup
+ * shows (large recent transaction, missing budget alert, suggest comparison).
+ */
+export async function getRecommendations(userId: string): Promise<Recommendation[]> {
+  const now = new Date();
+  const monthAgo = new Date(now);
+  monthAgo.setDate(now.getDate() - 30);
+
+  const [recent, budgets] = await Promise.all([
+    prisma.transaction.findMany({
+      where: { userId, type: 'expense', date: { gte: monthAgo } },
+      include: { category: true },
+      orderBy: { date: 'desc' },
+    }),
+    prisma.budget.findMany({
+      where: { userId, month: now.getMonth() + 1, year: now.getFullYear() },
+      include: { categories: true },
+    }),
+  ]);
+
+  const recs: Recommendation[] = [];
+
+  // Rule 1: a single recent transaction that is much bigger than this user's
+  // category mean — suggest reviewing it.
+  if (recent.length >= 5) {
+    const byCategory = new Map<string, number[]>();
+    for (const t of recent) {
+      const arr = byCategory.get(t.categoryId) ?? [];
+      arr.push(Number(t.amount));
+      byCategory.set(t.categoryId, arr);
+    }
+    let biggestOutlier: { tx: typeof recent[number]; mean: number; ratio: number } | null = null;
+    for (const t of recent) {
+      const arr = byCategory.get(t.categoryId) ?? [];
+      if (arr.length < 3) continue;
+      const mean = arr.reduce((s, v) => s + v, 0) / arr.length;
+      if (mean <= 0) continue;
+      const ratio = Number(t.amount) / mean;
+      if (ratio < 2) continue;
+      if (!biggestOutlier || ratio > biggestOutlier.ratio) {
+        biggestOutlier = { tx: t, mean, ratio };
+      }
+    }
+    if (biggestOutlier) {
+      recs.push({
+        id: 'large-tx',
+        icon: '🔍',
+        title: 'Verifică tranzacțiile mari',
+        body: `Vezi tranzacția de ${fmtNumber(Number(biggestOutlier.tx.amount))} RON la „${
+          biggestOutlier.tx.category?.name ?? 'Necunoscut'
+        }" — e de ${biggestOutlier.ratio.toFixed(1)}× peste media categoriei.`,
+        tag: 'Acțiune',
+      });
+    }
+  }
+
+  // Rule 2: a top-spending category without a budget — suggest creating one.
+  const byCat = new Map<string, { name: string; total: number; categoryId: string }>();
+  for (const t of recent) {
+    const k = t.categoryId;
+    const prev = byCat.get(k);
+    if (prev) {
+      prev.total += Number(t.amount);
+    } else {
+      byCat.set(k, {
+        name: t.category?.name ?? 'Necunoscut',
+        total: Number(t.amount),
+        categoryId: t.categoryId,
+      });
+    }
+  }
+  const budgetCategoryIds = new Set<string>();
+  for (const b of budgets) {
+    for (const bc of b.categories ?? []) budgetCategoryIds.add(bc.categoryId);
+  }
+  const unbudgetedTop = [...byCat.values()]
+    .filter((c) => !budgetCategoryIds.has(c.categoryId))
+    .sort((a, b) => b.total - a.total)[0];
+  if (unbudgetedTop) {
+    recs.push({
+      id: 'set-budget',
+      icon: '💡',
+      title: 'Setează o limită pe categorie',
+      body: `Ai cheltuit ${fmtNumber(unbudgetedTop.total)} RON pe „${unbudgetedTop.name}" în 30 zile fără limită. Adaugă un buget ca să primești alerte.`,
+      tag: 'Buget',
+    });
+  }
+
+  // Rule 3: always suggest comparing months if there's enough history.
+  recs.push({
+    id: 'compare',
+    icon: '📊',
+    title: 'Compară cu lunile trecute',
+    body: 'Deschide raportul lunar ca să vezi cum a evoluat fiecare categorie în ultimele luni.',
+    tag: 'Raport',
+  });
+
+  return recs.slice(0, 3);
+}

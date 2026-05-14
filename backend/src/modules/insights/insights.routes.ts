@@ -6,5 +6,7 @@ const router = Router();
 router.use(requireAuth);
 router.get('/weekly', InsightsController.weekly);
 router.get('/tip', InsightsController.tip);
+router.get('/recommendations', InsightsController.recommendations);
+router.post('/ask', InsightsController.ask);
 
 export default router;

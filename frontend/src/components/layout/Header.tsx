@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Plus, Search } from 'lucide-react';
+import { Bell, Plus, Search, Sparkles } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { notificationsService } from '../../services/notifications.service';
 import { NotificationDropdown } from './NotificationDropdown';
+import { AiAssistantDrawer } from './AiAssistantDrawer';
 
 const ROUTE_CRUMBS: Record<string, string> = {
   '/': 'Dashboard',
@@ -17,6 +18,7 @@ const ROUTE_CRUMBS: Record<string, string> = {
 export function Header() {
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: unreadCount } = useQuery({
@@ -62,6 +64,30 @@ export function Header() {
         <kbd>⌘K</kbd>
       </div>
 
+      <button
+        onClick={() => setIsAssistantOpen(true)}
+        title="Asistent AI"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          height: 36,
+          padding: '0 12px',
+          borderRadius: 10,
+          background: 'linear-gradient(135deg, #2547f5, #6c4cf8)',
+          color: '#fff',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: 12.5,
+          fontWeight: 600,
+          fontFamily: 'inherit',
+          boxShadow: '0 2px 8px -2px rgba(37,71,245,.45)',
+        }}
+      >
+        <Sparkles size={14} />
+        Asistent AI
+      </button>
+
       <div className="notification-bell-wrapper" ref={dropdownRef}>
         <button
           className="icon-btn"
@@ -80,6 +106,8 @@ export function Header() {
       <button className="icon-btn" title="Adaugă">
         <Plus size={17} />
       </button>
+
+      <AiAssistantDrawer open={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} />
     </div>
   );
 }

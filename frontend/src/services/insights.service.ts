@@ -26,4 +26,23 @@ export const insightsService = {
       params: refresh ? { refresh: 'true' } : {},
     });
   },
+
+  ask: (question: string) => {
+    return api.post<{ success: boolean; data: { answer: string; generatedAt: string } }>(
+      '/insights/ask',
+      { question },
+    );
+  },
+
+  getRecommendations: () => {
+    return api.get<{ success: boolean; data: Recommendation[] }>('/insights/recommendations');
+  },
 };
+
+export interface Recommendation {
+  id: string;
+  icon: string;
+  title: string;
+  body: string;
+  tag: 'Acțiune' | 'Buget' | 'Raport' | 'Reminder';
+}
