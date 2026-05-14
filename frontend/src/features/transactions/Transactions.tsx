@@ -476,7 +476,7 @@ export function Transactions() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `sasha-tranzactii-${startDate}_${endDate}.${ext}`);
+      link.setAttribute('download', `faro-tranzactii-${startDate}_${endDate}.${ext}`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);

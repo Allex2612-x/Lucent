@@ -460,7 +460,7 @@ export function Settings() {
       {tab === 'preferences' && (
         <SettingsSection
           title="Preferințe"
-          sub="Personalizează cum arată Sasha pentru tine."
+          sub="Personalizează cum arată FARO pentru tine."
         >
           <ToggleRow
             label="Temă întunecată"
@@ -576,7 +576,7 @@ export function Settings() {
                 borderColor: 'var(--expense)',
               }}
             >
-              <Trash2 size={12} /> Șterge contul Sasha
+              <Trash2 size={12} /> Șterge contul FARO
             </Button>
           </div>
         </SettingsSection>

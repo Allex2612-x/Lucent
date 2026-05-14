@@ -14,20 +14,18 @@ export function AuthShell({ children }: AuthShellProps) {
         <div className="auth-art-glow-b" />
 
         <div className="auth-art-brand">
-          <div className="auth-art-mark">S</div>
-          <div className="auth-art-brand-name">
-            Sasha<em>·fin</em>
-          </div>
+          <div className="auth-art-mark">F</div>
+          <div className="auth-art-brand-name">FARO</div>
         </div>
 
         <div className="auth-art-content">
           <div className="auth-art-headline">
-            Banii tăi,
+            Finanțe atente,
             <br />
-            respectați cu grijă.
+            respectate, organizate.
           </div>
           <div className="auth-art-desc">
-            Sasha pune toate veniturile, cheltuielile și bugetele într-un singur loc — limpede, fără
+            FARO pune toate veniturile, cheltuielile și bugetele într-un singur loc — limpede, fără
             supărări, în limba ta.
           </div>
 
@@ -56,7 +54,7 @@ export function AuthShell({ children }: AuthShellProps) {
           </div>
         </div>
 
-        <div className="auth-art-footer">© 2026 Sasha · Proiect de licență</div>
+        <div className="auth-art-footer">© 2026 FARO · Proiect de licență</div>
       </div>
 
       <div className="auth-form-wrap">{children}</div>

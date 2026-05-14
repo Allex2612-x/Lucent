@@ -585,7 +585,7 @@ export function Dashboard() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `sasha-dashboard-${currentYear}-${String(currentMonth).padStart(2, '0')}.pdf`);
+      link.setAttribute('download', `faro-dashboard-${currentYear}-${String(currentMonth).padStart(2, '0')}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);

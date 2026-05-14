@@ -61,12 +61,10 @@ export function Sidebar() {
   return (
     <aside className="sb">
       <div className="sb-brand">
-        <div className="sb-mark">S</div>
+        <div className="sb-mark">F</div>
         <div>
-          <div className="sb-name">
-            Sasha<em>·fin</em>
-          </div>
-          <div className="sb-tag">Personal finance</div>
+          <div className="sb-name">FARO</div>
+          <div className="sb-tag">Finanțe personale</div>
         </div>
       </div>
 

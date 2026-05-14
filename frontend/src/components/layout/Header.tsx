@@ -53,7 +53,7 @@ export function Header() {
   return (
     <div className="topbar">
       <div className="crumb">
-        Sasha <span className="crumb-sep">/</span> <b>{currentLabel}</b>
+        FARO <span className="crumb-sep">/</span> <b>{currentLabel}</b>
       </div>
 
       <div className="search">

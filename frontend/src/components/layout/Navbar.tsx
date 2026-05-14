@@ -22,7 +22,7 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <h2>Sasha</h2>
+        <h2>FARO</h2>
       </div>
       <div className="navbar-links">
         <NavLink to="/" end className={({ isActive }) => isActive ? "active" : ""}>Dashboard</NavLink>

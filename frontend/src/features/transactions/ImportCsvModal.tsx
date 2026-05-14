@@ -322,7 +322,7 @@ export function ImportCsvModal({ isOpen, onClose, categories }: ImportCsvModalPr
             <span style={{ fontSize: 12, color: 'var(--text-3)' }}>· {rows.length} rânduri detectate</span>
           </div>
           <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>
-            Mapează fiecare coloană din CSV la câmpul corespunzător din Sasha. Data și suma sunt
+            Mapează fiecare coloană din CSV la câmpul corespunzător din FARO. Data și suma sunt
             obligatorii — celelalte pot rămâne pe „Ignoră".
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

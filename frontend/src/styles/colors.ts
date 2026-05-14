@@ -1,5 +1,5 @@
 /**
- * Sasha Finance App - Design Token System (light, modern fintech)
+ * FARO Finance App - Design Token System (light, modern fintech)
  * Mirrors the CSS custom properties declared in index.css.
  */
 

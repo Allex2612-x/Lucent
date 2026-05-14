@@ -10,6 +10,16 @@ const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || 'http://localhost:4
 let googleConfigured = false;
 let facebookConfigured = false;
 
+// Startup debug: prints which OAuth env vars are visible to the process.
+// Helpful when a button refuses to appear despite the .env being set.
+console.log('[oauth] env check at startup:', {
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? `set (${process.env.GOOGLE_CLIENT_ID.length} chars)` : 'EMPTY',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? `set (${process.env.GOOGLE_CLIENT_SECRET.length} chars)` : 'EMPTY',
+  FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID ? `set (${process.env.FACEBOOK_APP_ID.length} chars)` : 'EMPTY',
+  FACEBOOK_APP_SECRET: process.env.FACEBOOK_APP_SECRET ? `set (${process.env.FACEBOOK_APP_SECRET.length} chars)` : 'EMPTY',
+  cwd: process.cwd(),
+});
+
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
