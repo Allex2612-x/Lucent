@@ -162,8 +162,10 @@ export class StatisticsService {
       {
         categoryId: string;
         categoryName: string;
+        categoryIcon: string | null;
         categoryColor: string | null;
         total: number;
+        count: number;
       }
     >();
 
@@ -172,19 +174,23 @@ export class StatisticsService {
     for (const transaction of transactions) {
       const categoryId = transaction.categoryId;
       const existing = categoryMap.get(categoryId);
+      const amount = Number(transaction.amount);
 
       if (existing) {
-        existing.total += transaction.amount;
+        existing.total += amount;
+        existing.count += 1;
       } else {
         categoryMap.set(categoryId, {
           categoryId,
           categoryName: transaction.category.name,
+          categoryIcon: transaction.category.icon,
           categoryColor: transaction.category.color,
-          total: transaction.amount,
+          total: amount,
+          count: 1,
         });
       }
 
-      grandTotal += transaction.amount;
+      grandTotal += amount;
     }
 
     // Convert to array and calculate percentages
