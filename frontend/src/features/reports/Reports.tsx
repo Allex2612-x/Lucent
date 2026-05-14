@@ -44,18 +44,68 @@ function MiniBar({ data, color }: { data: number[]; color: string }) {
 }
 
 type ReportType = 'income' | 'expense' | 'all';
+type Preset = 'this-month' | 'last-30' | 'this-quarter' | 'ytd' | 'last-year' | 'custom';
+
+function toIsoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function rangeForPreset(preset: Preset): { start: string; end: string } {
+  const now = new Date();
+  const today = toIsoDate(now);
+  if (preset === 'this-month') {
+    return {
+      start: toIsoDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+      end: today,
+    };
+  }
+  if (preset === 'last-30') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - 30);
+    return { start: toIsoDate(start), end: today };
+  }
+  if (preset === 'this-quarter') {
+    const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    return {
+      start: toIsoDate(new Date(now.getFullYear(), qStartMonth, 1)),
+      end: today,
+    };
+  }
+  if (preset === 'ytd') {
+    return {
+      start: toIsoDate(new Date(now.getFullYear(), 0, 1)),
+      end: today,
+    };
+  }
+  if (preset === 'last-year') {
+    return {
+      start: toIsoDate(new Date(now.getFullYear() - 1, 0, 1)),
+      end: toIsoDate(new Date(now.getFullYear() - 1, 11, 31)),
+    };
+  }
+  return { start: today, end: today };
+}
 
 export function Reports() {
   const now = new Date();
-  const yearStart = `${now.getFullYear()}-01`;
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   const [reportType, setReportType] = useState<ReportType>('expense');
-  const [startMonth, setStartMonth] = useState(yearStart);
-  const [endMonth, setEndMonth] = useState(currentMonth);
+  const [preset, setPreset] = useState<Preset>('ytd');
+  const initial = rangeForPreset('ytd');
+  const [startDate, setStartDate] = useState<string>(initial.start);
+  const [endDate, setEndDate] = useState<string>(initial.end);
 
-  const startDateFull = startMonth ? `${startMonth}-01` : undefined;
-  const endDateFull = endMonth ? `${endMonth}-28` : undefined;
+  const applyPreset = (p: Preset) => {
+    setPreset(p);
+    if (p !== 'custom') {
+      const range = rangeForPreset(p);
+      setStartDate(range.start);
+      setEndDate(range.end);
+    }
+  };
+
+  const startDateFull = startDate || undefined;
+  const endDateFull = endDate || undefined;
 
   const { data: categoriesResponse } = useQuery({
     queryKey: ['categories'],
@@ -119,11 +169,13 @@ export function Reports() {
   const avg = count > 0 ? total / count : 0;
 
   const periodDays = useMemo(() => {
-    if (!startMonth || !endMonth) return 0;
-    const [sy, sm] = startMonth.split('-').map(Number);
-    const [ey, em] = endMonth.split('-').map(Number);
-    return (ey - sy) * 12 + (em - sm) + 1;
-  }, [startMonth, endMonth]);
+    if (!startDate || !endDate) return 0;
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    const diff = Math.floor((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(1, diff);
+  }, [startDate, endDate]);
+  const periodMonths = useMemo(() => Math.max(1, periodDays / 30), [periodDays]);
 
   const handleExportPDF = async () => {
     try {
@@ -135,7 +187,7 @@ export function Reports() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `raport-financiar-${startMonth || 'all'}.pdf`);
+      link.setAttribute('download', `raport-financiar-${startDate}_${endDate}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -157,7 +209,7 @@ export function Reports() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `raport-financiar-${startMonth || 'all'}.xlsx`);
+      link.setAttribute('download', `raport-financiar-${startDate}_${endDate}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -167,10 +219,10 @@ export function Reports() {
     }
   };
 
-  const formatMonthDisplay = (ym: string) => {
-    if (!ym) return '';
-    const [y, m] = ym.split('-').map(Number);
-    return `${ROMANIAN_MONTHS[m - 1] || ''} ${y}`;
+  const formatDateDisplay = (iso: string) => {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-').map(Number);
+    return `${d} ${ROMANIAN_MONTHS[m! - 1] || ''} ${y}`;
   };
 
   return (
@@ -237,6 +289,43 @@ export function Reports() {
             >
               Perioadă
             </div>
+
+            {/* Preset chips */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {(
+                [
+                  { value: 'this-month', label: 'Luna curentă' },
+                  { value: 'last-30', label: 'Ultimele 30 zile' },
+                  { value: 'this-quarter', label: 'Trimestrul curent' },
+                  { value: 'ytd', label: 'Anul curent' },
+                  { value: 'last-year', label: 'Anul trecut' },
+                  { value: 'custom', label: 'Personalizat' },
+                ] as Array<{ value: Preset; label: string }>
+              ).map((opt) => {
+                const on = preset === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => applyPreset(opt.value)}
+                    style={{
+                      padding: '5px 11px',
+                      borderRadius: 999,
+                      border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+                      background: on ? 'var(--accent-soft)' : '#fff',
+                      color: on ? 'var(--accent-ink)' : 'var(--text-2)',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span
                 className="chip"
@@ -244,9 +333,13 @@ export function Reports() {
               >
                 <Calendar size={12} />
                 <input
-                  type="month"
-                  value={startMonth}
-                  onChange={(e) => setStartMonth(e.target.value)}
+                  type="date"
+                  value={startDate}
+                  max={endDate || undefined}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setPreset('custom');
+                  }}
                   style={{
                     border: 'none',
                     background: 'transparent',
@@ -264,9 +357,14 @@ export function Reports() {
               >
                 <Calendar size={12} />
                 <input
-                  type="month"
-                  value={endMonth}
-                  onChange={(e) => setEndMonth(e.target.value)}
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  max={toIsoDate(now)}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setPreset('custom');
+                  }}
                   style={{
                     border: 'none',
                     background: 'transparent',
@@ -278,7 +376,8 @@ export function Reports() {
                 />
               </span>
               <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                {formatMonthDisplay(startMonth)} → {formatMonthDisplay(endMonth)}
+                {formatDateDisplay(startDate)} → {formatDateDisplay(endDate)} · {periodDays}{' '}
+                {periodDays === 1 ? 'zi' : 'zile'}
               </span>
             </div>
           </div>
@@ -316,7 +415,8 @@ export function Reports() {
             </span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
-            {periodDays} {periodDays === 1 ? 'lună' : 'luni'} selectate
+            {periodDays} {periodDays === 1 ? 'zi' : 'zile'} ·{' '}
+            {periodMonths < 1.2 ? '~1 lună' : `~${periodMonths.toFixed(0)} luni`}
           </div>
         </div>
 
@@ -335,7 +435,7 @@ export function Reports() {
             {count}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
-            ~{periodDays > 0 ? Math.round(count / periodDays) : 0} pe lună
+            ~{periodMonths > 0 ? Math.round(count / periodMonths) : 0} pe lună
           </div>
         </div>
 
@@ -395,7 +495,7 @@ export function Reports() {
             <div className="card-sub">
               {rows.length} categorii ·{' '}
               {reportType === 'income' ? 'venituri' : reportType === 'expense' ? 'cheltuieli' : 'sumar'}{' '}
-              {formatMonthDisplay(startMonth)} – {formatMonthDisplay(endMonth)}
+              {formatDateDisplay(startDate)} – {formatDateDisplay(endDate)}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
