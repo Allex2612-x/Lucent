@@ -9,13 +9,25 @@ export interface WeeklyInsight {
   cached: boolean;
 }
 
+export interface QuickTip {
+  generatedAt: string;
+  content: string;
+  cached: boolean;
+}
+
 interface CacheEntry {
   generatedAt: number;
   insight: WeeklyInsight;
 }
 
+interface TipCacheEntry {
+  generatedAt: number;
+  tip: QuickTip;
+}
+
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const cache = new Map<string, CacheEntry>();
+const tipCache = new Map<string, TipCacheEntry>();
 
 let client: GoogleGenerativeAI | null = null;
 function getClient(): GoogleGenerativeAI {
@@ -171,4 +183,85 @@ Reguli:
   };
   cache.set(userId, { generatedAt: Date.now(), insight });
   return insight;
+}
+
+/**
+ * Generates a single-sentence financial tip ("Ar trebui să…", "Încearcă să…")
+ * tailored to the user's last 30 days of spending. Cached 24h per user so the
+ * sidebar widget on every page doesn't burn quota.
+ */
+export async function getQuickTip(userId: string, forceRefresh = false): Promise<QuickTip> {
+  const cached = tipCache.get(userId);
+  if (!forceRefresh && cached && Date.now() - cached.generatedAt < CACHE_TTL_MS) {
+    return { ...cached.tip, cached: true };
+  }
+
+  const now = new Date();
+  const monthAgo = new Date(now);
+  monthAgo.setDate(now.getDate() - 30);
+
+  const last30 = await prisma.transaction.findMany({
+    where: { userId, date: { gte: monthAgo } },
+    include: { category: true },
+    take: 300,
+  });
+
+  const expenses = last30.filter((t) => t.type === 'expense');
+  const incomes = last30.filter((t) => t.type === 'income');
+  const totalExpense = expenses.reduce((s, t) => s + Number(t.amount), 0);
+  const totalIncome = incomes.reduce((s, t) => s + Number(t.amount), 0);
+
+  const byCategory = new Map<string, number>();
+  for (const t of expenses) {
+    const n = t.category?.name ?? 'Necunoscut';
+    byCategory.set(n, (byCategory.get(n) ?? 0) + Number(t.amount));
+  }
+  const topCategories = [...byCategory.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name, total]) => `${name} ${fmtNumber(total)} RON`)
+    .join(', ');
+
+  const stats = `Context utilizator (ultimele 30 zile):
+- Venituri: ${fmtNumber(totalIncome)} RON
+- Cheltuieli: ${fmtNumber(totalExpense)} RON
+- Top categorii cheltuieli: ${topCategories || '(fără date)'}
+- Număr tranzacții: ${last30.length}`;
+
+  const systemPrompt = `Generezi un sfat financiar foarte scurt pentru un utilizator român al aplicației FARO.
+
+Reguli stricte:
+- O singură propoziție, maxim 18 cuvinte.
+- Începe cu „Ar trebui să…", „Încearcă să…", „Pune deoparte…", „Atenție la…" sau formulare similară.
+- Bazează-l pe contextul utilizatorului (top categorie, raport venituri/cheltuieli).
+- Fără emoji, fără markdown, fără cifre brute lungi (rotunjește la sută/mie).
+- Ton calm, prietenos, fără morală.
+- Dacă datele sunt insuficiente: „Adaugă mai multe tranzacții ca să-ți pot oferi sfaturi personalizate."`;
+
+  let content: string;
+  console.log('[insights/tip] generating for user', userId);
+  try {
+    const c = getClient();
+    const model = c.getGenerativeModel({
+      model: 'gemini-2.5-flash-lite',
+      systemInstruction: systemPrompt,
+      generationConfig: { maxOutputTokens: 80, temperature: 0.9 },
+    });
+    const result = await model.generateContent(stats);
+    const text = result.response.text().trim();
+    if (!text) throw new Error('Răspuns gol de la Gemini.');
+    content = text.replace(/^["'„]|["'"]$/g, '').trim();
+    console.log('[insights/tip] OK', content);
+  } catch (err: any) {
+    console.error('[insights/tip] failed:', err?.message || err);
+    content = 'Verifică-ți bugetele săptămânal — un control scurt previne surprizele de la final de lună.';
+  }
+
+  const tip: QuickTip = {
+    generatedAt: new Date().toISOString(),
+    content,
+    cached: false,
+  };
+  tipCache.set(userId, { generatedAt: Date.now(), tip });
+  return tip;
 }

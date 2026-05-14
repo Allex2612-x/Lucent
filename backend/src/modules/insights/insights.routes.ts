@@ -5,5 +5,6 @@ import { requireAuth } from '../../middleware/requireAuth.js';
 const router = Router();
 router.use(requireAuth);
 router.get('/weekly', InsightsController.weekly);
+router.get('/tip', InsightsController.tip);
 
 export default router;
