@@ -14,7 +14,7 @@ ambii furnizori urmând pașii de mai jos, apoi pune valorile în
 4. **Credentials → Create credentials → OAuth client ID**:
    - Application type: **Web application**
    - Authorized JavaScript origins: `http://localhost:5173`
-   - Authorized redirect URIs: `http://localhost:5000/api/auth/google/callback`
+   - Authorized redirect URIs: `http://localhost:4000/api/auth/google/callback`
 5. Copiază **Client ID** și **Client Secret** în `.env`:
    ```env
    GOOGLE_CLIENT_ID="...apps.googleusercontent.com"
@@ -28,7 +28,7 @@ ambii furnizori urmând pașii de mai jos, apoi pune valorile în
 2. **Create App** → Type: **Consumer** → numele aplicației.
 3. În dashboard adaugă produsul **Facebook Login**.
 4. **Facebook Login → Settings**:
-   - Valid OAuth Redirect URIs: `http://localhost:5000/api/auth/facebook/callback`
+   - Valid OAuth Redirect URIs: `http://localhost:4000/api/auth/facebook/callback`
 5. **Settings → Basic** → copiază **App ID** și **App Secret** în `.env`:
    ```env
    FACEBOOK_APP_ID="..."
