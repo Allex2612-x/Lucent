@@ -97,13 +97,6 @@ export function Reports() {
   const [endDate, setEndDate] = useState(ytd.end);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
   const [categoriesInitialized, setCategoriesInitialized] = useState(false);
-  const [include, setInclude] = useState({
-    table: true,
-    sparklines: true,
-    donut: false,
-    aiComments: false,
-  });
-
   const applyPreset = (p: Preset) => {
     setPreset(p);
     if (p !== 'custom') {
@@ -354,7 +347,7 @@ export function Reports() {
         <div>
           <div className="page-title">Rapoarte</div>
           <div className="page-sub">
-            Configurează un raport în 4 pași, vizualizează rezultatul, exportă în formatul dorit.
+            Configurează un raport în 3 pași, vizualizează rezultatul, exportă în formatul dorit.
           </div>
         </div>
       </div>
@@ -614,42 +607,6 @@ export function Reports() {
               </div>
             </div>
 
-            {/* Step 4: Include */}
-            <div style={{ marginBottom: 8 }}>
-              <div style={stepLabelStyle}>
-                <span style={stepNumberStyle}>4</span>Include
-              </div>
-              {[
-                { key: 'table' as const, label: 'Tabel detaliat', sub: 'Toate tranzacțiile' },
-                { key: 'sparklines' as const, label: 'Grafice evoluție', sub: 'Sparkline per categorie' },
-                { key: 'donut' as const, label: 'Donut distribuție', sub: '% per categorie' },
-                { key: 'aiComments' as const, label: 'Comentarii AI', sub: 'Insight-uri din Gemini' },
-              ].map((opt, i, arr) => (
-                <label
-                  key={opt.key}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'auto 1fr',
-                    gap: 10,
-                    alignItems: 'flex-start',
-                    padding: '10px 0',
-                    borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={include[opt.key]}
-                    onChange={() => setInclude((prev) => ({ ...prev, [opt.key]: !prev[opt.key] }))}
-                    style={{ accentColor: 'var(--accent)', marginTop: 2 }}
-                  />
-                  <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 500 }}>{opt.label}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{opt.sub}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
           </div>
 
           {/* Builder footer */}
@@ -828,15 +785,14 @@ export function Reports() {
           </div>
 
           {/* Detail table */}
-          {include.table && (
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid var(--border)',
-                borderRadius: 14,
-                overflow: 'hidden',
-              }}
-            >
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid var(--border)',
+              borderRadius: 14,
+              overflow: 'hidden',
+            }}
+          >
               <div
                 style={{
                   display: 'flex',
@@ -869,7 +825,7 @@ export function Reports() {
                     <tr>
                       <th>Categorie</th>
                       <th style={{ width: 60 }}>TX</th>
-                      {include.sparklines && <th style={{ width: 180 }}>Evoluție lunară</th>}
+                      <th style={{ width: 180 }}>Evoluție lunară</th>
                       <th className="ta-right" style={{ width: 170 }}>% din total</th>
                       <th className="ta-right" style={{ width: 140 }}>Subtotal</th>
                     </tr>
@@ -903,11 +859,9 @@ export function Reports() {
                             </div>
                           </td>
                           <td className="num" style={{ color: 'var(--text-2)' }}>{r.count}</td>
-                          {include.sparklines && (
-                            <td>
-                              <MiniLine data={r.spark} color={r.color} />
-                            </td>
-                          )}
+                          <td>
+                            <MiniLine data={r.spark} color={r.color} />
+                          </td>
                           <td className="ta-right">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
                               <div className="pbar" style={{ width: 70 }}>
@@ -927,7 +881,8 @@ export function Reports() {
                     <tr style={{ background: 'var(--bg-subtle)' }}>
                       <td style={{ fontWeight: 600 }}>Total general</td>
                       <td className="num" style={{ fontWeight: 600 }}>{count}</td>
-                      {include.sparklines && <td />}
+                      <td />
+
                       <td className="ta-right num" style={{ fontWeight: 600 }}>100%</td>
                       <td className="ta-right num" style={{ fontWeight: 700, fontSize: 14 }}>
                         {fmt(total)}{' '}
@@ -937,35 +892,14 @@ export function Reports() {
                   </tbody>
                 </table>
               )}
-            </div>
-          )}
+          </div>
 
-          {include.donut && rows.length > 0 && (
+          {rows.length > 0 && (
             <div className="card" style={{ padding: 18 }}>
               <div className="card-title" style={{ marginBottom: 12 }}>
                 Distribuție pe categorii
               </div>
               <DonutChart rows={rows} />
-            </div>
-          )}
-
-          {include.aiComments && (
-            <div
-              className="card"
-              style={{
-                padding: 16,
-                background:
-                  'linear-gradient(135deg, rgba(37,71,245,0.04) 0%, rgba(10,179,156,0.04) 100%)',
-                border: '1px solid rgba(37,71,245,0.18)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <Sparkles size={14} style={{ color: 'var(--accent)' }} />
-                <div style={{ fontSize: 13, fontWeight: 600 }}>Comentarii AI</div>
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                Deschide drawer-ul „Asistent AI" din topbar (butonul cu gradient) pentru insight-urile generate de Gemini pe baza acestor date.
-              </div>
             </div>
           )}
         </div>
