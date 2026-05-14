@@ -12,6 +12,7 @@ import budgetRoutes from './modules/budget/budget.routes.js';
 import statisticsRoutes from './modules/statistics/statistics.routes.js';
 import reportRoutes from './modules/report/report.routes.js';
 import notificationRoutes from './modules/notification/notification.routes.js';
+import insightsRoutes from './modules/insights/insights.routes.js';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/budgets', budgetRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/insights', insightsRoutes);
 
 // Error handling middleware should be last
 app.use(errorHandler);

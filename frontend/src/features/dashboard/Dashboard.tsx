@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal, Repeat, Sparkles, AlertTriangle } from 'lucide-react';
+import { ArrowUp, ArrowDown, Download, Plus, MoreHorizontal, Repeat, Sparkles, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -16,6 +16,7 @@ import { Category } from '@sasha-licenta/shared';
 import { CHART_COLORS } from '../../styles/colors';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
+import { insightsService } from '../../services/insights.service';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -398,6 +399,21 @@ export function Dashboard() {
   });
   const [dismissedAnomalies, setDismissedAnomalies] = useState<Set<string>>(new Set());
   const visibleAnomalies = (anomaliesData ?? []).filter((a) => !dismissedAnomalies.has(a.id));
+
+  const insightsQuery = useQuery({
+    queryKey: ['insights', 'weekly'],
+    queryFn: () => insightsService.getWeekly(),
+    select: (res) => res.data?.data,
+    staleTime: 1000 * 60 * 60, // 1h client cache
+  });
+  const refreshInsight = async () => {
+    try {
+      const res = await insightsService.getWeekly(true);
+      queryClient.setQueryData(['insights', 'weekly'], res);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Nu am putut regenera insight-ul.');
+    }
+  };
 
   const { data: categoriesResponse } = useQuery({
     queryKey: ['categories'],
@@ -813,6 +829,86 @@ export function Dashboard() {
             </div>
           </div>
           <CategoryDonut data={donutSlices} monthLabel={monthLabel} />
+        </div>
+      </div>
+
+      {/* Weekly insight (AI) */}
+      <div
+        className="card"
+        style={{
+          marginBottom: 18,
+          padding: 22,
+          background:
+            'linear-gradient(135deg, rgba(37,71,245,0.04) 0%, rgba(10,179,156,0.04) 100%)',
+          border: '1px solid rgba(37,71,245,0.18)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, #2547f5, #6c4cf8)',
+              color: '#fff',
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Sparkles size={20} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                marginBottom: 8,
+                gap: 12,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>Insight săptămânal</div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                  Generat de Claude · {insightsQuery.data?.cached ? 'cache 24h' : 'proaspăt'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={refreshInsight}
+                disabled={insightsQuery.isFetching}
+                className="btn btn-ghost btn-sm"
+                title="Regenerează"
+              >
+                {insightsQuery.isFetching ? (
+                  <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <RefreshCw size={12} />
+                )}
+                Regenerează
+              </button>
+            </div>
+            {insightsQuery.isLoading ? (
+              <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Se generează...</div>
+            ) : insightsQuery.data ? (
+              <div
+                className="serif"
+                style={{
+                  fontSize: 16,
+                  lineHeight: 1.55,
+                  color: 'var(--text-1)',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {insightsQuery.data.content}
+              </div>
+            ) : (
+              <div style={{ color: 'var(--text-3)', fontSize: 13 }}>
+                Nu am putut genera insight-ul acum.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
