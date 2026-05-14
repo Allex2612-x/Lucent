@@ -13,6 +13,7 @@ import { categoriesService } from '../../services/categories.service';
 import { budgetsService } from '../../services/budgets.service';
 import { Category } from '@sasha-licenta/shared';
 import { CHART_COLORS } from '../../styles/colors';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -485,19 +486,23 @@ export function Dashboard() {
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
   const getCategory = (id: string) => categories.find((c) => c.id === id);
 
-  const userGreeting = (() => {
+  const currentUser = useAuthStore((s) => s.user);
+  const firstName = currentUser?.firstName?.trim() || '';
+  const { greeting, motto } = (() => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Bună dimineața';
-    if (hour < 18) return 'Bună ziua';
-    return 'Bună seara';
+    if (hour < 5) return { greeting: 'Bună seara', motto: 'Noaptea numără — un bilanț scurt înainte de odihnă.' };
+    if (hour < 12) return { greeting: 'Bună dimineața', motto: 'O cafea, o privire calmă peste banii tăi.' };
+    if (hour < 18) return { greeting: 'Bună ziua', motto: 'Banii la zi — fără filtre, fără surprize.' };
+    return { greeting: 'Bună seara', motto: 'Bilanțul de seară — calm, complet, clar.' };
   })();
+  const fullGreeting = firstName ? `${greeting}, ${firstName}` : greeting;
 
   return (
     <>
       <div className="page-head">
         <div>
-          <div className="page-title">{userGreeting}</div>
-          <div className="page-sub">Iată un rezumat al banilor tăi pentru perioada selectată.</div>
+          <div className="page-title">{fullGreeting}</div>
+          <div className="page-sub">{motto}</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="seg">
