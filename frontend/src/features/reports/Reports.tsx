@@ -909,46 +909,222 @@ export function Reports() {
 }
 
 // Minimal SVG donut for the optional include.donut section
-function DonutChart({ rows }: { rows: Array<{ catId: string; cat: string; color: string; subtotal: number }> }) {
+function DonutChart({
+  rows,
+}: {
+  rows: Array<{ catId: string; cat: string; color: string; subtotal: number; icon?: string; count?: number }>;
+}) {
   const total = rows.reduce((s, r) => s + r.subtotal, 0);
+  const [hoverId, setHoverId] = useState<string | null>(null);
   if (total === 0) return null;
-  const R = 70;
-  const r = 48;
-  const cx = 88;
-  const cy = 88;
-  let acc = -Math.PI / 2;
-  const arcs = rows.map((d) => {
-    const a = (d.subtotal / total) * Math.PI * 2;
-    const x1 = cx + R * Math.cos(acc);
-    const y1 = cy + R * Math.sin(acc);
-    const x2 = cx + R * Math.cos(acc + a);
-    const y2 = cy + R * Math.sin(acc + a);
-    const xi2 = cx + r * Math.cos(acc + a);
-    const yi2 = cy + r * Math.sin(acc + a);
-    const xi1 = cx + r * Math.cos(acc);
-    const yi1 = cy + r * Math.sin(acc);
-    const large = a > Math.PI ? 1 : 0;
-    const path = `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${r} ${r} 0 ${large} 0 ${xi1} ${yi1} Z`;
-    acc += a;
-    return { ...d, path };
+
+  // Use a single SVG circle per segment + stroke-dasharray so we get the modern
+  // donut look with small gaps between segments. Linecap "butt" keeps edges
+  // sharp; we offset each segment along the circumference.
+  const STROKE = 22; // donut thickness
+  const SIZE = 220;
+  const RADIUS = SIZE / 2 - STROKE / 2 - 4;
+  const C = 2 * Math.PI * RADIUS;
+  const GAP = 0.012 * C; // ~1.2% of circumference between slices
+
+  let offset = 0;
+  const segments = rows.map((d, i) => {
+    const share = d.subtotal / total;
+    const arc = Math.max(0, share * C - GAP);
+    const seg = {
+      ...d,
+      idx: i,
+      share,
+      arc,
+      // dashoffset rotates the start of the stroke to where this segment begins
+      dashOffset: -offset,
+    };
+    offset += share * C;
+    return seg;
   });
+
+  const hovered = segments.find((s) => s.catId === hoverId);
+  const center = hovered
+    ? {
+        label: hovered.cat,
+        value: hovered.subtotal,
+        share: hovered.share,
+        color: hovered.color,
+      }
+    : {
+        label: 'Total',
+        value: total,
+        share: 1,
+        color: 'var(--text-1)',
+      };
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-      <svg viewBox="0 0 176 176" width={160} height={160} style={{ flexShrink: 0 }}>
-        {arcs.map((a) => (
-          <path key={a.catId} d={a.path} fill={a.color} />
-        ))}
-      </svg>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {rows.map((d) => (
-          <div key={d.catId} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 2, background: d.color }} />
-            <span style={{ flex: 1, color: 'var(--text-2)' }}>{d.cat}</span>
-            <span className="mono" style={{ color: 'var(--text-3)' }}>
-              {((d.subtotal / total) * 100).toFixed(1)}%
-            </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <svg
+          viewBox={`0 0 ${SIZE} ${SIZE}`}
+          width={SIZE}
+          height={SIZE}
+          style={{ display: 'block', transform: 'rotate(-90deg)' }}
+        >
+          <defs>
+            <filter id="donut-shadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.12" />
+            </filter>
+          </defs>
+          {/* track */}
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={RADIUS}
+            fill="none"
+            stroke="var(--bg-inset)"
+            strokeWidth={STROKE}
+          />
+          {segments.map((s) => {
+            const isHover = hoverId === s.catId;
+            const dim = hoverId !== null && !isHover;
+            return (
+              <circle
+                key={s.catId}
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={STROKE + (isHover ? 4 : 0)}
+                strokeDasharray={`${s.arc} ${C - s.arc}`}
+                strokeDashoffset={s.dashOffset}
+                strokeLinecap="butt"
+                style={{
+                  opacity: dim ? 0.35 : 1,
+                  transition: 'opacity .15s, stroke-width .15s',
+                  cursor: 'pointer',
+                  filter: isHover ? 'url(#donut-shadow)' : undefined,
+                  animation: `donutGrow .6s ease-out both`,
+                  animationDelay: `${s.idx * 60}ms`,
+                  transformOrigin: 'center',
+                }}
+                onMouseEnter={() => setHoverId(s.catId)}
+                onMouseLeave={() => setHoverId(null)}
+              />
+            );
+          })}
+        </svg>
+        {/* center label */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10.5,
+              color: 'var(--text-3)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginBottom: 2,
+            }}
+          >
+            {center.label}
           </div>
-        ))}
+          <div
+            className="serif num"
+            style={{
+              fontSize: 26,
+              fontStyle: 'italic',
+              color: center.color,
+              letterSpacing: '-0.02em',
+              lineHeight: 1,
+            }}
+          >
+            {Math.round(center.value).toLocaleString('ro-RO')}
+          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 4 }}>
+            RON · {(center.share * 100).toFixed(1)}%
+          </div>
+        </div>
+      </div>
+
+      {/* legend */}
+      <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {rows
+          .slice()
+          .sort((a, b) => b.subtotal - a.subtotal)
+          .map((d) => {
+            const isHover = hoverId === d.catId;
+            const share = d.subtotal / total;
+            return (
+              <button
+                key={d.catId}
+                type="button"
+                onMouseEnter={() => setHoverId(d.catId)}
+                onMouseLeave={() => setHoverId(null)}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '14px 1fr auto auto',
+                  gap: 10,
+                  alignItems: 'center',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  background: isHover ? 'var(--bg-subtle)' : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
+                  transition: 'background .12s',
+                }}
+              >
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 3,
+                    background: d.color,
+                    boxShadow: isHover ? `0 0 0 3px ${d.color}33` : 'none',
+                    transition: 'box-shadow .15s',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 12.5,
+                    color: 'var(--text-1)',
+                    fontWeight: isHover ? 600 : 500,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {d.icon ? `${d.icon} ` : ''}
+                  {d.cat}
+                </span>
+                <span
+                  className="num"
+                  style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 500 }}
+                >
+                  {Math.round(d.subtotal).toLocaleString('ro-RO')}
+                </span>
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-3)',
+                    width: 44,
+                    textAlign: 'right',
+                  }}
+                >
+                  {(share * 100).toFixed(1)}%
+                </span>
+              </button>
+            );
+          })}
       </div>
     </div>
   );
