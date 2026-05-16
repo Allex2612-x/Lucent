@@ -63,12 +63,24 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedError('Invalid email or password');
+      // Trade-off: this distinguishes "no account" from "wrong password",
+      // which allows account enumeration. We accept it for a personal-finance
+      // app where the UX win (telling the user whether to register vs reset)
+      // outweighs the small privacy cost.
+      const err = new UnauthorizedError(
+        'Nu există un cont cu acest email. Creează unul nou sau verifică datele de logare.',
+      );
+      (err as any).code = 'EMAIL_NOT_FOUND';
+      throw err;
     }
 
     const isMatch = await bcrypt.compare(data.password, user.password);
     if (!isMatch) {
-      throw new UnauthorizedError('Invalid email or password');
+      const err = new UnauthorizedError(
+        'Parolă greșită. Verifică datele de logare sau resetează parola.',
+      );
+      (err as any).code = 'INVALID_PASSWORD';
+      throw err;
     }
 
     const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: '15m' });

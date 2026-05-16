@@ -11,6 +11,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [providers, setProviders] = useState<OAuthProviders>({ google: false, facebook: false });
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -56,6 +57,7 @@ export function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorCode(null);
     setSubmitting(true);
     try {
       const res = await api.post('/auth/login', { email, password });
@@ -65,6 +67,7 @@ export function Login() {
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'A apărut o eroare la autentificare');
+      setErrorCode(err.response?.data?.code ?? null);
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +83,39 @@ export function Login() {
         <div className="auth-sub">Continuă să-ți gestionezi finanțele de unde ai rămas.</div>
       </div>
 
-      {error && <div className="auth-form-error">{error}</div>}
+      {error && (
+        <div className="auth-form-error" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span>{error}</span>
+          {errorCode === 'EMAIL_NOT_FOUND' && (
+            <Link
+              to="/register"
+              style={{
+                alignSelf: 'flex-start',
+                color: 'var(--expense)',
+                fontWeight: 600,
+                fontSize: 12.5,
+                textDecoration: 'underline',
+              }}
+            >
+              Creează cont nou cu „{email}" →
+            </Link>
+          )}
+          {errorCode === 'INVALID_PASSWORD' && (
+            <Link
+              to="/forgot-password"
+              style={{
+                alignSelf: 'flex-start',
+                color: 'var(--expense)',
+                fontWeight: 600,
+                fontSize: 12.5,
+                textDecoration: 'underline',
+              }}
+            >
+              Resetează parola →
+            </Link>
+          )}
+        </div>
+      )}
 
       {(providers.google || providers.facebook) && (
         <>

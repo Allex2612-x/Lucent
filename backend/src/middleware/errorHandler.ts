@@ -10,10 +10,9 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
-      success: false,
-      message: err.message,
-    });
+    const payload: any = { success: false, message: err.message };
+    if ((err as any).code) payload.code = (err as any).code;
+    return res.status(err.statusCode).json(payload);
   }
 
   if (err instanceof ZodError) {
