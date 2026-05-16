@@ -57,32 +57,23 @@ export class NotificationService {
 
     // Check if budget is exceeded (>= 100%)
     if (percentage >= 100) {
-      // Check if notification already exists (unread)
-      const existingNotification = await prisma.notification.findFirst({
-        where: {
-          userId,
-          type: 'budget_exceeded',
-          relatedEntityId: budgetCategory.id,
-          isRead: false,
-        },
+      // Every over-limit transaction fires a fresh notification — the user
+      // explicitly wants to be reminded each time, not just the first time
+      // they cross the limit. Stale unread notifications would also show
+      // outdated totals (frozen at the moment of first overage).
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
       });
 
-      if (!existingNotification) {
-        // Get category name for the message
-        const category = await prisma.category.findUnique({
-          where: { id: categoryId },
-        });
-
-        await prisma.notification.create({
-          data: {
-            userId,
-            type: 'budget_exceeded',
-            title: 'Limită buget depășită',
-            message: `Ai depășit limita bugetului pentru categoria "${category?.name || 'Necunoscută'}". Cheltuieli: ${totalSpent.toFixed(2)} RON / Limită: ${limitAmount.toFixed(2)} RON`,
-            relatedEntityId: budgetCategory.id,
-          },
-        });
-      }
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: 'budget_exceeded',
+          title: 'Limită buget depășită',
+          message: `Ai depășit limita bugetului pentru categoria "${category?.name || 'Necunoscută'}". Cheltuieli: ${totalSpent.toFixed(2)} RON / Limită: ${limitAmount.toFixed(2)} RON`,
+          relatedEntityId: budgetCategory.id,
+        },
+      });
     }
     // Check if budget is near limit (>= 80% and < 100%)
     else if (percentage >= 80) {
