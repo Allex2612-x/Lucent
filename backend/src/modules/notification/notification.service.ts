@@ -14,12 +14,16 @@ export class NotificationService {
     const month = transactionDate.getMonth() + 1; // JavaScript months are 0-indexed
     const year = transactionDate.getFullYear();
 
-    // Find the budget for this month/year
+    // Find the per-category budget for this month/year. Filtering by
+    // isTotal: false matters — otherwise findFirst can pick the total
+    // budget row (which has no categories), and we bail out without
+    // checking the per-category limit.
     const budget = await prisma.budget.findFirst({
       where: {
         userId,
         month,
         year,
+        isTotal: false,
       },
       include: {
         categories: {
@@ -34,7 +38,10 @@ export class NotificationService {
     }
 
     const budgetCategory = budget.categories[0];
-    const limitAmount = budgetCategory.limitAmount;
+    // Coerce Prisma Decimal -> number once. Without this, `sum + t.amount`
+    // mixes number with Decimal and silently turns into string concat,
+    // making the percentage and threshold checks nonsense.
+    const limitAmount = Number(budgetCategory.limitAmount);
 
     // Calculate total spent in this category for this month
     const startOfMonth = new Date(year, month - 1, 1);
@@ -52,8 +59,8 @@ export class NotificationService {
       },
     });
 
-    const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
-    const percentage = (totalSpent / limitAmount) * 100;
+    const totalSpent = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+    const percentage = limitAmount > 0 ? (totalSpent / limitAmount) * 100 : 0;
 
     // Check if budget is exceeded (>= 100%)
     if (percentage >= 100) {
