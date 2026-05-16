@@ -17,6 +17,7 @@ import { CHART_COLORS } from '../../styles/colors';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
 import { CategoryIcon } from '../../components/CategoryIcon';
+import { BudgetWarningDialog, BudgetWarningPayload } from '../../components/BudgetWarningDialog';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -335,6 +336,7 @@ export function Dashboard() {
   const monthLabel = `${MONTH_NAMES[currentMonth - 1]} ${currentYear}`;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [budgetWarning, setBudgetWarning] = useState<BudgetWarningPayload | null>(null);
   const [formData, setFormData] = useState<TransactionData>({
     description: '',
     amount: 0,
@@ -502,13 +504,7 @@ export function Dashboard() {
       const status = error?.response?.status;
       const payload = error?.response?.data;
       if (status === 409 && payload?.requiresConfirmation) {
-        const warn = payload.warning;
-        const msg = warn
-          ? `Această tranzacție depășește bugetul „${warn.categoryName}" cu ${(warn.overage ?? 0).toFixed(2)} RON. Continui oricum?`
-          : 'Această tranzacție depășește bugetul categoriei. Continui oricum?';
-        if (window.confirm(msg)) {
-          createMutation.mutate({ data: formData, force: true });
-        }
+        setBudgetWarning(payload.warning ?? { categoryName: 'Necunoscut' });
         return;
       }
       const message = payload?.message || 'Eroare la salvarea tranzacției. Încearcă din nou.';
@@ -1142,6 +1138,16 @@ export function Dashboard() {
           </div>
         </div>
       </Modal>
+
+      <BudgetWarningDialog
+        warning={budgetWarning}
+        onCancel={() => setBudgetWarning(null)}
+        onConfirm={() => {
+          createMutation.mutate({ data: formData, force: true });
+          setBudgetWarning(null);
+        }}
+        isPending={createMutation.isPending}
+      />
     </>
   );
 }

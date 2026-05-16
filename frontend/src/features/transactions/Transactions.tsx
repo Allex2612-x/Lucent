@@ -26,6 +26,7 @@ import { Sparkles, Upload as UploadIcon, Camera, Loader2 } from 'lucide-react';
 import { ImportCsvModal } from './ImportCsvModal';
 import { runReceiptOcr } from '../../utils/receiptOcr';
 import { CategoryIcon } from '../../components/CategoryIcon';
+import { BudgetWarningDialog, BudgetWarningPayload } from '../../components/BudgetWarningDialog';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -155,13 +156,8 @@ export function Transactions() {
       const status = error?.response?.status;
       const payload = error?.response?.data;
       if (status === 409 && payload?.requiresConfirmation) {
-        const warn = payload.warning;
-        const msg = warn
-          ? `Această tranzacție depășește bugetul „${warn.categoryName}" cu ${(warn.overage ?? 0).toFixed(2)} RON. Continui oricum?`
-          : 'Tranzacția depășește bugetul. Continui oricum?';
-        if (window.confirm(msg)) {
-          createMutation.mutate({ data: formData, force: true });
-        }
+        // Surface our themed dialog instead of window.confirm
+        setBudgetWarning(payload.warning ?? { categoryName: 'Necunoscut' });
         return;
       }
       toast.error(payload?.message || 'Eroare la adăugarea tranzacției');
@@ -412,6 +408,7 @@ export function Transactions() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
+  const [budgetWarning, setBudgetWarning] = useState<BudgetWarningPayload | null>(null);
   const [ocrProgress, setOcrProgress] = useState<number | null>(null);
   const ocrFileRef = useRef<HTMLInputElement>(null);
 
@@ -551,6 +548,16 @@ export function Transactions() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         categories={categories}
+      />
+
+      <BudgetWarningDialog
+        warning={budgetWarning}
+        onCancel={() => setBudgetWarning(null)}
+        onConfirm={() => {
+          createMutation.mutate({ data: formData, force: true });
+          setBudgetWarning(null);
+        }}
+        isPending={createMutation.isPending}
       />
 
       {/* summary strip */}
