@@ -309,11 +309,38 @@ export function Budgets() {
 
   const createMutation = useMutation({
     mutationFn: (data: BudgetData) => budgetsService.create(data),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       setIsCreateModalOpen(false);
       resetForm();
       toast.success('Buget creat cu succes!');
+
+      // The backend includes `overflows` on the create response when the
+      // newly-set limits are already breached by existing transactions.
+      // Surface them as additional toasts so the user notices immediately.
+      const overflows: Array<{
+        categoryName: string;
+        spent: number;
+        limit: number;
+        severity: 'exceeded' | 'near';
+      }> = res?.data?.data?.overflows ?? [];
+      for (const o of overflows) {
+        const fmtN = (n: number) =>
+          n.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        if (o.severity === 'exceeded') {
+          toast.error(
+            `„${o.categoryName}" e deja peste limită: ${fmtN(o.spent)} RON din ${fmtN(o.limit)} RON.`,
+            { duration: 6000 },
+          );
+        } else {
+          toast.warning(
+            `„${o.categoryName}" e aproape de limită: ${fmtN(o.spent)} RON din ${fmtN(o.limit)} RON.`,
+            { duration: 5000 },
+          );
+        }
+      }
     },
     onError: (error: any) =>
       toast.error(error?.response?.data?.message || 'Eroare la crearea bugetului.'),

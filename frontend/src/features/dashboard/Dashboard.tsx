@@ -16,6 +16,7 @@ import { Category } from '@sasha-licenta/shared';
 import { CHART_COLORS } from '../../styles/colors';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
+import { CategoryIcon } from '../../components/CategoryIcon';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -863,13 +864,13 @@ export function Dashboard() {
                         width: 36,
                         height: 36,
                         borderRadius: 10,
-                        background: 'var(--bg-inset)',
+                        background: cat?.color ? `${cat.color}1f` : 'var(--bg-inset)',
+                        color: cat?.color || 'var(--text-2)',
                         display: 'grid',
                         placeItems: 'center',
-                        fontSize: 16,
                       }}
                     >
-                      {cat?.icon || (isIncome ? '💼' : '🛒')}
+                      <CategoryIcon icon={cat?.icon} name={cat?.name} size={17} />
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div

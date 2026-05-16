@@ -10,6 +10,7 @@ import { categoriesService, CategoryData } from '../../services/categories.servi
 import { statisticsService } from '../../services/statistics.service';
 import { Category } from '@sasha-licenta/shared';
 import { CHART_COLORS } from '../../styles/colors';
+import { CategoryIcon } from '../../components/CategoryIcon';
 
 const fmt = (n: number, dec = 0) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -60,12 +61,12 @@ function CategoryCard({
             height: 40,
             borderRadius: 10,
             background: `${color}1a`,
+            color,
             display: 'grid',
             placeItems: 'center',
-            fontSize: 18,
           }}
         >
-          {c.cat.icon || '📁'}
+          <CategoryIcon icon={c.cat.icon} name={c.cat.name} size={20} />
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
           {c.cat.isDefault ? (

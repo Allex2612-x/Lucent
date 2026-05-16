@@ -25,6 +25,7 @@ import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
 import { Sparkles, Upload as UploadIcon, Camera, Loader2 } from 'lucide-react';
 import { ImportCsvModal } from './ImportCsvModal';
 import { runReceiptOcr } from '../../utils/receiptOcr';
+import { CategoryIcon } from '../../components/CategoryIcon';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -851,13 +852,13 @@ export function Transactions() {
                               width: 32,
                               height: 32,
                               borderRadius: 9,
-                              background: 'var(--bg-inset)',
+                              background: cat?.color ? `${cat.color}1f` : 'var(--bg-inset)',
+                              color: cat?.color || 'var(--text-2)',
                               display: 'grid',
                               placeItems: 'center',
-                              fontSize: 14,
                             }}
                           >
-                            {cat?.icon || (isIncome ? '💼' : '🛒')}
+                            <CategoryIcon icon={cat?.icon} name={cat?.name} size={16} />
                           </div>
                           <div style={{ minWidth: 0 }}>
                             <div

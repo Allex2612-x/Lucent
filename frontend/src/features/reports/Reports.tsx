@@ -17,6 +17,7 @@ import { categoriesService } from '../../services/categories.service';
 import { api } from '../../services/api';
 import { CHART_COLORS } from '../../styles/colors';
 import { Category } from '@sasha-licenta/shared';
+import { CategoryIcon } from '../../components/CategoryIcon';
 
 const fmt = (n: number, dec = 2) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -843,12 +844,12 @@ export function Reports() {
                                   height: 28,
                                   borderRadius: 8,
                                   background: `${r.color}1a`,
+                                  color: r.color,
                                   display: 'grid',
                                   placeItems: 'center',
-                                  fontSize: 13,
                                 }}
                               >
-                                {r.icon}
+                                <CategoryIcon icon={r.icon} name={r.cat} size={14} />
                               </div>
                               <div>
                                 <div style={{ fontWeight: 500, fontSize: 13 }}>{r.cat}</div>
