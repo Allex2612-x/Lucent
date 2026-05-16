@@ -2,6 +2,8 @@
 import { Routes, Route } from 'react-router-dom';
 import { Login } from '../features/auth/Login';
 import { Register } from '../features/auth/Register';
+import { ForgotPassword } from '../features/auth/ForgotPassword';
+import { ResetPassword } from '../features/auth/ResetPassword';
 import { PrivateRoute } from '../components/PrivateRoute';
 import { MainLayout } from '../components/layout/MainLayout';
 import { Dashboard } from '../features/dashboard/Dashboard';
@@ -16,6 +18,8 @@ export function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       
       <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
         <Route index element={<Dashboard />} />

@@ -34,4 +34,15 @@ export class UserController {
       next(error);
     }
   }
+
+  static async deleteMe(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      await UserService.deleteAccount(userId);
+      res.clearCookie('refreshToken');
+      res.json({ success: true, message: 'Account deleted' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

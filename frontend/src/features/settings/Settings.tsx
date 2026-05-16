@@ -1,4 +1,6 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Modal } from '../../components/ui/Modal';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Shield, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,6 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { useAuthStore } from '../../store/useAuthStore';
+import { sounds } from '../../utils/sounds';
 
 interface UserProfile {
   id: string;
@@ -23,6 +26,7 @@ interface ProfileUpdateData {
   firstName?: string;
   lastName?: string;
   currency?: string;
+  avatarUrl?: string | null;
 }
 
 interface PasswordUpdateData {
@@ -33,7 +37,6 @@ interface PasswordUpdateData {
 interface Preferences {
   darkTheme: boolean;
   euDateFormat: boolean;
-  compact: boolean;
   sounds: boolean;
 }
 
@@ -106,8 +109,14 @@ function initials(first?: string, last?: string) {
 export function Settings() {
   const queryClient = useQueryClient();
   const setAuthUser = useAuthStore((s) => s.setUser);
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
 
   const [tab, setTab] = useState<Tab>('profile');
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const [profileData, setProfileData] = useState<ProfileUpdateData>({
     firstName: '',
@@ -119,12 +128,29 @@ export function Settings() {
     newPassword: '',
   });
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [preferences, setPreferences] = useState<Preferences>({
-    darkTheme: false,
-    euDateFormat: true,
-    compact: false,
-    sounds: true,
+  const [preferences, setPreferences] = useState<Preferences>(() => {
+    try {
+      const raw = localStorage.getItem('faro-preferences');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          darkTheme: !!parsed.darkTheme,
+          euDateFormat: parsed.euDateFormat !== false,
+          sounds: parsed.sounds !== false,
+        };
+      }
+    } catch {}
+    return { darkTheme: false, euDateFormat: true, sounds: true };
   });
+
+  // Persist preferences + apply dark theme to document root
+  useEffect(() => {
+    try {
+      localStorage.setItem('faro-preferences', JSON.stringify(preferences));
+    } catch {}
+    document.documentElement.dataset.theme = preferences.darkTheme ? 'dark' : 'light';
+    window.dispatchEvent(new CustomEvent('faro-preferences-changed', { detail: preferences }));
+  }, [preferences]);
 
   const { data: userResponse, isLoading } = useQuery({
     queryKey: ['user', 'me'],
@@ -169,6 +195,81 @@ export function Settings() {
     },
   });
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => api.delete('/users/me'),
+    onSuccess: () => {
+      toast.success('Contul a fost șters.');
+      logout();
+      navigate('/login', { replace: true });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Eroare la ștergerea contului.');
+    },
+  });
+
+  /**
+   * Reads an image File, downscales to max 512px on the long edge using a
+   * canvas, then JSON-PATCHes the user with a base64 data URL.
+   */
+  const handleAvatarFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Te rugăm să alegi o imagine.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Imaginea trebuie să aibă maxim 2 MB.');
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const max = 512;
+          const ratio = Math.min(1, max / Math.max(img.width, img.height));
+          const w = Math.round(img.width * ratio);
+          const h = Math.round(img.height * ratio);
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject(new Error('Canvas indisponibil'));
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => reject(new Error('Imaginea nu poate fi citită'));
+        const reader = new FileReader();
+        reader.onload = () => (img.src = reader.result as string);
+        reader.onerror = () => reject(new Error('Imaginea nu poate fi citită'));
+        reader.readAsDataURL(file);
+      });
+      const res = await api.patch('/users/me', { avatarUrl: dataUrl });
+      const updated = res.data?.data;
+      if (updated && setAuthUser) setAuthUser(updated);
+      queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
+      toast.success('Fotografie actualizată.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Eroare la încărcare.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    setAvatarUploading(true);
+    try {
+      const res = await api.patch('/users/me', { avatarUrl: null });
+      const updated = res.data?.data;
+      if (updated && setAuthUser) setAuthUser(updated);
+      queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
+      toast.success('Fotografie eliminată.');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Eroare la eliminare.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if ((profileData.firstName ?? '').trim().length < 2) {
@@ -199,15 +300,21 @@ export function Settings() {
     updatePasswordMutation.mutate(passwordData);
   };
 
-  const togglePref = (key: keyof Preferences) =>
-    setPreferences((prev) => ({ ...prev, [key]: !prev[key] }));
+  const togglePref = (key: keyof Preferences) => {
+    setPreferences((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      // play after state update so sounds.click() respects the new flag
+      setTimeout(() => sounds.click(), 0);
+      return next;
+    });
+  };
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'profile', label: 'Profil' },
     { id: 'security', label: 'Securitate' },
     { id: 'preferences', label: 'Preferințe' },
     { id: 'notifications', label: 'Notificări' },
-    { id: 'data', label: 'Date & Export' },
+    { id: 'data', label: 'Date' },
   ];
 
   if (isLoading) {
@@ -254,18 +361,54 @@ export function Settings() {
         >
           <form onSubmit={handleProfileSubmit}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 22 }}>
-              <div
-                className="sb-avatar"
-                style={{ width: 64, height: 64, fontSize: 22, borderRadius: 16 }}
-              >
-                {initials(profileData.firstName, profileData.lastName)}
-              </div>
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt="Fotografie profil"
+                  style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  className="sb-avatar"
+                  style={{ width: 64, height: 64, fontSize: 22, borderRadius: 16 }}
+                >
+                  {initials(profileData.firstName, profileData.lastName)}
+                </div>
+              )}
               <div>
-                <Button type="button" variant="secondary" disabled>
-                  Încarcă fotografie
-                </Button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => avatarFileRef.current?.click()}
+                    disabled={avatarUploading}
+                  >
+                    {avatarUploading ? 'Se încarcă...' : user?.avatarUrl ? 'Schimbă' : 'Încarcă fotografie'}
+                  </Button>
+                  {user?.avatarUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleAvatarRemove}
+                      disabled={avatarUploading}
+                    >
+                      Elimină
+                    </Button>
+                  )}
+                </div>
+                <input
+                  ref={avatarFileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarFile(file);
+                    e.target.value = '';
+                  }}
+                />
                 <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
-                  PNG sau JPG, max. 2 MB
+                  PNG sau JPG, max. 2 MB. Se redimensionează automat la 512px.
                 </div>
               </div>
             </div>
@@ -475,12 +618,6 @@ export function Settings() {
             onChange={() => togglePref('euDateFormat')}
           />
           <ToggleRow
-            label="Mod compact"
-            sub="Listă mai densă în tabele, fără pierderi de info"
-            on={preferences.compact}
-            onChange={() => togglePref('compact')}
-          />
-          <ToggleRow
             label="Sunete în aplicație"
             sub="Mici feedback-uri sonore la acțiuni-cheie"
             on={preferences.sounds}
@@ -519,33 +656,9 @@ export function Settings() {
 
       {tab === 'data' && (
         <SettingsSection
-          title="Date & Export"
-          sub="Exportă-ți datele sau șterge contul definitiv."
+          title="Date"
+          sub="Acțiuni ireversibile asupra contului tău."
         >
-          <div
-            style={{
-              padding: 18,
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              background: 'var(--bg-subtle)',
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 600 }}>Exportă toate datele</div>
-            <div
-              style={{
-                fontSize: 12.5,
-                color: 'var(--text-2)',
-                marginTop: 4,
-                marginBottom: 12,
-                lineHeight: 1.5,
-              }}
-            >
-              Descarcă toate tranzacțiile, bugetele și categoriile într-un fișier JSON sau Excel.
-            </div>
-            <Button variant="secondary">Descarcă export</Button>
-          </div>
-
           <div
             style={{
               padding: 18,
@@ -571,6 +684,10 @@ export function Settings() {
             </div>
             <Button
               variant="secondary"
+              onClick={() => {
+                setDeleteConfirmText('');
+                setIsDeleteOpen(true);
+              }}
               style={{
                 color: 'var(--expense)',
                 borderColor: 'var(--expense)',
@@ -581,6 +698,56 @@ export function Settings() {
           </div>
         </SettingsSection>
       )}
+
+      {/* Delete account confirmation */}
+      <Modal
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        title="Confirmare ștergere cont"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsDeleteOpen(false)}>
+              Anulează
+            </Button>
+            <Button
+              variant="danger"
+              disabled={deleteConfirmText !== 'STERGE' || deleteAccountMutation.isPending}
+              onClick={() => deleteAccountMutation.mutate()}
+            >
+              {deleteAccountMutation.isPending ? 'Se șterge...' : 'Șterge definitiv'}
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div
+            style={{
+              padding: 14,
+              border: '1px solid var(--expense-soft)',
+              borderRadius: 12,
+              background: 'rgba(245,85,110,0.04)',
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: 'var(--text-2)',
+            }}
+          >
+            Vei pierde definitiv toate tranzacțiile, bugetele, categoriile personalizate și
+            insight-urile generate pentru contul <b style={{ color: 'var(--text-1)' }}>{user?.email}</b>. Această
+            acțiune nu poate fi anulată.
+          </div>
+          <div className="field">
+            <label>
+              Scrie <b style={{ color: 'var(--expense)' }}>STERGE</b> ca să confirmi:
+            </label>
+            <input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="STERGE"
+              autoFocus
+            />
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

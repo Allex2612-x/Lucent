@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService, registerSchema, loginSchema } from './auth.service.js';
 import { AppError } from '../../shared/errors.js';
+import { requestPasswordReset, consumePasswordReset } from './password-reset.service.js';
 
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
@@ -90,6 +91,36 @@ export class AuthController {
       });
     } catch (error) {
       next(error);
+    }
+  }
+
+  static async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const email = String(req.body?.email ?? '').trim().toLowerCase();
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email obligatoriu.' });
+      }
+      const result = await requestPasswordReset(email);
+      // Always 200 — we don't reveal whether the email exists.
+      res.json({
+        success: true,
+        message:
+          'Dacă există un cont cu acest email, am trimis un link de resetare. Verifică inbox-ul.',
+        token: result.token, // null in production
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = String(req.body?.token ?? '').trim();
+      const newPassword = String(req.body?.newPassword ?? '');
+      await consumePasswordReset(token, newPassword);
+      res.json({ success: true, message: 'Parola a fost resetată. Te poți autentifica.' });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error?.message || 'Eroare la resetare.' });
     }
   }
 }

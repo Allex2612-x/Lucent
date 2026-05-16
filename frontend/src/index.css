@@ -46,8 +46,119 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-serif: 'Instrument Serif', 'Times New Roman', serif;
+}
 
-  /* legacy semantic aliases for backwards-compat */
+/* Dark mode — overrides surface, border, text tokens; keeps semantic accents */
+html[data-theme="dark"] {
+  --bg-canvas: #0e0f12;
+  --bg-app: #14161b;
+  --bg-surface: #1a1d23;
+  --bg-subtle: #1f2229;
+  --bg-inset: #24272f;
+
+  --border: #2a2e36;
+  --border-strong: #383d47;
+
+  --text-1: #ecedf1;
+  --text-2: #b0b3bd;
+  --text-3: #7a7f8c;
+
+  --accent: #4d6bff;
+  --accent-soft: rgba(77,107,255,0.16);
+  --accent-ink: #8aa1ff;
+
+  --income: #2dd4af;
+  --income-soft: rgba(45,212,175,0.14);
+  --expense: #ff6f86;
+  --expense-soft: rgba(255,111,134,0.14);
+  --warn: #f3b04a;
+  --warn-soft: rgba(243,176,74,0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04);
+  --shadow-md: 0 4px 14px -2px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.04);
+  --shadow-lg: 0 22px 50px -16px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.05);
+
+  /* legacy aliases follow the new values */
+  --bg-base: var(--bg-app);
+  --bg-elevated: var(--bg-surface);
+  --bg-hover: var(--bg-subtle);
+  --bg-active: var(--bg-inset);
+  --border-default: var(--border);
+  --border-hover: var(--border-strong);
+  --text-primary: var(--text-1);
+  --text-secondary: var(--text-2);
+  --text-muted: var(--text-3);
+  --accent-primary: var(--accent);
+  --accent-primary-hover: var(--accent-ink);
+  --accent-success: var(--income);
+  --accent-danger: var(--expense);
+  --accent-warning: var(--warn);
+  --primary: var(--accent);
+  --primary-hover: var(--accent-ink);
+  --success: var(--income);
+  --danger: var(--expense);
+  --warning: var(--warn);
+  --bg-color: var(--bg-app);
+  --surface: var(--bg-surface);
+  --surface-hover: var(--bg-subtle);
+  --border-color: var(--border);
+}
+
+html[data-theme="dark"] .topbar {
+  background: rgba(26,29,35,0.7);
+}
+
+html[data-theme="dark"] .btn-secondary {
+  background: var(--bg-surface);
+}
+html[data-theme="dark"] .btn-secondary:hover {
+  background: var(--bg-subtle);
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] .field textarea,
+html[data-theme="dark"] .input-field,
+html[data-theme="dark"] .form-group input {
+  background: var(--bg-surface);
+  color: var(--text-1);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .icon-btn {
+  background: var(--bg-surface);
+  border-color: var(--border);
+  color: var(--text-2);
+}
+html[data-theme="dark"] .icon-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-1);
+}
+
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .modal-overlay {
+  background: var(--bg-surface);
+}
+html[data-theme="dark"] .modal-overlay {
+  background: rgba(0,0,0,0.65);
+}
+
+html[data-theme="dark"] .notification-dropdown,
+html[data-theme="dark"] .notif-pop {
+  background: var(--bg-surface);
+}
+
+html[data-theme="dark"] kbd {
+  background: var(--bg-subtle) !important;
+  border-color: var(--border) !important;
+  color: var(--text-2) !important;
+}
+
+:root {
+  /* legacy semantic aliases for backwards-compat (light defaults) */
   --bg-base: var(--bg-app);
   --bg-elevated: var(--bg-surface);
   --bg-hover: var(--bg-subtle);

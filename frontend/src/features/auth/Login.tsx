@@ -130,9 +130,12 @@ export function Login() {
         <div className="field">
           <label style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Parolă</span>
-            <a style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }} href="#">
+            <Link
+              to="/forgot-password"
+              style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}
+            >
               Am uitat parola?
-            </a>
+            </Link>
           </label>
           <div style={{ position: 'relative' }}>
             <input

@@ -9,5 +9,6 @@ router.use(requireAuth);
 router.get('/me', UserController.getMe);
 router.patch('/me', UserController.updateMe);
 router.patch('/me/password', UserController.updatePassword);
+router.delete('/me', UserController.deleteMe);
 
 export default router;

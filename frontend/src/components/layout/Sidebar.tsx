@@ -142,7 +142,15 @@ export function Sidebar() {
       </div>
 
       <div className="sb-user">
-        <div className="sb-avatar">{getInitials(user?.firstName, user?.lastName)}</div>
+        {(user as any)?.avatarUrl ? (
+          <img
+            src={(user as any).avatarUrl}
+            alt="Avatar"
+            style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+          />
+        ) : (
+          <div className="sb-avatar">{getInitials(user?.firstName, user?.lastName)}</div>
+        )}
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="sb-user-name">
             {user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || 'Utilizator' : 'Utilizator'}
