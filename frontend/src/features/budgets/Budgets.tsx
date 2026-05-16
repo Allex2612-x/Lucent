@@ -62,6 +62,10 @@ function BudgetRing({
 
 interface BudgetCardData {
   id: string;
+  // For multi-category rows this is the underlying Category.id (NOT the
+  // BudgetCategory join-row id) so the drill-down filter on Transactions
+  // actually matches transaction.categoryId.
+  categoryId?: string;
   rootBudgetId: string;
   name: string;
   icon: string;
@@ -236,12 +240,11 @@ function MultiCategoryBudgetCard({
         {entries.map((e, i) => {
           const epct = e.limit > 0 ? (e.spent / e.limit) * 100 : 0;
           const eover = e.spent > e.limit && e.limit > 0;
-          const rowExtractedCatId = e.id.split('__')[1] ?? '';
           return (
             <button
               key={e.id}
               type="button"
-              onClick={() => onOpenCategory?.(rowExtractedCatId)}
+              onClick={() => e.categoryId && onOpenCategory?.(e.categoryId)}
               title={`Vezi tranzacțiile ${e.name}`}
               style={{
                 width: '100%',
@@ -579,6 +582,7 @@ export function Budgets() {
       budget: b,
       entries: b.categories.map((bc: any) => ({
         id: `${b.id}__${bc.id}`,
+        categoryId: bc.categoryId,
         rootBudgetId: b.id,
         name: bc.category?.name || 'Categorie',
         icon: bc.category?.icon || '',
