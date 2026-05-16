@@ -13,7 +13,6 @@ export class NotificationService {
   ): Promise<void> {
     const month = transactionDate.getMonth() + 1; // JavaScript months are 0-indexed
     const year = transactionDate.getFullYear();
-    console.log('[notif-check] entry', { userId, categoryId, month, year });
 
     // Find the per-category budget for this month/year. Filtering by
     // isTotal: false matters — otherwise findFirst can pick the total
@@ -35,10 +34,6 @@ export class NotificationService {
 
     // If no budget exists for this category/month, nothing to check
     if (!budget || budget.categories.length === 0) {
-      console.log('[notif-check] no per-category budget for this category — bail', {
-        budgetFound: !!budget,
-        catCount: budget?.categories.length ?? 0,
-      });
       return;
     }
 
@@ -66,11 +61,9 @@ export class NotificationService {
 
     const totalSpent = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
     const percentage = limitAmount > 0 ? (totalSpent / limitAmount) * 100 : 0;
-    console.log('[notif-check] totals', { totalSpent, limitAmount, percentage });
 
     // Check if budget is exceeded (>= 100%)
     if (percentage >= 100) {
-      console.log('[notif-check] creating budget_exceeded notification');
       // Every over-limit transaction fires a fresh notification — the user
       // explicitly wants to be reminded each time, not just the first time
       // they cross the limit. Stale unread notifications would also show
