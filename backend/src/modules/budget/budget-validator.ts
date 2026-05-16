@@ -61,7 +61,9 @@ export class BudgetValidator {
     let perCategoryWarning: BudgetWarningData | null = null;
     if (budget && budget.categories.length > 0) {
       const budgetCategory = budget.categories[0]!;
-      const budgetLimit = budgetCategory.limitAmount;
+      // Coerce Prisma Decimal to number up-front so all comparisons and
+      // arithmetic below stay in the same numeric type.
+      const budgetLimit = Number(budgetCategory.limitAmount);
       const startOfMonth = new Date(year, month - 1, 1);
       const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
       const currentSpentTx = await prisma.transaction.findMany({
@@ -73,7 +75,7 @@ export class BudgetValidator {
         },
       });
       const currentSpent = currentSpentTx.reduce((s, t) => s + Number(t.amount), 0);
-      const newTotal = currentSpent + amount;
+      const newTotal = currentSpent + Number(amount);
       if (newTotal > budgetLimit) {
         perCategoryWarning = {
           categoryId,
@@ -81,9 +83,9 @@ export class BudgetValidator {
           month,
           year,
           currentSpent,
-          budgetLimit: Number(budgetLimit),
+          budgetLimit,
           newTotal,
-          overage: newTotal - Number(budgetLimit),
+          overage: newTotal - budgetLimit,
         };
       }
     }
@@ -104,7 +106,7 @@ export class BudgetValidator {
         },
       });
       const currentSpent = allExpenseTx.reduce((s, t) => s + Number(t.amount), 0);
-      const newTotal = currentSpent + amount;
+      const newTotal = currentSpent + Number(amount);
       const totalLimit = Number(totalBudget.totalLimit);
       if (newTotal > totalLimit) {
         // Need the category name for the warning text; fall back gracefully.

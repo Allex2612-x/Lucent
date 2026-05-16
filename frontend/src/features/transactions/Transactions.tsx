@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -93,15 +94,34 @@ export function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [filters, setFilters] = useState<FilterState>({
-    segment: 'all',
-    dateRange: 'current-month',
-    customStartDate: '',
-    customEndDate: '',
-    categoryIds: new Set(),
-    minAmount: 0,
-    maxAmount: 999999,
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Seed filters from URL query params on first mount (lets other pages
+  // deep-link into transactions: e.g. clicking a budget category opens
+  // /transactions?category=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD).
+  const [filters, setFilters] = useState<FilterState>(() => {
+    const categoryParam = searchParams.get('category');
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const hasCustomRange = !!(from && to);
+    return {
+      segment: 'all',
+      dateRange: hasCustomRange ? 'custom' : 'current-month',
+      customStartDate: from ?? '',
+      customEndDate: to ?? '',
+      categoryIds: categoryParam ? new Set(categoryParam.split(',').filter(Boolean)) : new Set(),
+      minAmount: 0,
+      maxAmount: 999999,
+    };
   });
+
+  // Strip the query params from the URL once they've been applied so a manual
+  // refresh doesn't keep re-applying them after the user changes filters.
+  useEffect(() => {
+    if (searchParams.get('category') || searchParams.get('from') || searchParams.get('to')) {
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [formData, setFormData] = useState<TransactionData>({
     description: '',
     amount: 0,
