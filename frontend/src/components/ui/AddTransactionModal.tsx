@@ -91,6 +91,8 @@ export function AddTransactionModal({
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       toast.success('Tranzacție adăugată cu succes!');
       onSuccess();
       handleClose();

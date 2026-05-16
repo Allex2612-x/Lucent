@@ -168,6 +168,11 @@ export function Transactions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
+      // The backend creates a budget_exceeded notification when this tx
+      // pushes the user over a category limit — refresh the bell badge
+      // so the new dot shows up immediately instead of after the 30s poll.
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       setIsAddModalOpen(false);
       resetForm();
       toast.success('Tranzacție adăugată cu succes!');
@@ -190,6 +195,8 @@ export function Transactions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
       setIsEditModalOpen(false);
       setEditingTransaction(null);
       resetForm();
