@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
@@ -80,12 +81,16 @@ function MultiCategoryBudgetCard({
   monthName,
   onEdit,
   onDelete,
+  onOpenAll,
+  onOpenCategory,
 }: {
   budget: Budget;
   entries: BudgetCardData[];
   monthName: string;
   onEdit: () => void;
   onDelete: () => void;
+  onOpenAll?: () => void;
+  onOpenCategory?: (categoryId: string) => void;
 }) {
   const totalSpent = entries.reduce((s, e) => s + e.spent, 0);
   const totalLimit = entries.reduce((s, e) => s + e.limit, 0);
@@ -167,7 +172,10 @@ function MultiCategoryBudgetCard({
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               <button
-                onClick={onEdit}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  onEdit();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -181,7 +189,10 @@ function MultiCategoryBudgetCard({
                 <Edit2 size={14} />
               </button>
               <button
-                onClick={onDelete}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  onDelete();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -225,15 +236,28 @@ function MultiCategoryBudgetCard({
         {entries.map((e, i) => {
           const epct = e.limit > 0 ? (e.spent / e.limit) * 100 : 0;
           const eover = e.spent > e.limit && e.limit > 0;
+          const rowExtractedCatId = e.id.split('__')[1] ?? '';
           return (
-            <div
+            <button
               key={e.id}
+              type="button"
+              onClick={() => onOpenCategory?.(rowExtractedCatId)}
+              title={`Vezi tranzacțiile ${e.name}`}
               style={{
+                width: '100%',
                 display: 'grid',
                 gridTemplateColumns: '32px 1fr auto',
                 gap: 12,
                 alignItems: 'center',
                 padding: '8px 6px',
+                borderRadius: 8,
+                border: 'none',
+                background: 'transparent',
+                cursor: onOpenCategory ? 'pointer' : 'default',
+                textAlign: 'left',
+                fontFamily: 'inherit',
+                color: 'inherit',
+                transition: 'background .12s',
                 borderBottom: i < entries.length - 1 ? '1px solid var(--border)' : 'none',
               }}
             >
@@ -284,9 +308,31 @@ function MultiCategoryBudgetCard({
               >
                 {Math.round(epct)}%
               </div>
-            </div>
+            </button>
           );
         })}
+        {onOpenAll && (
+          <button
+            type="button"
+            onClick={onOpenAll}
+            style={{
+              width: '100%',
+              marginTop: 6,
+              padding: '8px 10px',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              color: 'var(--accent)',
+              fontSize: 12,
+              fontWeight: 500,
+              textAlign: 'center',
+              borderRadius: 8,
+            }}
+          >
+            Vezi toate tranzacțiile bugetului →
+          </button>
+        )}
       </div>
     </div>
   );
@@ -296,10 +342,12 @@ function BudgetCardView({
   b,
   onEdit,
   onDelete,
+  onOpen,
 }: {
   b: BudgetCardData;
   onEdit: () => void;
   onDelete: () => void;
+  onOpen?: () => void;
 }) {
   const pct = b.limit > 0 ? (b.spent / b.limit) * 100 : 0;
   const status = pct >= 100 ? 'over' : pct >= 80 ? 'near' : 'ok';
@@ -310,7 +358,13 @@ function BudgetCardView({
   const statusFg = { ok: 'var(--income)', near: 'var(--warn)', over: 'var(--expense)' }[status];
 
   return (
-    <div className="card" style={{ padding: 20 }}>
+    <div
+      className="card"
+      style={{ padding: 20, cursor: onOpen ? 'pointer' : 'default' }}
+      onClick={onOpen}
+      role={onOpen ? 'button' : undefined}
+      title={onOpen ? 'Vezi tranzacțiile bugetului' : undefined}
+    >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
         <div style={{ position: 'relative' }}>
           <BudgetRing pct={pct} color={ringColor} />
@@ -355,7 +409,10 @@ function BudgetCardView({
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               <button
-                onClick={onEdit}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  onEdit();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -369,7 +426,10 @@ function BudgetCardView({
                 <Edit2 size={14} />
               </button>
               <button
-                onClick={onDelete}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  onDelete();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -432,6 +492,7 @@ function daysLeftInMonth(month: number, year: number) {
 
 export function Budgets() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear] = useState(now.getFullYear());
@@ -886,13 +947,27 @@ export function Budgets() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
-          {items.map((it) =>
-            it.kind === 'total' ? (
+          {items.map((it) => {
+            // Build the date range for the budget's month so the drill-down
+            // pre-fills the Transactions filter to "this whole month".
+            const start = `${it.budget.year}-${String(it.budget.month).padStart(2, '0')}-01`;
+            const end = `${it.budget.year}-${String(it.budget.month).padStart(2, '0')}-${String(
+              new Date(it.budget.year, it.budget.month, 0).getDate(),
+            ).padStart(2, '0')}`;
+            const navigateWithFilter = (categoryIds: string[] | null) => {
+              const params = new URLSearchParams();
+              if (categoryIds && categoryIds.length > 0) params.set('category', categoryIds.join(','));
+              params.set('from', start);
+              params.set('to', end);
+              navigate(`/transactions?${params.toString()}`);
+            };
+            return it.kind === 'total' ? (
               <BudgetCardView
                 key={it.data.id}
                 b={it.data}
                 onEdit={() => handleEditClick(it.budget)}
                 onDelete={() => handleDeleteClick(it.budget.id)}
+                onOpen={() => navigateWithFilter(null)}
               />
             ) : (
               <MultiCategoryBudgetCard
@@ -902,9 +977,15 @@ export function Budgets() {
                 monthName={getMonthName(it.budget.month)}
                 onEdit={() => handleEditClick(it.budget)}
                 onDelete={() => handleDeleteClick(it.budget.id)}
+                onOpenAll={() =>
+                  navigateWithFilter(
+                    (it.budget.categories ?? []).map((bc: any) => bc.categoryId),
+                  )
+                }
+                onOpenCategory={(catId) => navigateWithFilter([catId])}
               />
-            ),
-          )}
+            );
+          })}
         </div>
       )}
 
