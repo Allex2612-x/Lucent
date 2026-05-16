@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Bell, Plus, Search, Sparkles } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { notificationsService } from '../../services/notifications.service';
@@ -19,6 +19,7 @@ const ROUTE_CRUMBS: Record<string, string> = {
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -59,6 +60,31 @@ export function Header() {
     refetchInterval: 30000,
     select: (data) => data?.data?.count || 0,
   });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () => notificationsService.markAllAsRead(),
+    onMutate: () => {
+      // Optimistic: zero the counter right away so the dot disappears
+      // before the network round-trip resolves.
+      queryClient.setQueryData(['notifications', 'unread-count'], {
+        data: { data: { count: 0 } },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+    },
+  });
+
+  const handleBellClick = () => {
+    const willOpen = !isDropdownOpen;
+    setIsDropdownOpen(willOpen);
+    // Mark everything as read the first time the user opens the dropdown
+    // while there are unread items.
+    if (willOpen && (unreadCount ?? 0) > 0 && !markAllReadMutation.isPending) {
+      markAllReadMutation.mutate();
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -125,7 +151,7 @@ export function Header() {
       <div className="notification-bell-wrapper" ref={dropdownRef}>
         <button
           className="icon-btn"
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          onClick={handleBellClick}
           aria-label="Notificări"
           title="Notificări"
         >
