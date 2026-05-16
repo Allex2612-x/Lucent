@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Wallet as WalletIcon } from 'lucide-react';
+import { CategoryIcon } from '../../components/CategoryIcon';
 
 import { budgetsService, BudgetData } from '../../services/budgets.service';
 import { categoriesService } from '../../services/categories.service';
@@ -66,6 +67,229 @@ interface BudgetCardData {
   spent: number;
   limit: number;
   color: string;
+}
+
+/**
+ * Renders a per-category budget that contains multiple categories as a single
+ * card with a header (combined progress) and a sub-list of per-category
+ * progress rows. Solves the "Facturi + Haine in the same budget showed up as
+ * two separate cards" UX issue.
+ */
+function MultiCategoryBudgetCard({
+  entries,
+  monthName,
+  onEdit,
+  onDelete,
+}: {
+  budget: Budget;
+  entries: BudgetCardData[];
+  monthName: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const totalSpent = entries.reduce((s, e) => s + e.spent, 0);
+  const totalLimit = entries.reduce((s, e) => s + e.limit, 0);
+  const pct = totalLimit > 0 ? (totalSpent / totalLimit) * 100 : 0;
+  const status = pct >= 100 ? 'over' : pct >= 80 ? 'near' : 'ok';
+  const headerColor =
+    status === 'over' ? 'var(--expense)' : status === 'near' ? 'var(--warn)' : 'var(--income)';
+  const statusLabel = { ok: 'În limită', near: 'Aproape de limită', over: 'Depășit' }[status];
+  const statusBg = {
+    ok: 'var(--income-soft)',
+    near: 'var(--warn-soft)',
+    over: 'var(--expense-soft)',
+  }[status];
+  return (
+    <div
+      className="card"
+      style={{ padding: 0, gridColumn: entries.length > 3 ? 'span 2' : undefined }}
+    >
+      {/* header */}
+      <div
+        style={{
+          padding: 18,
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 14,
+        }}
+      >
+        <div style={{ position: 'relative' }}>
+          <BudgetRing pct={pct} color={headerColor} size={68} stroke={7} />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'grid',
+              placeItems: 'center',
+              textAlign: 'center',
+            }}
+          >
+            <div>
+              <div className="num serif" style={{ fontSize: 15, fontStyle: 'italic', lineHeight: 1 }}>
+                {Math.round(pct)}%
+              </div>
+              <div
+                style={{
+                  fontSize: 9,
+                  color: 'var(--text-3)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginTop: 1,
+                }}
+              >
+                din buget
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: 14.5, fontWeight: 600 }}>
+                Buget pe categorii · {monthName}
+              </div>
+              <div
+                className="chip"
+                style={{
+                  marginTop: 6,
+                  background: statusBg,
+                  color: headerColor,
+                  border: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                <span className="chip-dot" style={{ background: headerColor }} /> {statusLabel}
+                <span style={{ color: 'var(--text-3)', fontWeight: 500, marginLeft: 4 }}>
+                  · {entries.length} categorii
+                </span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={onEdit}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-3)',
+                  padding: 4,
+                  borderRadius: 6,
+                }}
+                title="Editează"
+              >
+                <Edit2 size={14} />
+              </button>
+              <button
+                onClick={onDelete}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-3)',
+                  padding: 4,
+                  borderRadius: 6,
+                }}
+                title="Șterge"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3)' }}>Total cheltuit / Total limită</div>
+          <div className="num" style={{ marginTop: 2 }}>
+            <span
+              style={{
+                fontSize: 16,
+                fontWeight: 600,
+                color: status === 'over' ? 'var(--expense)' : 'var(--text-1)',
+              }}
+            >
+              {totalSpent.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+            <span style={{ color: 'var(--text-3)', fontSize: 13 }}>
+              {' '}
+              /{' '}
+              {totalLimit.toLocaleString('ro-RO', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}{' '}
+              RON
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* per-category rows */}
+      <div style={{ padding: 12 }}>
+        {entries.map((e, i) => {
+          const epct = e.limit > 0 ? (e.spent / e.limit) * 100 : 0;
+          const eover = e.spent > e.limit && e.limit > 0;
+          return (
+            <div
+              key={e.id}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '32px 1fr auto',
+                gap: 12,
+                alignItems: 'center',
+                padding: '8px 6px',
+                borderBottom: i < entries.length - 1 ? '1px solid var(--border)' : 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 9,
+                  background: `${e.color}1f`,
+                  color: e.color,
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
+              >
+                <CategoryIcon icon={e.icon} name={e.name} size={15} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>{e.name}</span>
+                  <span className="num" style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                    <b style={{ color: eover ? 'var(--expense)' : 'var(--text-1)' }}>
+                      {e.spent.toLocaleString('ro-RO', { maximumFractionDigits: 0 })}
+                    </b>
+                    <span style={{ color: 'var(--text-3)' }}>
+                      {' / '}
+                      {e.limit.toLocaleString('ro-RO', { maximumFractionDigits: 0 })} RON
+                    </span>
+                  </span>
+                </div>
+                <div className="pbar" style={{ marginTop: 5 }}>
+                  <span
+                    style={{
+                      width: `${Math.min(epct, 100)}%`,
+                      background: eover ? 'var(--expense)' : e.color,
+                    }}
+                  />
+                </div>
+              </div>
+              <div
+                className="num"
+                style={{
+                  fontSize: 11,
+                  color: eover ? 'var(--expense)' : 'var(--text-3)',
+                  fontWeight: eover ? 600 : 500,
+                  textAlign: 'right',
+                  minWidth: 38,
+                }}
+              >
+                {Math.round(epct)}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function BudgetCardView({
@@ -267,10 +491,18 @@ export function Budgets() {
     (b: Budget) => b.month === selectedMonth && b.year === selectedYear,
   );
 
-  const cards: BudgetCardData[] = monthBudgets.flatMap((b: Budget) => {
+  // Build render items: each budget produces either a single "total" card or
+  // a grouped multi-category card with N sub-entries.
+  type RenderItem =
+    | { kind: 'total'; budget: Budget; data: BudgetCardData }
+    | { kind: 'multi'; budget: Budget; entries: BudgetCardData[] };
+
+  const items: RenderItem[] = monthBudgets.map((b: Budget) => {
     if ((b as any).isTotal || !b.categories || b.categories.length === 0) {
-      return [
-        {
+      return {
+        kind: 'total' as const,
+        budget: b,
+        data: {
           id: b.id,
           rootBudgetId: b.id,
           name: `Buget total · ${getMonthName(b.month)}`,
@@ -279,19 +511,25 @@ export function Budgets() {
           limit: Number(b.totalLimit),
           color: '#2547f5',
         },
-      ];
+      };
     }
-    return b.categories.map((bc: any) => ({
-      id: `${b.id}__${bc.id}`,
-      rootBudgetId: b.id,
-      name: bc.category?.name || 'Categorie',
-      icon: bc.category?.icon || '📁',
-      spent: byCategorySpent[bc.categoryId] || 0,
-      limit: Number(bc.limitAmount),
-      color: bc.category?.color || '#2547f5',
-    }));
+    return {
+      kind: 'multi' as const,
+      budget: b,
+      entries: b.categories.map((bc: any) => ({
+        id: `${b.id}__${bc.id}`,
+        rootBudgetId: b.id,
+        name: bc.category?.name || 'Categorie',
+        icon: bc.category?.icon || '',
+        spent: byCategorySpent[bc.categoryId] || 0,
+        limit: Number(bc.limitAmount),
+        color: bc.category?.color || '#2547f5',
+      })),
+    };
   });
 
+  // Flatten for the hero header stats.
+  const cards: BudgetCardData[] = items.flatMap((it) => (it.kind === 'total' ? [it.data] : it.entries));
   const totalSpent = cards.reduce((s, c) => s + c.spent, 0);
   const totalLimit = cards.reduce((s, c) => s + c.limit, 0);
   const totalPct = totalLimit > 0 ? Math.min((totalSpent / totalLimit) * 100, 100) : 0;
@@ -648,17 +886,25 @@ export function Budgets() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
-          {cards.map((c) => (
-            <BudgetCardView
-              key={c.id}
-              b={c}
-              onEdit={() => {
-                const root = budgets.find((b) => b.id === c.rootBudgetId);
-                if (root) handleEditClick(root);
-              }}
-              onDelete={() => handleDeleteClick(c.rootBudgetId)}
-            />
-          ))}
+          {items.map((it) =>
+            it.kind === 'total' ? (
+              <BudgetCardView
+                key={it.data.id}
+                b={it.data}
+                onEdit={() => handleEditClick(it.budget)}
+                onDelete={() => handleDeleteClick(it.budget.id)}
+              />
+            ) : (
+              <MultiCategoryBudgetCard
+                key={it.budget.id}
+                budget={it.budget}
+                entries={it.entries}
+                monthName={getMonthName(it.budget.month)}
+                onEdit={() => handleEditClick(it.budget)}
+                onDelete={() => handleDeleteClick(it.budget.id)}
+              />
+            ),
+          )}
         </div>
       )}
 

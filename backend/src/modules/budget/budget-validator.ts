@@ -35,12 +35,17 @@ export class BudgetValidator {
     const month = date.getMonth() + 1; // JavaScript months are 0-indexed
     const year = date.getFullYear();
 
-    // Query budget for matching category, month, and year
+    // Query per-category budget for matching category, month, and year. The
+    // previous version omitted `isTotal: false` and could pick up the user's
+    // total-budget row (which has no categories), then skip the check
+    // entirely with `categories.length === 0`. Filtering by `isTotal: false`
+    // ensures we always inspect the per-category budget when one exists.
     const budget = await prisma.budget.findFirst({
       where: {
         userId,
         month,
         year,
+        isTotal: false,
       },
       include: {
         categories: {
@@ -52,51 +57,80 @@ export class BudgetValidator {
       },
     });
 
-    // Skip validation if no budget exists
-    if (!budget || budget.categories.length === 0) {
-      return null;
-    }
-
-    const budgetCategory = budget.categories[0];
-    const budgetLimit = budgetCategory.limitAmount;
-
-    // Calculate current spent amount for category/month
-    const startOfMonth = new Date(year, month - 1, 1);
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
-
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        userId,
-        categoryId,
-        type: 'expense',
-        date: {
-          gte: startOfMonth,
-          lte: endOfMonth,
+    // Per-category budget exists and includes this category — use that path.
+    let perCategoryWarning: BudgetWarningData | null = null;
+    if (budget && budget.categories.length > 0) {
+      const budgetCategory = budget.categories[0]!;
+      const budgetLimit = budgetCategory.limitAmount;
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+      const currentSpentTx = await prisma.transaction.findMany({
+        where: {
+          userId,
+          categoryId,
+          type: 'expense',
+          date: { gte: startOfMonth, lte: endOfMonth },
         },
-      },
-    });
-
-    const currentSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
-
-    // Calculate new total: current spent + new transaction amount
-    const newTotal = currentSpent + amount;
-
-    // Return warning data if new total exceeds budget limit
-    if (newTotal > budgetLimit) {
-      const overage = newTotal - budgetLimit;
-
-      return {
-        categoryId,
-        categoryName: budgetCategory.category.name,
-        month,
-        year,
-        currentSpent,
-        budgetLimit,
-        newTotal,
-        overage,
-      };
+      });
+      const currentSpent = currentSpentTx.reduce((s, t) => s + Number(t.amount), 0);
+      const newTotal = currentSpent + amount;
+      if (newTotal > budgetLimit) {
+        perCategoryWarning = {
+          categoryId,
+          categoryName: budgetCategory.category.name,
+          month,
+          year,
+          currentSpent,
+          budgetLimit: Number(budgetLimit),
+          newTotal,
+          overage: newTotal - Number(budgetLimit),
+        };
+      }
     }
 
+    // Also check the total monthly budget if one is configured. We want either
+    // overage to trigger the warning — the more specific one wins.
+    const totalBudget = await prisma.budget.findFirst({
+      where: { userId, month, year, isTotal: true },
+    });
+    if (totalBudget) {
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+      const allExpenseTx = await prisma.transaction.findMany({
+        where: {
+          userId,
+          type: 'expense',
+          date: { gte: startOfMonth, lte: endOfMonth },
+        },
+      });
+      const currentSpent = allExpenseTx.reduce((s, t) => s + Number(t.amount), 0);
+      const newTotal = currentSpent + amount;
+      const totalLimit = Number(totalBudget.totalLimit);
+      if (newTotal > totalLimit) {
+        // Need the category name for the warning text; fall back gracefully.
+        const cat = await prisma.category.findUnique({
+          where: { id: categoryId },
+          select: { name: true },
+        });
+        const totalWarning: BudgetWarningData = {
+          categoryId,
+          categoryName: perCategoryWarning?.categoryName || cat?.name || 'Buget total',
+          month,
+          year,
+          currentSpent,
+          budgetLimit: totalLimit,
+          newTotal,
+          overage: newTotal - totalLimit,
+        };
+        // If both per-category and total are exceeded, surface the bigger
+        // overage so the user sees the most painful one first.
+        if (!perCategoryWarning || totalWarning.overage > perCategoryWarning.overage) {
+          return totalWarning;
+        }
+      }
+    }
+
+    if (perCategoryWarning) return perCategoryWarning;
     return null;
   }
 
