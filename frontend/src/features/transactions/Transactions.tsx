@@ -443,18 +443,55 @@ export function Transactions() {
     setOcrProgress(0);
     try {
       const result = await runReceiptOcr(file, setOcrProgress);
-      setFormData((prev) => ({
-        ...prev,
-        type: 'expense',
-        amount: result.amount ?? prev.amount,
-        description: result.merchant ?? prev.description,
-        date: result.date ?? prev.date,
-      }));
-      if (result.amount || result.merchant) {
+
+      // Try to auto-classify the category from the merchant name. The
+      // existing category-suggestion endpoint is the same one used for
+      // manual typing; reuse it so OCR-driven saves stay consistent with
+      // the rest of the app.
+      let suggestedCategoryId: string | null = null;
+      if (result.merchant) {
+        try {
+          const res = await categoriesService.suggest(result.merchant, 'expense');
+          suggestedCategoryId = res.data?.data?.categoryId ?? null;
+        } catch {
+          // Suggestion is best-effort — fall through and let the user pick.
+        }
+      }
+
+      const nextData = {
+        ...formData,
+        type: 'expense' as const,
+        amount: result.amount ?? formData.amount,
+        description: result.merchant ?? formData.description,
+        date: result.date ?? formData.date,
+        categoryId: suggestedCategoryId ?? formData.categoryId,
+        isRecurring: false,
+        frequency: undefined,
+        repetitionCount: undefined,
+      };
+      setFormData(nextData);
+      if (suggestedCategoryId) setUserPickedCategory(true);
+
+      // If OCR + suggestion gave us everything we need (amount + category),
+      // skip the form and save the expense in one shot. Otherwise keep the
+      // form open so the user can fill the gaps.
+      if (
+        nextData.amount > 0 &&
+        nextData.categoryId &&
+        nextData.date
+      ) {
+        createMutation.mutate({ data: nextData });
         toast.success(
-          `Bon procesat${result.merchant ? ` — ${result.merchant}` : ''}${
+          `Bon adăugat${result.merchant ? ` — ${result.merchant}` : ''} · ${nextData.amount.toFixed(2)} RON`,
+        );
+        return;
+      }
+
+      if (result.amount || result.merchant) {
+        toast.message(
+          `Bon scanat${result.merchant ? ` — ${result.merchant}` : ''}${
             result.amount ? ` · ${result.amount.toFixed(2)} RON` : ''
-          }`,
+          }. Verifică datele și apasă Salvează.`,
         );
       } else {
         toast.message('Bonul a fost scanat dar nu am putut extrage suma. Completează manual.');
