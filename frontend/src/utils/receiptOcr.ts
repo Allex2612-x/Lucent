@@ -1,25 +1,38 @@
 import { api } from '../services/api';
 
+export interface ReceiptLineItem {
+  name: string;
+  qty: number;
+  unitPrice: number | null;
+  total: number;
+}
+
+export interface ReceiptData {
+  merchant: string | null;
+  address: string | null;
+  date: string | null;
+  time: string | null;
+  items: ReceiptLineItem[];
+  subtotal: number | null;
+  vat: number | null;
+  total: number | null;
+  paymentMethod: string | null;
+  currency: string;
+}
+
 export interface ReceiptOcrResult {
   rawText: string;
   amount: number | null;
   merchant: string | null;
-  date: string | null; // ISO yyyy-mm-dd
-  /** URL of the persisted receipt image, e.g. /uploads/receipts/<uuid>.jpg */
-  receiptUrl: string | null;
+  date: string | null;
+  /** Full structured digital receipt (Lidl-Plus-style line items). */
+  receiptData: ReceiptData | null;
 }
 
 /**
  * Send a receipt image to the backend, which uses Gemini multimodal to
- * extract:
- *   - the total amount (e.g. "TOTAL DE PLATĂ")
- *   - the merchant (top-of-receipt store name)
- *   - the transaction date in ISO yyyy-mm-dd
- *
- * Replaces the previous Tesseract.js client-side OCR which was unreliable
- * on Romanian receipts (especially photos taken with iPhones / poor
- * lighting). The progress callback is still invoked once at start and
- * once at end so existing UI animations keep working.
+ * extract a structured digital receipt (merchant, date, time, line items,
+ * subtotal, VAT, total, payment method).
  */
 export async function runReceiptOcr(
   file: File,
@@ -27,8 +40,6 @@ export async function runReceiptOcr(
 ): Promise<ReceiptOcrResult> {
   onProgress?.(0.1);
   const dataUrl = await readFileAsDataUrl(file);
-  // Strip the "data:image/...;base64," prefix — the backend accepts either
-  // form, but sending the raw base64 keeps the JSON payload smaller.
   const commaIndex = dataUrl.indexOf(',');
   const base64 = commaIndex === -1 ? dataUrl : dataUrl.slice(commaIndex + 1);
   onProgress?.(0.3);
@@ -43,7 +54,7 @@ export async function runReceiptOcr(
     amount: typeof data.amount === 'number' ? data.amount : null,
     merchant: typeof data.merchant === 'string' ? data.merchant : null,
     date: typeof data.date === 'string' ? data.date : null,
-    receiptUrl: typeof data.receiptUrl === 'string' ? data.receiptUrl : null,
+    receiptData: (data.receiptData as ReceiptData | null | undefined) ?? null,
   };
 }
 

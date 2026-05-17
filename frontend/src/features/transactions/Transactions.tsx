@@ -22,7 +22,8 @@ import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
-import { api, resolveAssetUrl } from '../../services/api';
+import { api } from '../../services/api';
+import type { ReceiptData } from '../../utils/receiptOcr';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
 import { Sparkles, Upload as UploadIcon, Camera, Loader2 } from 'lucide-react';
 import { ImportCsvModal } from './ImportCsvModal';
@@ -43,6 +44,7 @@ interface Transaction {
   createdAt: string;
   isRecurring?: boolean;
   receiptUrl?: string | null;
+  receiptData?: ReceiptData | null;
 }
 
 interface Category {
@@ -448,8 +450,13 @@ export function Transactions() {
   const [budgetWarning, setBudgetWarning] = useState<BudgetWarningPayload | null>(null);
   const [ocrProgress, setOcrProgress] = useState<number | null>(null);
   const ocrFileRef = useRef<HTMLInputElement>(null);
-  // Receipt viewer: which photo to show fullscreen, null when closed.
-  const [receiptViewerUrl, setReceiptViewerUrl] = useState<string | null>(null);
+  // Receipt viewer: the structured digital receipt to render fullscreen.
+  // Null when closed. We render a Lidl-Plus-style card from this data.
+  const [receiptViewerData, setReceiptViewerData] = useState<{
+    data: ReceiptData;
+    catName?: string;
+    catColor?: string;
+  } | null>(null);
 
   const handleReceipt = async (file: File) => {
     setOcrProgress(0);
@@ -477,7 +484,7 @@ export function Transactions() {
         description: result.merchant ?? formData.description,
         date: result.date ?? formData.date,
         categoryId: suggestedCategoryId ?? formData.categoryId,
-        receiptUrl: result.receiptUrl ?? formData.receiptUrl,
+        receiptData: result.receiptData ?? formData.receiptData,
         isRecurring: false,
         frequency: undefined,
         repetitionCount: undefined,
@@ -637,59 +644,13 @@ export function Transactions() {
         isPending={createMutation.isPending}
       />
 
-      {receiptViewerUrl && (
-        <div
-          onClick={() => setReceiptViewerUrl(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15,15,16,0.78)',
-            backdropFilter: 'blur(4px)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 1200,
-            padding: 32,
-            cursor: 'zoom-out',
-          }}
-        >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setReceiptViewerUrl(null);
-            }}
-            aria-label="Închide"
-            style={{
-              position: 'absolute',
-              top: 20,
-              right: 20,
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              border: 'none',
-              background: 'rgba(255,255,255,0.12)',
-              color: '#fff',
-              cursor: 'pointer',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <X size={20} />
-          </button>
-          <img
-            src={receiptViewerUrl}
-            alt="Bon scanat"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              borderRadius: 12,
-              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.5)',
-              cursor: 'default',
-              background: '#fff',
-            }}
-          />
-        </div>
+      {receiptViewerData && (
+        <DigitalReceiptViewer
+          data={receiptViewerData.data}
+          catName={receiptViewerData.catName}
+          catColor={receiptViewerData.catColor}
+          onClose={() => setReceiptViewerData(null)}
+        />
       )}
 
       {/* summary strip */}
@@ -1027,14 +988,18 @@ export function Transactions() {
                                   recurent
                                 </span>
                               )}
-                              {t.receiptUrl && (
+                              {t.receiptData && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setReceiptViewerUrl(resolveAssetUrl(t.receiptUrl));
+                                    setReceiptViewerData({
+                                      data: t.receiptData!,
+                                      catName: cat?.name,
+                                      catColor: cat?.color,
+                                    });
                                   }}
-                                  title="Vezi bonul scanat"
+                                  title="Vezi bonul digital"
                                   style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -1765,5 +1730,252 @@ export function Transactions() {
         </div>
       </Modal>
     </>
+  );
+}
+
+/**
+ * Lidl-Plus-style digital receipt overlay. Renders the structured data we
+ * extracted with Gemini OCR — header (merchant, date, time), line items,
+ * subtotal / VAT / total, payment method. No raw photo needed.
+ */
+function DigitalReceiptViewer({
+  data,
+  catName,
+  catColor,
+  onClose,
+}: {
+  data: ReceiptData;
+  catName?: string;
+  catColor?: string;
+  onClose: () => void;
+}) {
+  const fmtN = (n: number) =>
+    n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15,15,16,0.78)',
+        backdropFilter: 'blur(4px)',
+        display: 'grid',
+        placeItems: 'center',
+        zIndex: 1200,
+        padding: 32,
+        cursor: 'zoom-out',
+        overflowY: 'auto',
+      }}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        aria-label="Închide"
+        style={{
+          position: 'fixed',
+          top: 20,
+          right: 20,
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          border: 'none',
+          background: 'rgba(255,255,255,0.12)',
+          color: '#fff',
+          cursor: 'pointer',
+          display: 'grid',
+          placeItems: 'center',
+        }}
+      >
+        <X size={20} />
+      </button>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          background: '#fff',
+          borderRadius: 18,
+          boxShadow: '0 30px 80px -20px rgba(0,0,0,0.5)',
+          padding: '24px 24px 28px',
+          cursor: 'default',
+          fontFamily: 'inherit',
+          // Slight saw-tooth bottom (jagged like a torn receipt) using a
+          // CSS mask so the card actually looks like a paper receipt.
+          WebkitMaskImage:
+            'radial-gradient(circle at 6px 100%, transparent 5px, #000 5.5px)',
+          WebkitMaskSize: '12px 12px',
+          WebkitMaskRepeat: 'repeat-x',
+          WebkitMaskPosition: 'bottom',
+          maskImage:
+            'radial-gradient(circle at 6px 100%, transparent 5px, #000 5.5px)',
+          maskSize: '12px 12px',
+          maskRepeat: 'repeat-x',
+          maskPosition: 'bottom',
+        }}
+      >
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 18 }}>
+          <div
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: 'var(--text-1)',
+            }}
+          >
+            {data.merchant || 'Bon fiscal'}
+          </div>
+          {data.address && (
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
+              {data.address}
+            </div>
+          )}
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
+            {data.date || '—'}
+            {data.time ? ` · ${data.time}` : ''}
+          </div>
+          {catName && (
+            <div
+              style={{
+                marginTop: 10,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 11,
+                background: `${catColor || '#a09c92'}1a`,
+                color: catColor || 'var(--text-2)',
+                padding: '3px 10px',
+                borderRadius: 999,
+                fontWeight: 500,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: catColor || 'var(--text-3)',
+                }}
+              />
+              {catName}
+            </div>
+          )}
+        </div>
+
+        {/* Dashed separator */}
+        <div
+          style={{
+            borderTop: '1px dashed var(--border-strong, #c8c4b8)',
+            margin: '4px 0 12px',
+          }}
+        />
+
+        {/* Line items */}
+        {data.items.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {data.items.map((it, i) => (
+              <div key={i} style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  <span
+                    style={{
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: 'var(--text-1)',
+                    }}
+                  >
+                    {it.name}
+                  </span>
+                  <span className="num" style={{ fontWeight: 500, color: 'var(--text-1)' }}>
+                    {fmtN(it.total)}
+                  </span>
+                </div>
+                {(it.qty > 1 || it.unitPrice !== null) && (
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    {it.qty > 1 ? `${it.qty} × ` : ''}
+                    {it.unitPrice !== null ? `${fmtN(it.unitPrice)} ${data.currency}` : ''}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', padding: '8px 0' }}>
+            Nu am putut citi produsele individuale de pe bon.
+          </div>
+        )}
+
+        {/* Dashed separator before totals */}
+        <div
+          style={{
+            borderTop: '1px dashed var(--border-strong, #c8c4b8)',
+            margin: '16px 0 12px',
+          }}
+        />
+
+        {/* Totals */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {data.subtotal !== null && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--text-2)' }}>
+              <span>Subtotal</span>
+              <span className="num">{fmtN(data.subtotal)} {data.currency}</span>
+            </div>
+          )}
+          {data.vat !== null && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--text-2)' }}>
+              <span>TVA</span>
+              <span className="num">{fmtN(data.vat)} {data.currency}</span>
+            </div>
+          )}
+          {data.total !== null && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 16,
+                fontWeight: 700,
+                marginTop: 6,
+                color: 'var(--text-1)',
+              }}
+            >
+              <span>TOTAL</span>
+              <span className="num">{fmtN(data.total)} {data.currency}</span>
+            </div>
+          )}
+        </div>
+
+        {data.paymentMethod && (
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 11.5,
+              color: 'var(--text-3)',
+              textAlign: 'center',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Plată: {data.paymentMethod}
+          </div>
+        )}
+
+        <div
+          style={{
+            marginTop: 18,
+            fontSize: 10.5,
+            color: 'var(--text-3)',
+            textAlign: 'center',
+            letterSpacing: '0.05em',
+          }}
+        >
+          Bon digital generat automat din scanare
+        </div>
+      </div>
+    </div>
   );
 }

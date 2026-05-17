@@ -67,6 +67,11 @@ model Transaction {
   description String?
   date        DateTime
   receiptUrl  String?
+  // Structured representation of a scanned receipt (line items, totals,
+  // VAT, payment method). Stored as JSON so we can show a Lidl-Plus-style
+  // digital receipt without re-fetching the photo. Shape: see
+  // ReceiptData type in receipt-scanner.service.ts.
+  receiptData Json?
   isRecurring Boolean         @default(false)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt

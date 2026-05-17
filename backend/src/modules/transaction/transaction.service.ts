@@ -13,6 +13,11 @@ const baseTransactionSchema = z.object({
   date: z.string().or(z.date()).transform((val) => new Date(val)),
   categoryId: z.string().uuid('ID categorie invalid'),
   receiptUrl: z.string().optional(),
+  // Structured digital receipt extracted by Gemini OCR. We don't strictly
+  // validate the inner shape on the way in — the scanner endpoint owns
+  // the shape and we trust whatever it produced. Anything goes here is
+  // round-tripped into the DB Json column.
+  receiptData: z.any().optional(),
   isRecurring: z.boolean().default(false),
   frequency: RecurringFrequencyEnum.optional(),
   repetitionCount: z.number().int().min(1, 'Numărul de repetări trebuie să fie cel puțin 1').max(365, 'Numărul de repetări nu poate depăși 365').optional(),
@@ -97,6 +102,7 @@ export class TransactionService {
         date: new Date(data.date),
         categoryId: data.categoryId,
         receiptUrl: data.receiptUrl,
+        receiptData: data.receiptData ?? undefined,
         isRecurring: data.isRecurring,
         userId,
       },

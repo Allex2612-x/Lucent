@@ -19,6 +19,8 @@ export interface TransactionData {
   frequency?: RecurringFrequency;
   repetitionCount?: number;
   receiptUrl?: string;
+  /** Structured digital receipt (line items, totals) — see ReceiptData. */
+  receiptData?: unknown;
 }
 
 export interface BudgetWarning {

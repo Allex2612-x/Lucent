@@ -51,6 +51,10 @@ model Transaction {
   categoryId        String
   userId            String
   receiptUrl        String?
+  // Structured representation of a scanned receipt (line items, totals,
+  // VAT, payment method). Stored as JSON so we can show a Lidl-Plus-style
+  // digital receipt without re-fetching the photo.
+  receiptData       Json?
   isRecurring       Boolean  @default(false)
   
   // Recurring transaction fields
