@@ -926,7 +926,10 @@ function DonutChart({
   const SIZE = 220;
   const RADIUS = SIZE / 2 - STROKE / 2 - 4;
   const C = 2 * Math.PI * RADIUS;
-  const GAP = 0.012 * C; // ~1.2% of circumference between slices
+  // Only inset a gap between slices when there's more than one slice —
+  // otherwise a single 100% category renders as a not-quite-closed ring
+  // with a thin notch at the top of the donut.
+  const GAP = rows.length > 1 ? 0.012 * C : 0;
 
   let offset = 0;
   const segments = rows.map((d, i) => {

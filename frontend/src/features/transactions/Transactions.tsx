@@ -63,7 +63,7 @@ interface FilterState {
   maxAmount: number;
 }
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 10;
 
 const ROMANIAN_MONTHS = [
   'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
@@ -377,6 +377,14 @@ export function Transactions() {
   }, [filteredTransactions, currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE));
+
+  // If filters shrink the result set so the current page no longer exists,
+  // snap back to a valid page instead of showing an empty slice.
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) => {
