@@ -18,6 +18,10 @@ model User {
   lastName  String
   currency  String   @default("RON")
   avatarUrl String?
+  // When false, the backend skips creating budget_exceeded /
+  // budget_near_limit notifications for this user. The pre-submit
+  // budget warning dialog still fires — this only silences the bell.
+  budgetNotifications Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

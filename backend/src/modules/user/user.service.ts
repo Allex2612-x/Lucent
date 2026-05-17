@@ -14,6 +14,7 @@ export const updateProfileSchema = z.object({
     .max(3_000_000)
     .nullable()
     .optional(),
+  budgetNotifications: z.boolean().optional(),
 });
 
 export const updatePasswordSchema = z.object({
@@ -32,6 +33,7 @@ export class UserService {
         lastName: true,
         currency: true,
         avatarUrl: true,
+        budgetNotifications: true,
         createdAt: true,
         updatedAt: true,
       }
@@ -55,6 +57,7 @@ export class UserService {
         lastName: true,
         currency: true,
         avatarUrl: true,
+        budgetNotifications: true,
         createdAt: true,
         updatedAt: true,
       }

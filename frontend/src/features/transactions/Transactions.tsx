@@ -25,8 +25,7 @@ import { categoriesService } from '../../services/categories.service';
 import { api } from '../../services/api';
 import type { ReceiptData } from '../../utils/receiptOcr';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
-import { Sparkles, Upload as UploadIcon, Camera, Loader2 } from 'lucide-react';
-import { ImportCsvModal } from './ImportCsvModal';
+import { Sparkles, Camera, Loader2 } from 'lucide-react';
 import { runReceiptOcr } from '../../utils/receiptOcr';
 import { CategoryIcon } from '../../components/CategoryIcon';
 import { BudgetWarningDialog, BudgetWarningPayload } from '../../components/BudgetWarningDialog';
@@ -120,8 +119,18 @@ export function Transactions() {
 
   // Strip the query params from the URL once they've been applied so a manual
   // refresh doesn't keep re-applying them after the user changes filters.
+  // Also handles ?add=true — the Dashboard "+" button deep-links here so
+  // the entire "add transaction" form lives in one place.
   useEffect(() => {
-    if (searchParams.get('category') || searchParams.get('from') || searchParams.get('to')) {
+    if (searchParams.get('add') === 'true') {
+      setIsAddModalOpen(true);
+    }
+    if (
+      searchParams.get('category') ||
+      searchParams.get('from') ||
+      searchParams.get('to') ||
+      searchParams.get('add')
+    ) {
       setSearchParams({}, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -445,7 +454,6 @@ export function Transactions() {
     searchTerm.length > 0;
 
   const [isExporting, setIsExporting] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
   const [budgetWarning, setBudgetWarning] = useState<BudgetWarningPayload | null>(null);
   const [ocrProgress, setOcrProgress] = useState<number | null>(null);
@@ -603,13 +611,6 @@ export function Transactions() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             className="btn btn-secondary"
-            onClick={() => setIsImportOpen(true)}
-            title="Import CSV de la bancă"
-          >
-            <UploadIcon size={14} /> Import CSV
-          </button>
-          <button
-            className="btn btn-secondary"
             onClick={() => handleExport('excel')}
             disabled={isExporting}
             title="Export Excel"
@@ -627,12 +628,6 @@ export function Transactions() {
           </button>
         </div>
       </div>
-
-      <ImportCsvModal
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
-        categories={categories}
-      />
 
       <BudgetWarningDialog
         warning={budgetWarning}

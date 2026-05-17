@@ -612,10 +612,11 @@ export function Dashboard() {
           </button>
           <button
             className="btn btn-primary"
-            onClick={() => {
-              resetForm();
-              setIsAddModalOpen(true);
-            }}
+            // Single source of truth for "Adaugă tranzacție" — the full
+            // form (with OCR receipt scan + AI category suggestion) lives
+            // on /transactions. Navigate there with ?add=true so the
+            // modal opens automatically.
+            onClick={() => navigate('/transactions?add=true')}
           >
             <Plus size={14} /> Tranzacție
           </button>

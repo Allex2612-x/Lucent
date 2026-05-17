@@ -41,23 +41,6 @@ export const createTransactionSchema = baseTransactionSchema.refine(
 // Update schema without refinement (safe to use .partial())
 export const updateTransactionSchema = baseTransactionSchema.partial();
 
-// Bulk-import schema. Rejects empty arrays; per-row failures are surfaced
-// individually by the service so the caller can show a partial-success result.
-export const bulkImportSchema = z.object({
-  transactions: z
-    .array(
-      z.object({
-        amount: z.number().positive(),
-        type: z.enum(['income', 'expense']),
-        description: z.string().optional(),
-        date: z.string().or(z.date()).transform((val) => new Date(val)),
-        categoryId: z.string().uuid(),
-      }),
-    )
-    .min(1, 'Cel puțin o tranzacție este necesară')
-    .max(2000, 'Maxim 2000 de tranzacții pe import'),
-});
-
 export interface BudgetWarningData {
   categoryId: string;
   categoryName: string;
@@ -119,63 +102,6 @@ export class TransactionService {
     }
 
     return transaction;
-  }
-
-  static async bulkImportTransactions(
-    userId: string,
-    rows: z.infer<typeof bulkImportSchema>['transactions'],
-  ) {
-    const succeeded: Array<{ index: number; id: string }> = [];
-    const failed: Array<{ index: number; reason: string }> = [];
-
-    // Run as a single Prisma transaction so partial failures roll back.
-    await prisma.$transaction(async (tx) => {
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i]!;
-        try {
-          // sanity check: ensure the category belongs to this user (or is default)
-          const cat = await tx.category.findFirst({
-            where: {
-              id: row.categoryId,
-              OR: [{ userId }, { isDefault: true, userId: null }],
-            },
-          });
-          if (!cat) {
-            failed.push({ index: i, reason: 'Categorie inexistentă' });
-            continue;
-          }
-          if (cat.type !== row.type) {
-            failed.push({
-              index: i,
-              reason: `Categoria "${cat.name}" este pentru ${cat.type === 'income' ? 'venituri' : 'cheltuieli'}`,
-            });
-            continue;
-          }
-          const created = await tx.transaction.create({
-            data: {
-              amount: row.amount,
-              type: row.type,
-              description: row.description,
-              date: row.date,
-              categoryId: row.categoryId,
-              userId,
-              isRecurring: false,
-            },
-          });
-          succeeded.push({ index: i, id: created.id });
-        } catch (err: any) {
-          failed.push({ index: i, reason: err?.message ?? 'Eroare necunoscută' });
-        }
-      }
-    });
-
-    return {
-      total: rows.length,
-      succeededCount: succeeded.length,
-      failedCount: failed.length,
-      succeeded,
-      failed,
-    };
   }
 
   static async createRecurringTransactions(
