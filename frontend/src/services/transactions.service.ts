@@ -18,6 +18,7 @@ export interface TransactionData {
   isRecurring?: boolean;
   frequency?: RecurringFrequency;
   repetitionCount?: number;
+  receiptUrl?: string;
 }
 
 export interface BudgetWarning {

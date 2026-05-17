@@ -1,10 +1,43 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { randomUUID } from 'crypto';
 
 export interface ScannedReceipt {
   amount: number | null;
   merchant: string | null;
   date: string | null; // ISO yyyy-mm-dd
   raw: string;
+  /** Public URL of the saved receipt image, e.g. /uploads/receipts/<uuid>.jpg */
+  receiptUrl: string | null;
+}
+
+const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads', 'receipts');
+
+function extensionFromMime(mimeType: string): string {
+  if (mimeType.includes('png')) return 'png';
+  if (mimeType.includes('webp')) return 'webp';
+  if (mimeType.includes('heic')) return 'heic';
+  return 'jpg';
+}
+
+async function saveReceiptImage(
+  base64: string,
+  mimeType: string,
+): Promise<string | null> {
+  try {
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    const ext = extensionFromMime(mimeType);
+    const filename = `${randomUUID()}.${ext}`;
+    const fullPath = path.join(UPLOAD_DIR, filename);
+    await fs.writeFile(fullPath, Buffer.from(base64, 'base64'));
+    return `/uploads/receipts/${filename}`;
+  } catch (err) {
+    // Persistence failure shouldn't break the OCR response — the
+    // transaction can still be created from the parsed fields.
+    console.error('[receipt] failed to save image', err);
+    return null;
+  }
 }
 
 let client: GoogleGenerativeAI | null = null;
@@ -33,6 +66,11 @@ export async function scanReceiptWithGemini(
   imageBase64: string,
   mimeType: string,
 ): Promise<ScannedReceipt> {
+  // Persist the image first (in parallel with the Gemini call below). We
+  // want the URL even if Gemini fails to parse — the user can still
+  // attach the receipt manually to a transaction.
+  const savePromise = saveReceiptImage(imageBase64, mimeType);
+
   const c = getClient();
   const model = c.getGenerativeModel({
     model: 'gemini-2.5-flash-lite',
@@ -89,6 +127,8 @@ Dacă un câmp nu poate fi citit cu încredere rezonabilă, pune null.`;
     dateStr = parsed.date;
   }
 
+  const receiptUrl = await savePromise;
+
   return {
     amount: Number.isFinite(amountNum) && amountNum > 0 ? amountNum : null,
     merchant: typeof parsed.merchant === 'string' && parsed.merchant.trim()
@@ -96,5 +136,6 @@ Dacă un câmp nu poate fi citit cu încredere rezonabilă, pune null.`;
       : null,
     date: dateStr,
     raw,
+    receiptUrl,
   };
 }

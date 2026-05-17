@@ -5,6 +5,8 @@ export interface ReceiptOcrResult {
   amount: number | null;
   merchant: string | null;
   date: string | null; // ISO yyyy-mm-dd
+  /** URL of the persisted receipt image, e.g. /uploads/receipts/<uuid>.jpg */
+  receiptUrl: string | null;
 }
 
 /**
@@ -41,6 +43,7 @@ export async function runReceiptOcr(
     amount: typeof data.amount === 'number' ? data.amount : null,
     merchant: typeof data.merchant === 'string' ? data.merchant : null,
     date: typeof data.date === 'string' ? data.date : null,
+    receiptUrl: typeof data.receiptUrl === 'string' ? data.receiptUrl : null,
   };
 }
 

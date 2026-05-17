@@ -1,9 +1,25 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
+// Backend origin (no /api suffix) — used for static asset URLs like
+// uploaded receipt photos that aren't behind /api.
+export const API_ORIGIN = 'http://localhost:4000';
+
+/**
+ * Resolve a possibly-relative URL returned by the backend (e.g.
+ * "/uploads/receipts/<uuid>.jpg") to an absolute URL the browser can
+ * fetch. Full URLs are returned as-is so this is safe to call on any
+ * stored value.
+ */
+export function resolveAssetUrl(maybeRelative: string | null | undefined): string | null {
+  if (!maybeRelative) return null;
+  if (/^https?:\/\//i.test(maybeRelative)) return maybeRelative;
+  return `${API_ORIGIN}${maybeRelative.startsWith('/') ? '' : '/'}${maybeRelative}`;
+}
+
 // Create an Axios instance with base URL depending on environment
 export const api = axios.create({
-  baseURL:  'http://localhost:4000/api',
+  baseURL: `${API_ORIGIN}/api`,
   withCredentials: true, // Needed for sending httpOnly cookies
 });
 
