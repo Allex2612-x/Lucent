@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
+import path from 'path';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import userRoutes from './modules/user/user.routes.js';
@@ -34,6 +35,12 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(passport.initialize());
+
+// Serve uploaded receipt photos so the frontend can render them inline
+// (a Lidl-Plus-style thumbnail next to each transaction). The directory
+// lives at <repo>/backend/uploads and is created on demand by the
+// receipt-scanner service.
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 // Basic health route
 app.get('/api/health', (req, res) => {

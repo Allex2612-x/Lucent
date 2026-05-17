@@ -13,6 +13,7 @@ import {
   X,
   Trash2,
   Inbox,
+  Receipt as ReceiptIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/Button';
@@ -21,7 +22,7 @@ import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
-import { api } from '../../services/api';
+import { api, resolveAssetUrl } from '../../services/api';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
 import { Sparkles, Upload as UploadIcon, Camera, Loader2 } from 'lucide-react';
 import { ImportCsvModal } from './ImportCsvModal';
@@ -41,6 +42,7 @@ interface Transaction {
   date: string;
   createdAt: string;
   isRecurring?: boolean;
+  receiptUrl?: string | null;
 }
 
 interface Category {
@@ -438,6 +440,8 @@ export function Transactions() {
   const [budgetWarning, setBudgetWarning] = useState<BudgetWarningPayload | null>(null);
   const [ocrProgress, setOcrProgress] = useState<number | null>(null);
   const ocrFileRef = useRef<HTMLInputElement>(null);
+  // Receipt viewer: which photo to show fullscreen, null when closed.
+  const [receiptViewerUrl, setReceiptViewerUrl] = useState<string | null>(null);
 
   const handleReceipt = async (file: File) => {
     setOcrProgress(0);
@@ -465,6 +469,7 @@ export function Transactions() {
         description: result.merchant ?? formData.description,
         date: result.date ?? formData.date,
         categoryId: suggestedCategoryId ?? formData.categoryId,
+        receiptUrl: result.receiptUrl ?? formData.receiptUrl,
         isRecurring: false,
         frequency: undefined,
         repetitionCount: undefined,
@@ -623,6 +628,61 @@ export function Transactions() {
         }}
         isPending={createMutation.isPending}
       />
+
+      {receiptViewerUrl && (
+        <div
+          onClick={() => setReceiptViewerUrl(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,15,16,0.78)',
+            backdropFilter: 'blur(4px)',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 1200,
+            padding: 32,
+            cursor: 'zoom-out',
+          }}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setReceiptViewerUrl(null);
+            }}
+            aria-label="Închide"
+            style={{
+              position: 'absolute',
+              top: 20,
+              right: 20,
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              border: 'none',
+              background: 'rgba(255,255,255,0.12)',
+              color: '#fff',
+              cursor: 'pointer',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={receiptViewerUrl}
+            alt="Bon scanat"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              borderRadius: 12,
+              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.5)',
+              cursor: 'default',
+              background: '#fff',
+            }}
+          />
+        </div>
+      )}
 
       {/* summary strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
@@ -958,6 +1018,33 @@ export function Transactions() {
                                   <Repeat size={10} />
                                   recurent
                                 </span>
+                              )}
+                              {t.receiptUrl && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setReceiptViewerUrl(resolveAssetUrl(t.receiptUrl));
+                                  }}
+                                  title="Vezi bonul scanat"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                    fontSize: 10.5,
+                                    color: 'var(--text-2)',
+                                    background: 'var(--bg-subtle)',
+                                    border: '1px solid var(--border)',
+                                    padding: '1px 7px',
+                                    borderRadius: 999,
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    fontFamily: 'inherit',
+                                  }}
+                                >
+                                  <ReceiptIcon size={10} />
+                                  bon
+                                </button>
                               )}
                             </div>
                           </div>
