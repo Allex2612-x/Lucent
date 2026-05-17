@@ -22,6 +22,11 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for development
   crossOriginEmbedderPolicy: false,
+  // Default `same-origin` blocks the frontend (localhost:5173) from
+  // loading static assets served by this backend (localhost:4000), e.g.
+  // receipt photos rendered in <img>. Relax to `cross-origin` so the
+  // browser can fetch them across the dev ports.
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors({
   origin: ['http://localhost:5173', 'exp://localhost:8081', process.env.FRONTEND_URL].filter(Boolean) as string[],
