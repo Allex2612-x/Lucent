@@ -104,8 +104,10 @@ export class StatisticsService {
       },
     });
 
-    const totalIncome = incomeResult._sum.amount ?? 0;
-    const totalExpenses = expensesResult._sum.amount ?? 0;
+    // Coerce Prisma Decimal -> number so the JSON response carries plain
+    // numbers (not stringified Decimals), keeping the frontend math sane.
+    const totalIncome = Number(incomeResult._sum.amount ?? 0);
+    const totalExpenses = Number(expensesResult._sum.amount ?? 0);
     const balance = totalIncome - totalExpenses;
 
     return {
@@ -282,8 +284,12 @@ export class StatisticsService {
         },
       });
 
-      const income = incomeResult._sum.amount ?? 0;
-      const expenses = expensesResult._sum.amount ?? 0;
+      // Coerce Prisma Decimal -> plain number so the JSON response carries
+      // numeric values, not stringified Decimals. Without this `income`
+      // arrives at the frontend as "100.50", which silently corrupts
+      // anything that does string concatenation (e.g. `income + expenses`).
+      const income = Number(incomeResult._sum.amount ?? 0);
+      const expenses = Number(expensesResult._sum.amount ?? 0);
       const balance = income - expenses;
 
       result.push({
