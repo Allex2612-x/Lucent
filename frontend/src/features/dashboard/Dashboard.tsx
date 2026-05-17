@@ -442,13 +442,14 @@ export function Dashboard() {
     expenses: number;
     balance: number;
   }>;
-  const evolutionData: EvolutionPoint[] = trendPoints
-    .filter((p) => p.income > 0 || p.expenses > 0)
-    .map((p) => ({
-      name: `${MONTH_NAMES[p.month - 1].slice(0, 3)}`,
-      income: p.income,
-      expenses: p.expenses,
-    }));
+  // Show every month in the 12-month window, even zero-only ones, so a
+  // brand-new user with data only in the current month still sees a line
+  // (otherwise a single non-zero point has no segment to draw).
+  const evolutionData: EvolutionPoint[] = trendPoints.map((p) => ({
+    name: `${MONTH_NAMES[p.month - 1].slice(0, 3)}`,
+    income: p.income,
+    expenses: p.expenses,
+  }));
 
   const sparkBalance = trendPoints.map((p) => p.balance);
   const sparkIncome = trendPoints.map((p) => p.income);
