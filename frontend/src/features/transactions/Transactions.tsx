@@ -1802,20 +1802,39 @@ function DigitalReceiptViewer({
           padding: '24px 24px 28px',
           cursor: 'default',
           fontFamily: 'inherit',
-          // Slight saw-tooth bottom (jagged like a torn receipt) using a
-          // CSS mask so the card actually looks like a paper receipt.
-          WebkitMaskImage:
-            'radial-gradient(circle at 6px 100%, transparent 5px, #000 5.5px)',
-          WebkitMaskSize: '12px 12px',
-          WebkitMaskRepeat: 'repeat-x',
-          WebkitMaskPosition: 'bottom',
-          maskImage:
-            'radial-gradient(circle at 6px 100%, transparent 5px, #000 5.5px)',
-          maskSize: '12px 12px',
-          maskRepeat: 'repeat-x',
-          maskPosition: 'bottom',
+          position: 'relative',
         }}
       >
+        {/* Paper-receipt jagged bottom edge. Implemented as an SVG strip
+            absolutely positioned below the card so it doesn't fight with
+            the card's mask/clipping (mask-image had cross-browser issues
+            in Safari that made the whole card invisible). */}
+        <svg
+          width="100%"
+          height="10"
+          viewBox="0 0 420 10"
+          preserveAspectRatio="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: -9,
+            display: 'block',
+          }}
+        >
+          <path
+            d={(() => {
+              const teeth = 35;
+              const w = 420 / teeth;
+              let d = `M 0 0 L 420 0 L 420 0 `;
+              for (let i = teeth - 1; i >= 0; i--) {
+                d += `L ${(i + 0.5) * w} 9 L ${i * w} 0 `;
+              }
+              return d + 'Z';
+            })()}
+            fill="#fff"
+          />
+        </svg>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 18 }}>
           <div
