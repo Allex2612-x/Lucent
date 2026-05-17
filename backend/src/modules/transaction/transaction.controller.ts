@@ -4,6 +4,7 @@ import { TransactionService, createTransactionSchema, updateTransactionSchema, b
 import { DateValidator } from '../../shared/date-validator.js';
 import { BudgetValidator } from '../budget/budget-validator.js';
 import { RecurringTransactionEngine } from './recurring-transaction-engine.js';
+import { scanReceiptWithGemini } from './receipt-scanner.service.js';
 
 export class TransactionController {
   static async bulkImport(req: AuthRequest, res: Response, next: NextFunction) {
@@ -142,6 +143,31 @@ export class TransactionController {
       const deleteFuture = req.query.deleteFuture === 'true';
       await TransactionService.deleteTransaction(req.user!.userId, req.params.id as string, deleteFuture);
       res.json({ success: true, message: 'Transaction deleted' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * OCR a receipt photo via Gemini multimodal. Replaces the brittle
+   * Tesseract.js fallback we used to run in the browser.
+   *
+   * Body: { image: "<base64>", mimeType: "image/jpeg" }
+   */
+  static async scanReceipt(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { image, mimeType } = req.body ?? {};
+      if (typeof image !== 'string' || !image) {
+        return res.status(400).json({
+          success: false,
+          message: 'Lipsește imaginea bonului.',
+        });
+      }
+      // Strip data: prefix if the caller forgot to remove it.
+      const base64 = image.replace(/^data:[^;]+;base64,/, '');
+      const mt = typeof mimeType === 'string' && mimeType ? mimeType : 'image/jpeg';
+      const result = await scanReceiptWithGemini(base64, mt);
+      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
