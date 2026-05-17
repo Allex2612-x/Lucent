@@ -11,6 +11,15 @@ export class NotificationService {
     categoryId: string,
     transactionDate: Date
   ): Promise<void> {
+    // Respect the per-user opt-out from Settings. The pre-submit budget
+    // warning dialog is a separate flow and stays on regardless.
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { budgetNotifications: true },
+    });
+    if (!user || user.budgetNotifications === false) {
+      return;
+    }
     const month = transactionDate.getMonth() + 1; // JavaScript months are 0-indexed
     const year = transactionDate.getFullYear();
 

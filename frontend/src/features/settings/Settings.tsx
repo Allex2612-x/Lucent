@@ -18,6 +18,7 @@ interface UserProfile {
   lastName: string;
   currency: string;
   avatarUrl?: string;
+  budgetNotifications?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +28,7 @@ interface ProfileUpdateData {
   lastName?: string;
   currency?: string;
   avatarUrl?: string | null;
+  budgetNotifications?: boolean;
 }
 
 interface PasswordUpdateData {
@@ -633,22 +635,14 @@ export function Settings() {
           sub="Alege ce tip de notificări vrei să primești în aplicație."
         >
           <ToggleRow
-            label="Avertizări depășire buget"
-            sub="Te notificăm când o categorie depășește limita"
-            on
-            onChange={() => undefined}
-          />
-          <ToggleRow
-            label="Avertizări aproape de limită"
-            sub="Te notificăm la 80% din limita unei categorii"
-            on
-            onChange={() => undefined}
-          />
-          <ToggleRow
-            label="Confirmări tranzacții recurente"
-            sub="Anunț la fiecare tranzacție programată recurent"
-            on={false}
-            onChange={() => undefined}
+            label="Notificări buget pe categorii"
+            sub="Bulina în clopoțel când o categorie e aproape de limită sau depășită. Dialogul de confirmare la salvarea unei tranzacții rămâne activ indiferent."
+            on={user?.budgetNotifications !== false}
+            onChange={() =>
+              updateProfileMutation.mutate({
+                budgetNotifications: !(user?.budgetNotifications !== false),
+              })
+            }
             isLast
           />
         </SettingsSection>

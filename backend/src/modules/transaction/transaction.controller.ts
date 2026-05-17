@@ -1,28 +1,12 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/requireAuth.js';
-import { TransactionService, createTransactionSchema, updateTransactionSchema, bulkImportSchema } from './transaction.service.js';
+import { TransactionService, createTransactionSchema, updateTransactionSchema } from './transaction.service.js';
 import { DateValidator } from '../../shared/date-validator.js';
 import { BudgetValidator } from '../budget/budget-validator.js';
 import { RecurringTransactionEngine } from './recurring-transaction-engine.js';
 import { scanReceiptWithGemini } from './receipt-scanner.service.js';
 
 export class TransactionController {
-  static async bulkImport(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const validated = bulkImportSchema.parse(req.body);
-      const result = await TransactionService.bulkImportTransactions(
-        req.user!.userId,
-        validated.transactions,
-      );
-      res.status(result.failedCount > 0 && result.succeededCount === 0 ? 400 : 201).json({
-        success: result.succeededCount > 0,
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
   static async getAll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { startDate, endDate } = req.query;
