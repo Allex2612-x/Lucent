@@ -473,8 +473,7 @@ export function Transactions() {
 
       // Try to auto-classify the category from the merchant name. The
       // existing category-suggestion endpoint is the same one used for
-      // manual typing; reuse it so OCR-driven saves stay consistent with
-      // the rest of the app.
+      // manual typing.
       let suggestedCategoryId: string | null = null;
       if (result.merchant) {
         try {
@@ -485,6 +484,10 @@ export function Transactions() {
         }
       }
 
+      // Fill the form fields from OCR but do NOT auto-save. The user
+      // sees the digital receipt preview right inside the modal (see
+      // the Add Transaction modal body below) and decides whether to
+      // press Salvează.
       const nextData = {
         ...formData,
         type: 'expense' as const,
@@ -500,26 +503,11 @@ export function Transactions() {
       setFormData(nextData);
       if (suggestedCategoryId) setUserPickedCategory(true);
 
-      // If OCR + suggestion gave us everything we need (amount + category),
-      // skip the form and save the expense in one shot. Otherwise keep the
-      // form open so the user can fill the gaps.
-      if (
-        nextData.amount > 0 &&
-        nextData.categoryId &&
-        nextData.date
-      ) {
-        createMutation.mutate({ data: nextData });
-        toast.success(
-          `Bon adăugat${result.merchant ? ` — ${result.merchant}` : ''} · ${nextData.amount.toFixed(2)} RON`,
-        );
-        return;
-      }
-
       if (result.amount || result.merchant) {
-        toast.message(
+        toast.success(
           `Bon scanat${result.merchant ? ` — ${result.merchant}` : ''}${
             result.amount ? ` · ${result.amount.toFixed(2)} RON` : ''
-          }. Verifică datele și apasă Salvează.`,
+          }. Verifică și apasă Salvează.`,
         );
       } else {
         toast.message('Bonul a fost scanat dar nu am putut extrage suma. Completează manual.');
@@ -1033,7 +1021,14 @@ export function Transactions() {
                           {tDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }} className="mono">
-                          {tDate.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}
+                          {/* tDate is parsed from YYYY-MM-DD which JS treats as
+                              UTC midnight, so the local-time render always showed
+                              03:00 in Romania. Use createdAt for the actual
+                              moment the user added the transaction. */}
+                          {new Date(t.createdAt).toLocaleTimeString('ro-RO', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </div>
                       </td>
                       <td
@@ -1221,6 +1216,15 @@ export function Transactions() {
               }}
             />
           </div>
+
+          {formData.receiptData ? (
+            <ReceiptPreviewCard
+              data={formData.receiptData as ReceiptData}
+              onRemove={() =>
+                setFormData({ ...formData, receiptData: undefined })
+              }
+            />
+          ) : null}
 
           <div className="field" style={{ marginBottom: 14 }}>
             <label>Descriere</label>
@@ -1990,6 +1994,160 @@ function DigitalReceiptViewer({
           Bon digital generat automat din scanare
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Compact in-modal preview of the digital receipt extracted by OCR.
+ * Shown above the form fields after a successful scan so the user can
+ * verify the extracted data before pressing Salvează.
+ */
+function ReceiptPreviewCard({
+  data,
+  onRemove,
+}: {
+  data: ReceiptData;
+  onRemove: () => void;
+}) {
+  const fmtN = (n: number) =>
+    n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const visibleItems = data.items.slice(0, 6);
+  const hidden = data.items.length - visibleItems.length;
+  return (
+    <div
+      style={{
+        background: '#fff',
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 14,
+        position: 'relative',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 7,
+              background: 'var(--accent-soft)',
+              color: 'var(--accent)',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <ReceiptIcon size={12} />
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>
+              {data.merchant || 'Bon scanat'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              {data.date || '—'}
+              {data.time ? ` · ${data.time}` : ''}
+              {data.items.length > 0 ? ` · ${data.items.length} produse` : ''}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          title="Elimină bonul din această tranzacție"
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--text-3)',
+            cursor: 'pointer',
+            padding: 4,
+            borderRadius: 6,
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {data.items.length > 0 && (
+        <>
+          <div
+            style={{
+              borderTop: '1px dashed var(--border-strong, #c8c4b8)',
+              margin: '8px 0',
+            }}
+          />
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3,
+              fontSize: 11.5,
+              color: 'var(--text-2)',
+              maxHeight: 140,
+              overflowY: 'auto',
+            }}
+          >
+            {visibleItems.map((it, i) => (
+              <div
+                key={i}
+                style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}
+              >
+                <span
+                  style={{
+                    flex: 1,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {it.qty > 1 ? `${it.qty}× ` : ''}
+                  {it.name}
+                </span>
+                <span className="num" style={{ color: 'var(--text-1)' }}>
+                  {fmtN(it.total)}
+                </span>
+              </div>
+            ))}
+            {hidden > 0 && (
+              <div style={{ fontSize: 10.5, color: 'var(--text-3)', textAlign: 'center', marginTop: 4 }}>
+                + încă {hidden} {hidden === 1 ? 'produs' : 'produse'}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {data.total !== null && (
+        <>
+          <div
+            style={{
+              borderTop: '1px dashed var(--border-strong, #c8c4b8)',
+              margin: '8px 0',
+            }}
+          />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 13,
+              fontWeight: 700,
+              color: 'var(--text-1)',
+            }}
+          >
+            <span>Total</span>
+            <span className="num">
+              {fmtN(data.total)} {data.currency}
+            </span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
