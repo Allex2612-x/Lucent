@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import path from 'path';
+import { env, isProduction } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import userRoutes from './modules/user/user.routes.js';
@@ -28,12 +29,30 @@ app.use(helmet({
   // browser can fetch them across the dev ports.
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
+// CORS — allow the dev frontend always, plus any origins from
+// FRONTEND_URL (comma-separated, supports multiple deploys).
+const allowedOrigins = [
+  'http://localhost:5173',
+  'exp://localhost:8081',
+  ...(env.FRONTEND_URL ? env.FRONTEND_URL.split(',').map((o) => o.trim()).filter(Boolean) : []),
+];
 app.use(cors({
-  origin: ['http://localhost:5173', 'exp://localhost:8081', process.env.FRONTEND_URL].filter(Boolean) as string[],
+  origin: (origin, callback) => {
+    // Allow requests with no Origin header (curl, mobile, server-to-server).
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS blocked for origin ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Behind Railway's edge proxy. Without trust proxy, secure cookies and
+// req.protocol are wrong (always "http").
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
 // 5mb covers the largest payloads (base64-encoded avatar + CSV import).
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));

@@ -2,8 +2,13 @@ import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
 // Backend origin (no /api suffix) — used for static asset URLs like
-// uploaded receipt photos that aren't behind /api.
-export const API_ORIGIN = 'http://localhost:4000';
+// uploaded receipt photos that aren't behind /api. Read from a Vite
+// env var so the production bundle points at the deployed backend
+// (e.g. https://faro-backend.up.railway.app) without code changes.
+//
+// To override locally, set VITE_API_ORIGIN in frontend/.env.local.
+export const API_ORIGIN: string =
+  (import.meta.env.VITE_API_ORIGIN as string | undefined) ?? 'http://localhost:4000';
 
 /**
  * Resolve a possibly-relative URL returned by the backend (e.g.

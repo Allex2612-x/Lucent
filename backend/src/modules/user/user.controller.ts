@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/requireAuth.js';
 import { UserService, updateProfileSchema, updatePasswordSchema } from './user.service.js';
+import { clearRefreshCookie } from '../../shared/cookies.js';
 
 export class UserController {
   static async getMe(req: AuthRequest, res: Response, next: NextFunction) {
@@ -39,7 +40,7 @@ export class UserController {
     try {
       const userId = req.user!.userId;
       await UserService.deleteAccount(userId);
-      res.clearCookie('refreshToken');
+      clearRefreshCookie(res);
       res.json({ success: true, message: 'Account deleted' });
     } catch (error) {
       next(error);
