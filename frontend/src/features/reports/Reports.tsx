@@ -16,7 +16,7 @@ import { statisticsService } from '../../services/statistics.service';
 import { categoriesService } from '../../services/categories.service';
 import { api } from '../../services/api';
 import { CHART_COLORS } from '../../styles/colors';
-import { Category } from '@sasha-licenta/shared';
+import { Category } from '../../types/shared';
 import { CategoryIcon } from '../../components/CategoryIcon';
 
 const fmt = (n: number, dec = 2) =>
