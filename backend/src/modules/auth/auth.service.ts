@@ -39,7 +39,7 @@ export class AuthService {
     });
 
     // Create default categories for the new user
-    const { DEFAULT_CATEGORIES } = await import('@sasha-licenta/shared');
+    const { DEFAULT_CATEGORIES } = await import('../../shared/default-categories.js');
     await prisma.category.createMany({
       data: DEFAULT_CATEGORIES.map(cat => ({
         name: cat.name,

@@ -10,7 +10,6 @@
     "start": "serve -s dist -l ${PORT:-3000}"
   },
   "dependencies": {
-    "@sasha-licenta/shared": "file:../shared",
     "@tanstack/react-query": "^5.51.11",
     "axios": "^1.7.2",
     "clsx": "^2.1.1",

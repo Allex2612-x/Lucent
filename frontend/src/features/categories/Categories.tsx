@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { categoriesService, CategoryData } from '../../services/categories.service';
 import { statisticsService } from '../../services/statistics.service';
-import { Category } from '@sasha-licenta/shared';
+import { Category } from '../../types/shared';
 import { CHART_COLORS } from '../../styles/colors';
 import { CategoryIcon } from '../../components/CategoryIcon';
 

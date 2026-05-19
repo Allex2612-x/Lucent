@@ -14,7 +14,7 @@ import { CategoryIcon } from '../../components/CategoryIcon';
 import { budgetsService, BudgetData } from '../../services/budgets.service';
 import { categoriesService } from '../../services/categories.service';
 import { statisticsService } from '../../services/statistics.service';
-import { Budget, Category } from '@sasha-licenta/shared';
+import { Budget, Category } from '../../types/shared';
 
 const fmt = (n: number, dec = 0) =>
   n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });

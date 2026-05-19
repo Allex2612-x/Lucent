@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User } from '@sasha-licenta/shared';
+import { User } from '../types/shared';
 
 interface AuthState {
   user: User | null;

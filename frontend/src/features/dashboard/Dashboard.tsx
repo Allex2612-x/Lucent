@@ -12,7 +12,7 @@ import { transactionsService, TransactionData } from '../../services/transaction
 import { categoriesService } from '../../services/categories.service';
 import { budgetsService } from '../../services/budgets.service';
 import { api } from '../../services/api';
-import { Category } from '@sasha-licenta/shared';
+import { Category } from '../../types/shared';
 import { CHART_COLORS } from '../../styles/colors';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';

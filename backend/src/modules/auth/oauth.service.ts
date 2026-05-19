@@ -38,7 +38,7 @@ export async function loginOrSignupFromOAuth(profile: OAuthProfile) {
     });
 
     // Seed default categories the same way regular signup does
-    const { DEFAULT_CATEGORIES } = await import('@sasha-licenta/shared');
+    const { DEFAULT_CATEGORIES } = await import('../../shared/default-categories.js');
     await prisma.category.createMany({
       data: DEFAULT_CATEGORIES.map((cat) => ({
         name: cat.name,

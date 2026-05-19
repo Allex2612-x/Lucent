@@ -150,11 +150,12 @@ După adăugare, actualizează `FRONTEND_URL` și `VITE_API_ORIGIN` cu noile dom
 - ⚠️ `--accept-data-loss` permite modificări destructive. Dacă faci o schimbare care ar șterge date (ex: redenumire coloană), DB-ul **se va modifica** la următorul start.
 
 ### Build sequence (citește din `railway.json`)
-- **Backend:** `cd ../shared && npm install && npm run build && cd ../backend && npm install && npm run build`
-  - Construiește mai întâi pachetul `shared` (tipuri TypeScript partajate).
-  - Apoi compilează backend-ul TS → `dist/`.
-  - `postinstall` rulează automat `prisma generate`.
-- **Frontend:** Identic, dar pentru frontend. Output: `dist/` cu HTML + JS bundle.
+- **Backend:** `npm run build` (= `prisma generate && tsc -p tsconfig.json`).
+  - Tipurile shared sunt inline-uite în `backend/src/shared/` și
+    `frontend/src/types/shared.ts` — nu mai depindem de un workspace
+    package sibling (Railway clonează doar subdirectorul Root Directory).
+- **Frontend:** `npm run build` (= `tsc -b && vite build`). Output: `dist/`
+  cu HTML + JS bundle.
 
 ### Runtime
 - **Backend:** `npm start` = `prisma db push && node dist/server.js`. Schema se sincronizează la fiecare start.
