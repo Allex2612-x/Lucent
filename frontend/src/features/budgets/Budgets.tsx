@@ -809,11 +809,11 @@ export function Budgets() {
 
       {/* Total budget hero */}
       <div
+        className="budget-hero"
         style={{
           background: 'linear-gradient(140deg, #0e0e10 0%, #1a1d2b 100%)',
           color: '#fff',
           borderRadius: 18,
-          padding: 28,
           marginBottom: 20,
           position: 'relative',
           overflow: 'hidden',
@@ -950,7 +950,7 @@ export function Budgets() {
           />
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+        <div className="r-grid-2">
           {items.map((it) => {
             // Build the date range for the budget's month so the drill-down
             // pre-fills the Transactions filter to "this whole month".

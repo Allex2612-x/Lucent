@@ -1245,6 +1245,25 @@ input, select, textarea { font-family: inherit; color: inherit; }
   to { opacity: 1; }
 }
 
+/* ===================== RESPONSIVE UTILITY CLASSES ===================== */
+/* Use these instead of inline grid styles so CSS can override cleanly. */
+.r-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.r-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.r-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.r-grid-split { display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px; }
+
+@media (max-width: 1024px) {
+  .r-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 880px) {
+  .r-grid-split { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .r-grid-2,
+  .r-grid-3,
+  .r-grid-4 { grid-template-columns: 1fr; gap: 12px; }
+}
+
 /* ===================== RESPONSIVE ===================== */
 
 /* Hamburger button — only shown on mobile when sidebar becomes a drawer. */
@@ -1440,4 +1459,184 @@ input, select, textarea { font-family: inherit; color: inherit; }
   .page-title { font-size: 20px; }
   .topbar { padding: 0 12px; }
   .btn { padding: 7px 10px; font-size: 12px; }
+}
+
+/* ===================== MOBILE POLISH ===================== */
+/* Specific component fixes that aren't covered by the global rules. */
+
+/* Budget hero — gradient dark card with the giant serif total. */
+.budget-hero { padding: 28px; }
+.budget-hero > div:nth-child(2) {
+  /* The inner grid "1fr auto" stack on mobile so the stats column
+     drops below the amount instead of squishing the serif. */
+}
+@media (max-width: 640px) {
+  .budget-hero { padding: 20px 18px; border-radius: 14px !important; }
+  .budget-hero > div:nth-child(2) {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    align-items: flex-start !important;
+  }
+  /* Tame the gigantic serif font on the hero. */
+  .budget-hero .serif.num {
+    font-size: 34px !important;
+    letter-spacing: -0.02em;
+  }
+  .budget-hero .serif.num span {
+    font-size: 14px !important;
+  }
+}
+
+/* Modals — proper bottom-sheet on mobile, with scrollable body. */
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+  .modal-content {
+    border-radius: 18px 18px 0 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh !important;
+    box-shadow: 0 -20px 50px -10px rgba(0,0,0,0.2);
+    animation: slideUp .22s ease;
+  }
+  /* Drag handle visual at top of bottom sheet. */
+  .modal-content::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border-strong, #d8d3c5);
+    margin: 8px auto 0;
+  }
+  .modal-header { padding-top: 12px; }
+  /* Modal footer sticks to the bottom even when body scrolls. */
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    border-top: 1px solid var(--border);
+    z-index: 1;
+  }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Touch targets — buttons need ≥ 40px high on mobile for thumbs. */
+@media (max-width: 640px) {
+  .btn { min-height: 40px; padding: 9px 14px; font-size: 13px; }
+  .btn-sm { min-height: 34px; padding: 7px 12px; }
+  .icon-btn { width: 40px; height: 40px; }
+  .hamburger { width: 40px; height: 40px; }
+  /* Form inputs taller for thumbs. */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  select,
+  textarea {
+    min-height: 42px;
+    font-size: 15px; /* prevents iOS zoom-on-focus */
+  }
+}
+
+/* Transactions table — convert to card layout instead of horizontal scroll.
+   Each row becomes a stacked card so amount + category are easy to read. */
+@media (max-width: 640px) {
+  table.tx-table { display: block; white-space: normal; }
+  table.tx-table thead { display: none; }
+  table.tx-table tbody { display: block; }
+  table.tx-table tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "select  desc    amount"
+      "select  category amount"
+      "select  date     more";
+    gap: 4px 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  table.tx-table td { display: block; padding: 0; border: none; }
+  table.tx-table td:nth-child(1) { grid-area: select; }
+  table.tx-table td:nth-child(2) { grid-area: desc; min-width: 0; }
+  table.tx-table td:nth-child(3) { grid-area: category; font-size: 11.5px; }
+  table.tx-table td:nth-child(4) { grid-area: date; font-size: 11px; color: var(--text-3); }
+  table.tx-table td:nth-child(5) { grid-area: amount; text-align: right; font-size: 15px; }
+  table.tx-table td:nth-child(6) { grid-area: more; text-align: right; }
+  table.tx-table td:nth-child(4) > div:last-child { display: none; } /* hide time-of-day on card view */
+}
+
+/* Reports page — generator panel + preview becomes single column. */
+@media (max-width: 1024px) {
+  .reports-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* AI Assistant drawer — full screen on small phones. */
+@media (max-width: 640px) {
+  .ai-drawer { width: 100vw !important; max-width: 100vw !important; }
+}
+
+/* Generic flex rows that should wrap on mobile (e.g. page-head action group). */
+@media (max-width: 640px) {
+  .page-head > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .page-head > div:last-child > * {
+    flex: 1 1 auto;
+  }
+}
+
+/* Cards with absolute "view all" links at corners — keep them inside on mobile. */
+@media (max-width: 640px) {
+  .card { border-radius: 14px; }
+  .card-head {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* Anomaly card on Dashboard — stack the chip layout. */
+@media (max-width: 640px) {
+  /* "1 tranzacție neobișnuită" wrapper. */
+  .anomaly-row {
+    grid-template-columns: 32px 1fr auto !important;
+  }
+}
+
+/* Budget card grid for entries (multi-category) — keep readable. */
+@media (max-width: 640px) {
+  /* Override the "gridColumn: span 2" for big multi-category cards. */
+  .card[style*="grid-column"] { grid-column: span 1 !important; }
+}
+
+/* Drawer animation polish — smooth slide + slight scale on backdrop fade. */
+.sb {
+  will-change: transform;
+}
+
+/* Prevent horizontal page scroll caused by overflow content. */
+html, body { overflow-x: hidden; }
+
+/* iOS safe areas (notch / home indicator). */
+@supports (padding: max(0px)) {
+  .topbar, .header {
+    padding-left: max(16px, env(safe-area-inset-left)) !important;
+    padding-right: max(16px, env(safe-area-inset-right)) !important;
+  }
+  .page, .page-content {
+    padding-left: max(16px, env(safe-area-inset-left)) !important;
+    padding-right: max(16px, env(safe-area-inset-right)) !important;
+    padding-bottom: max(32px, env(safe-area-inset-bottom)) !important;
+  }
 }
