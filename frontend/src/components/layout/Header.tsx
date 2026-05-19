@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { Bell, Plus, Search, Sparkles } from 'lucide-react';
+import { Bell, Menu, Plus, Search, Sparkles } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { notificationsService } from '../../services/notifications.service';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -16,7 +16,11 @@ const ROUTE_CRUMBS: Record<string, string> = {
   '/settings': 'Setări',
 };
 
-export function Header() {
+interface HeaderProps {
+  onOpenDrawer?: () => void;
+}
+
+export function Header({ onOpenDrawer }: HeaderProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -109,8 +113,19 @@ export function Header() {
 
   return (
     <div className="topbar">
+      {onOpenDrawer && (
+        <button
+          type="button"
+          className="hamburger"
+          onClick={onOpenDrawer}
+          aria-label="Deschide meniul"
+        >
+          <Menu size={20} />
+        </button>
+      )}
       <div className="crumb">
-        FARO <span className="crumb-sep">/</span> <b>{currentLabel}</b>
+        <span className="crumb-prefix">FARO <span className="crumb-sep">/</span> </span>
+        <b>{currentLabel}</b>
       </div>
 
       <button
@@ -127,25 +142,10 @@ export function Header() {
       <button
         onClick={() => setIsAssistantOpen(true)}
         title="Asistent AI"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          height: 36,
-          padding: '0 12px',
-          borderRadius: 10,
-          background: 'linear-gradient(135deg, #2547f5, #6c4cf8)',
-          color: '#fff',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: 12.5,
-          fontWeight: 600,
-          fontFamily: 'inherit',
-          boxShadow: '0 2px 8px -2px rgba(37,71,245,.45)',
-        }}
+        className="ai-assistant-btn"
       >
         <Sparkles size={14} />
-        Asistent AI
+        <span className="ai-assistant-label">Asistent AI</span>
       </button>
 
       <div className="notification-bell-wrapper" ref={dropdownRef}>

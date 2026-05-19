@@ -29,7 +29,12 @@ function getInitials(firstName?: string, lastName?: string) {
   return (first + last).toUpperCase() || 'AS';
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  drawerOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ drawerOpen = false, onClose }: SidebarProps = {}) {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
@@ -79,13 +84,23 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sb">
+    <aside className={`sb${drawerOpen ? ' sb-open' : ''}`}>
       <div className="sb-brand">
         <div className="sb-mark">F</div>
         <div>
           <div className="sb-name">FARO</div>
           <div className="sb-tag">Finanțe personale</div>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            className="sb-close"
+            onClick={onClose}
+            aria-label="Închide meniul"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       <div className="sb-section">General</div>
