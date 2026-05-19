@@ -637,7 +637,7 @@ export function Transactions() {
       )}
 
       {/* summary strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+      <div className="r-grid-4" style={{ marginBottom: 16 }}>
         {summaryCards.map((s, i) => (
           <div
             key={i}
@@ -887,7 +887,7 @@ export function Transactions() {
           </div>
         ) : (
           <>
-            <table className="tbl">
+            <table className="tbl tx-table">
               <thead>
                 <tr>
                   <th style={{ width: 28, paddingRight: 0 }}>

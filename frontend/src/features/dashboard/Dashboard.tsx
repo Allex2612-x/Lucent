@@ -624,7 +624,7 @@ export function Dashboard() {
       </div>
 
       {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18, marginBottom: 18 }}>
+      <div className="r-grid-3" style={{ gap: 18, marginBottom: 18 }}>
         <KpiCard
           label="Sold curent"
           value={overviewLoading ? 0 : balance}
@@ -787,7 +787,7 @@ export function Dashboard() {
       )}
 
       {/* Chart row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 18, marginBottom: 18 }}>
+      <div className="r-grid-split" style={{ marginBottom: 18 }}>
         <div className="card">
           <div className="card-head">
             <div>
@@ -818,7 +818,7 @@ export function Dashboard() {
       </div>
 
       {/* Recent + budgets */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 18 }}>
+      <div className="r-grid-split">
         <div className="card" style={{ padding: 0 }}>
           <div
             style={{
