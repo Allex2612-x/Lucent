@@ -384,6 +384,10 @@ input, select, textarea { font-family: inherit; color: inherit; }
 .crumb { font-size: 12px; color: var(--text-3); }
 .crumb b { color: var(--text-1); font-weight: 500; }
 .crumb-sep { margin: 0 8px; color: var(--text-3); }
+@media (max-width: 640px) {
+  .crumb-prefix { display: none; }
+  .crumb b { font-size: 14px; }
+}
 
 .search {
   flex: 0 1 320px;
@@ -428,6 +432,29 @@ input, select, textarea { font-family: inherit; color: inherit; }
 }
 
 .notification-bell-wrapper { position: relative; }
+
+/* AI Assistant button — gradient pill on desktop, icon-only on mobile. */
+.ai-assistant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2547f5, #6c4cf8);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  box-shadow: 0 2px 8px -2px rgba(37,71,245,.45);
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .ai-assistant-btn { width: 36px; padding: 0; justify-content: center; gap: 0; }
+  .ai-assistant-label { display: none; }
+}
 
 /* ===================== PAGE ===================== */
 .page,
@@ -1218,18 +1245,199 @@ input, select, textarea { font-family: inherit; color: inherit; }
   to { opacity: 1; }
 }
 
-/* responsive */
+/* ===================== RESPONSIVE ===================== */
+
+/* Hamburger button — only shown on mobile when sidebar becomes a drawer. */
+.hamburger {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-2);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hamburger:active { background: var(--bg-subtle); }
+
+/* Sidebar close button — only visible inside the mobile drawer. */
+.sb-close {
+  display: none;
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 18px;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+/* Backdrop behind the open mobile drawer. */
+.sb-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15,15,16,0.45);
+  z-index: 39;
+  animation: fadeIn .15s ease;
+}
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+/* Tablet — 1024 down. Slightly tighter, but desktop layout still works. */
+@media (max-width: 1024px) {
+  .page, .page-content { padding: 24px 24px 32px; }
+  .topbar, .header { padding: 0 24px; }
+  .sb, .sidebar { width: 200px; flex: 0 0 200px; }
+}
+
+/* Mobile + small tablet — sidebar becomes an off-canvas drawer. */
 @media (max-width: 880px) {
-  .sb, .sidebar { width: 64px; flex: 0 0 64px; padding: 18px 8px; }
+  /* Drawer: position-fixed off-screen, slides in when .sb-open. */
+  .sb, .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 268px;
+    max-width: 80vw;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+    z-index: 40;
+    box-shadow: 0 12px 40px -10px rgba(0,0,0,0.25);
+    /* Override desktop collapsed style. */
+    flex: 0 0 268px;
+    padding: 22px 14px 18px;
+  }
+  .sb.sb-open, .sidebar.sb-open { transform: translateX(0); }
+
+  /* Drawer is now full-width, so show everything that was hidden in the
+     desktop "collapsed" rule. */
   .sb-brand > div:not(.sb-mark),
   .sb-section,
   .sb-item span,
   .sb-tip,
   .sb-user > div:not(.sb-avatar),
-  .sb-logout { display: none; }
-  .sb-item { justify-content: center; padding: 8px; }
-  .sb-item .badge, .sb-item .sb-badge { display: none; }
-  .topbar, .header { padding: 0 16px; }
-  .page, .page-content { padding: 20px 16px 32px; }
+  .sb-logout { display: block; }
+  .sb-user > div:not(.sb-avatar) { display: block; }
+  .sb-user { display: flex; }
+  .sb-item { justify-content: flex-start; padding: 8px 10px; }
+  .sb-item .badge, .sb-item .sb-badge { display: inline-block; }
+
+  .sb-close { display: block; }
+  .sb-backdrop { display: block; }
+
+  .hamburger { display: inline-flex; }
+  .topbar, .header { padding: 0 16px; gap: 10px; }
+  .page, .page-content { padding: 16px 14px 24px; }
   .search { display: none; }
+
+  /* Hide AI Assistant label text on mobile — keep only the icon. */
+  .topbar > button:has(.lucide-sparkles) span,
+  .topbar button[title="Asistent AI"] {
+    /* Keep button visible but compact; explicit padding to make it square-ish. */
+    padding: 0 10px !important;
+  }
+
+  /* Page heads: stack title and actions instead of side-by-side. */
+  .page-head,
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .page-head > div:last-child,
+  .page-header-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  /* Period segmented control: horizontal scroll if it overflows. */
+  .seg {
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+  .seg::-webkit-scrollbar { display: none; }
+
+  /* Buttons in action rows: shrink padding so they fit. */
+  .btn { padding: 8px 12px; font-size: 12.5px; }
+  .btn-sm { padding: 6px 10px; }
+}
+
+/* True mobile — < 640px. Single-column grids everywhere. */
+@media (max-width: 640px) {
+  /* Generic grid utility: collapse repeated-column grids. */
+  [style*="grid-template-columns: repeat(3, 1fr)"],
+  [style*="grid-template-columns: repeat(4, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  [style*="grid-template-columns: repeat(2, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Chart row "1.6fr 1fr" → stack */
+  [style*="grid-template-columns: 1.6fr 1fr"],
+  [style*="grid-template-columns: 1fr auto"],
+  [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* KPI cards: keep sparkline visible but slightly less tall. */
+  .card { padding: 16px !important; }
+
+  /* Hero balance card on Budgets / similar: tighter padding. */
+  .page-title { font-size: 22px; }
+  .page-sub { font-size: 12.5px; }
+
+  /* Modals: take almost the full screen on mobile. */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal-content {
+    border-radius: 16px 16px 0 0;
+    max-width: 100%;
+    max-height: 92vh;
+  }
+
+  /* Tables — horizontal scroll wrapper. Apply to any .card containing a
+     table or to .table-scroll explicitly. */
+  .card table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .card table thead,
+  .card table tbody,
+  .card table tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  /* Settings — single column instead of label/body split. */
+  .settings-section {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 20px 0;
+  }
+  .settings-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .settings-tabs::-webkit-scrollbar { display: none; }
+
+  /* Crumb on topbar: hide leading "FARO /" prefix to save space. */
+  .crumb { font-size: 13px; }
+
+  /* Sparkline on KPI cards: hide entirely to keep cards compact. */
+  .card svg[viewBox="0 0 280 56"] { height: 36px; }
+}
+
+/* Extra-tight phones (iPhone SE etc.) — 380px down. */
+@media (max-width: 380px) {
+  .page, .page-content { padding: 14px 12px 24px; }
+  .page-title { font-size: 20px; }
+  .topbar { padding: 0 12px; }
+  .btn { padding: 7px 10px; font-size: 12px; }
 }
