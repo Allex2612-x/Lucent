@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService, registerSchema, loginSchema } from './auth.service.js';
 import { AppError } from '../../shared/errors.js';
+import { setRefreshCookie, clearRefreshCookie } from '../../shared/cookies.js';
 import { requestPasswordReset, consumePasswordReset } from './password-reset.service.js';
 
 export class AuthController {
@@ -10,12 +11,7 @@ export class AuthController {
       const { user, accessToken, refreshToken } = await AuthService.register(validatedData);
 
       // set refresh token in httpOnly cookie
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      setRefreshCookie(res, refreshToken);
 
       res.status(201).json({
         success: true,
@@ -39,12 +35,7 @@ export class AuthController {
       const validatedData = loginSchema.parse(req.body);
       const { user, accessToken, refreshToken } = await AuthService.login(validatedData);
 
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      setRefreshCookie(res, refreshToken);
 
       res.json({
         success: true,
@@ -64,7 +55,7 @@ export class AuthController {
   }
 
   static async logout(req: Request, res: Response, next: NextFunction) {
-    res.clearCookie('refreshToken');
+    clearRefreshCookie(res);
     res.json({ success: true, message: 'Logged out successfully' });
   }
 
@@ -78,12 +69,7 @@ export class AuthController {
 
       const { accessToken, refreshToken: newRefreshToken } = await AuthService.refreshTokens(refreshToken);
 
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      setRefreshCookie(res, newRefreshToken);
 
       res.json({
         success: true,
