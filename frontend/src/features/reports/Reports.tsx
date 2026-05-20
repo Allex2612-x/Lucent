@@ -353,7 +353,7 @@ export function Reports() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 18, alignItems: 'flex-start' }}>
+      <div className="reports-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 18, alignItems: 'flex-start' }}>
         {/* ===== RIGHT — BUILDER (order:2 in grid) ===== */}
         <div
           className="card"
@@ -715,7 +715,7 @@ export function Reports() {
           </div>
 
           {/* KPI row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div className="r-grid-4">
             <div className="card" style={{ padding: 16 }}>
               <div style={{ fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Total {reportType === 'income' ? 'venituri' : reportType === 'expense' ? 'cheltuieli' : 'operațiuni'}
