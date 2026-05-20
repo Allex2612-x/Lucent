@@ -356,7 +356,7 @@ export function Reports() {
       <div className="reports-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 18, alignItems: 'flex-start' }}>
         {/* ===== RIGHT — BUILDER (order:2 in grid) ===== */}
         <div
-          className="card"
+          className="card reports-builder"
           style={{
             padding: 0,
             position: 'sticky',
@@ -676,7 +676,7 @@ export function Reports() {
         </div>
 
         {/* ===== LEFT — PREVIEW (order:1 in grid) ===== */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, order: 1 }}>
+        <div className="reports-preview" style={{ display: 'flex', flexDirection: 'column', gap: 16, order: 1 }}>
           {/* Preview header */}
           <div
             style={{
@@ -963,7 +963,7 @@ function DonutChart({
       };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+    <div className="donut-row" style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <svg
           viewBox={`0 0 ${SIZE} ${SIZE}`}
