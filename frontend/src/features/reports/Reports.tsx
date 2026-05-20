@@ -100,12 +100,13 @@ export function Reports() {
   const [endDate, setEndDate] = useState(ytd.end);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
   const [categoriesInitialized, setCategoriesInitialized] = useState(false);
-  // Builder is expanded by default on desktop, collapsed on mobile.
-  // The mobile-first UX prioritizes the preview — user taps the summary
-  // chip at the top to expand the builder when they want to tweak.
-  const [builderOpen, setBuilderOpen] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
-  );
+  // Builder always starts expanded — both on desktop and mobile. Earlier
+  // we tried to default-collapse on small screens via window.innerWidth,
+  // but iOS Safari reports the viewport width late (it shifts as the URL
+  // bar settles), causing a visible flicker where the page renders
+  // expanded for ~1-2s and then snaps closed. Defaulting to open avoids
+  // the race — mobile users can still tap the header to collapse.
+  const [builderOpen, setBuilderOpen] = useState(true);
   const applyPreset = (p: Preset) => {
     setPreset(p);
     if (p !== 'custom') {
