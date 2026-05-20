@@ -26,6 +26,12 @@ const envSchema = z.object({
   // Required for the receipt OCR endpoint. Without it, /scan-receipt
   // returns a 500 — the endpoint surfaces the error.
   GEMINI_API_KEY: z.string().optional(),
+  // Required to actually send the password-reset email. Without it,
+  // the link is only logged to the server console.
+  RESEND_API_KEY: z.string().optional(),
+  // Sender address for transactional email. Default `onboarding@resend.dev`
+  // works without DNS setup but emails come from that domain.
+  RESEND_FROM: z.string().optional(),
 });
 
 const parseResult = envSchema.safeParse(process.env);
