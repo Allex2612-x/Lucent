@@ -191,6 +191,18 @@ html, body, #root {
   margin: 0;
   padding: 0;
   height: 100%;
+  /* Hard-clip horizontal overflow at the root so no descendant can
+     stretch the viewport. Mobile browsers will respect the meta
+     viewport scale=1 because the document is exactly device-width
+     wide, never wider. */
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Belt-and-suspenders: anything that escapes its container with a
+   forgotten fixed width still can't push beyond the viewport. */
+img, svg, video, canvas, iframe, table {
+  max-width: 100%;
 }
 
 body {
@@ -1717,7 +1729,7 @@ input, select, textarea { font-family: inherit; color: inherit; }
 
 /* AI Assistant drawer — full screen on small phones. */
 @media (max-width: 640px) {
-  .ai-drawer { width: 100vw !important; max-width: 100vw !important; }
+  .ai-drawer { width: 100% !important; max-width: 100% !important; }
 }
 
 /* Generic flex rows that should wrap on mobile (e.g. page-head action group). */
