@@ -1611,6 +1611,89 @@ input, select, textarea { font-family: inherit; color: inherit; }
   .reports-layout {
     grid-template-columns: 1fr !important;
   }
+  /* Cancel sticky positioning + max-height that don't make sense
+     once the layout is stacked. Without these overrides the builder
+     panel was either floating weird or constrained to a tiny height. */
+  .reports-builder {
+    position: static !important;
+    max-height: none !important;
+    /* Put the builder FIRST on mobile so the user configures the
+       report, then scrolls down to see the preview. */
+    order: -1 !important;
+  }
+  .reports-preview {
+    order: 0 !important;
+  }
+  /* Builder's inner scroll area also no longer needs to fight the
+     viewport — let it grow naturally. */
+  .reports-builder > div:nth-child(2) {
+    overflow-y: visible !important;
+    flex: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Header buttons row in the preview ("Regenerează" + "Previzualizare
+     PDF") — wrap into a column under 360px tablet/phone widths. */
+  .reports-preview > div:first-child {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .reports-preview > div:first-child > div:last-child {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .reports-preview > div:first-child > div:last-child button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Builder padding tighter on mobile so categories list doesn't
+     overflow. */
+  .reports-builder > div:nth-child(2) {
+    padding: 14px !important;
+  }
+
+  /* Detail table — drop the noisy middle columns (TX count, sparkline,
+     percentage bar) on mobile. Keep just Categorie + Subtotal so each
+     row fits the screen without sideways scroll. */
+  .reports-preview table.tbl thead th:nth-child(2),
+  .reports-preview table.tbl thead th:nth-child(3),
+  .reports-preview table.tbl thead th:nth-child(4),
+  .reports-preview table.tbl tbody td:nth-child(2),
+  .reports-preview table.tbl tbody td:nth-child(3),
+  .reports-preview table.tbl tbody td:nth-child(4) {
+    display: none;
+  }
+  .reports-preview table.tbl th,
+  .reports-preview table.tbl td {
+    padding: 12px 14px !important;
+  }
+  .reports-preview table.tbl tbody td:last-child {
+    text-align: right;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* The donut chart row at the bottom of the preview — stack legend
+     under the donut instead of side-by-side, center the donut. */
+  .reports-preview .donut-row {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 18px !important;
+  }
+  /* Legend list takes full width below the donut. */
+  .reports-preview .donut-row > *:not(:first-child) {
+    width: 100%;
+  }
+
+  /* "Cea mai mare categorie" KPI card — italic serif text can overflow. */
+  .reports-preview .card .serif {
+    font-size: 18px !important;
+  }
 }
 
 /* AI Assistant drawer — full screen on small phones. */
