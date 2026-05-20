@@ -1606,16 +1606,35 @@ input, select, textarea { font-family: inherit; color: inherit; }
   table.tx-table td:nth-child(4) > div:last-child { display: none; } /* hide time-of-day on card view */
 }
 
-/* Reports page — generator panel + preview becomes single column. */
+/* Reports page — generator panel + preview becomes single column.
+   The builder header chevron + collapse behavior is mobile-only;
+   on desktop the builder is always expanded and the click is inert. */
+.reports-builder-chevron { display: none; }
+@media (min-width: 1025px) {
+  /* Disable the collapse click on desktop. */
+  .reports-builder-header {
+    cursor: default !important;
+    pointer-events: none !important;
+  }
+}
+
 @media (max-width: 1024px) {
   .reports-layout {
     grid-template-columns: 1fr !important;
   }
-  /* Cancel sticky positioning + max-height that don't make sense
-     once the layout is stacked. Without these overrides the builder
-     panel was either floating weird or constrained to a tiny height. */
+  .reports-builder-chevron { display: inline-flex; }
+  /* Builder is sticky to the top of the viewport on mobile so the user
+     can always reach the toggle even after scrolling far into the
+     preview. */
   .reports-builder {
-    position: static !important;
+    position: sticky !important;
+    top: 64px; /* under the topbar */
+    z-index: 5;
+    background: #fff;
+  }
+  /* Cancel max-height that doesn't make sense once layout is stacked.
+     Sticky is kept (overridden above) so the toggle stays accessible. */
+  .reports-builder {
     max-height: none !important;
     /* Put the builder FIRST on mobile so the user configures the
        report, then scrolls down to see the preview. */

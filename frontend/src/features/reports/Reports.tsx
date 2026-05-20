@@ -10,6 +10,8 @@ import {
   Sheet,
   Sparkles,
   Eye,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { statisticsService } from '../../services/statistics.service';
@@ -98,6 +100,12 @@ export function Reports() {
   const [endDate, setEndDate] = useState(ytd.end);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
   const [categoriesInitialized, setCategoriesInitialized] = useState(false);
+  // Builder is expanded by default on desktop, collapsed on mobile.
+  // The mobile-first UX prioritizes the preview — user taps the summary
+  // chip at the top to expand the builder when they want to tweak.
+  const [builderOpen, setBuilderOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
+  );
   const applyPreset = (p: Preset) => {
     setPreset(p);
     if (p !== 'custom') {
@@ -367,14 +375,23 @@ export function Reports() {
             order: 2,
           }}
         >
-          {/* Builder header */}
-          <div
+          {/* Builder header — clickable to collapse/expand on mobile. */}
+          <button
+            type="button"
+            onClick={() => setBuilderOpen((v) => !v)}
+            className="reports-builder-header"
             style={{
               padding: '16px 18px',
-              borderBottom: '1px solid var(--border)',
+              borderBottom: builderOpen ? '1px solid var(--border)' : 'none',
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               gap: 10,
+              width: '100%',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              textAlign: 'left',
             }}
           >
             <div
@@ -391,16 +408,41 @@ export function Reports() {
             >
               <Cog size={15} />
             </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Generator raport</div>
-              <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
-                Configurează ce vrei să exporți
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>Generator raport</div>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: 'var(--text-3)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {builderOpen
+                  ? 'Configurează ce vrei să exporți'
+                  : `${
+                      reportType === 'income'
+                        ? 'Venituri'
+                        : reportType === 'expense'
+                          ? 'Cheltuieli'
+                          : 'Complet'
+                    } · ${selectedCategoryIds.size}/${allCategories.length} categorii · ${periodDays} zile`}
               </div>
             </div>
-          </div>
+            {/* Chevron — only visible on mobile via CSS. */}
+            <span
+              className="reports-builder-chevron"
+              style={{ color: 'var(--text-3)', flexShrink: 0 }}
+              aria-hidden="true"
+            >
+              {builderOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </span>
+          </button>
 
-          {/* Steps scrollable area */}
-          <div style={{ overflowY: 'auto', flex: 1, padding: 18 }}>
+          {/* Steps scrollable area — collapses to display:none when
+              the user folds the builder on mobile. */}
+          <div style={{ overflowY: 'auto', flex: 1, padding: 18, display: builderOpen ? 'block' : 'none' }}>
             {/* Step 1: Tip raport */}
             <div style={{ marginBottom: 20 }}>
               <div style={stepLabelStyle}>
