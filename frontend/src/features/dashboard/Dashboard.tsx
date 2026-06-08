@@ -77,7 +77,7 @@ function HeroAmount({
             {positive ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
             {delta}
           </span>
-          <span style={{ color: 'var(--text-3)' }}>vs luna trecută</span>
+          <span style={{ color: 'var(--text-3)' }}>vs perioada trecută</span>
         </div>
       )}
     </div>
@@ -326,6 +326,35 @@ function CategoryDonut({ data, monthLabel }: { data: DonutSlice[]; monthLabel: s
   );
 }
 
+type Period = '7d' | '30d' | '90d' | 'year';
+
+function dateRangeForPeriod(period: Period): { startDate: string; endDate: string; label: string } {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const start = new Date(now);
+  let label = '';
+  switch (period) {
+    case '7d':
+      start.setDate(now.getDate() - 6);
+      label = 'ultimele 7 zile';
+      break;
+    case '30d':
+      start.setDate(now.getDate() - 29);
+      label = 'ultimele 30 de zile';
+      break;
+    case '90d':
+      start.setDate(now.getDate() - 89);
+      label = 'ultimele 90 de zile';
+      break;
+    case 'year':
+      start.setFullYear(now.getFullYear() - 1);
+      start.setDate(now.getDate() + 1);
+      label = 'ultimul an';
+      break;
+  }
+  return { startDate: start.toISOString().split('T')[0], endDate: today, label };
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -333,6 +362,12 @@ export function Dashboard() {
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
   const monthLabel = `${MONTH_NAMES[currentMonth - 1]} ${currentYear}`;
+
+  // Period selector (7z / 30z / 90z / An) — controlează KPI-urile +
+  // graficul de distribuție. Default 30z ca să prindă majoritatea
+  // tranzacțiilor recente fără a fi limitat la luna calendaristică.
+  const [period, setPeriod] = useState<Period>('30d');
+  const range = dateRangeForPeriod(period);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [budgetWarning, setBudgetWarning] = useState<BudgetWarningPayload | null>(null);
@@ -362,15 +397,34 @@ export function Dashboard() {
   }, [addSuggestion, isAddModalOpen, userPickedCategory]);
 
   const { data: overviewData, isLoading: overviewLoading } = useQuery({
-    queryKey: ['statistics', 'overview', currentMonth, currentYear],
-    queryFn: () => statisticsService.getOverview({ month: currentMonth, year: currentYear }),
+    queryKey: ['statistics', 'overview', range.startDate, range.endDate],
+    queryFn: () => statisticsService.getOverview({
+      startDate: range.startDate,
+      endDate: range.endDate,
+    }),
   });
 
-  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-  const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  // Pentru comparația "vs perioada trecută" trimitem aceeași durată
+  // imediat înaintea range-ului curent (ex: 30z curente vs 30z anterioare).
+  const prevRange = (() => {
+    const start = new Date(range.startDate);
+    const end = new Date(range.endDate);
+    const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    const prevEnd = new Date(start);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate() - (days - 1));
+    return {
+      startDate: prevStart.toISOString().split('T')[0],
+      endDate: prevEnd.toISOString().split('T')[0],
+    };
+  })();
   const { data: prevOverviewData } = useQuery({
-    queryKey: ['statistics', 'overview', prevMonth, prevYear],
-    queryFn: () => statisticsService.getOverview({ month: prevMonth, year: prevYear }),
+    queryKey: ['statistics', 'overview', prevRange.startDate, prevRange.endDate],
+    queryFn: () => statisticsService.getOverview({
+      startDate: prevRange.startDate,
+      endDate: prevRange.endDate,
+    }),
   });
 
   const { data: trendData } = useQuery({
@@ -385,10 +439,11 @@ export function Dashboard() {
   });
 
   const { data: categoryStats } = useQuery({
-    queryKey: ['statistics', 'by-category', currentMonth, currentYear],
+    queryKey: ['statistics', 'by-category', range.startDate, range.endDate],
     queryFn: () =>
       statisticsService.getByCategory({
-        startDate: `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`,
+        startDate: range.startDate,
+        endDate: range.endDate,
         type: 'expense',
       }),
   });
@@ -574,17 +629,37 @@ export function Dashboard() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="seg">
-            <button>7z</button>
-            <button className="on">30z</button>
-            <button>90z</button>
-            <button>An</button>
+            {([
+              { v: '7d', l: '7z' },
+              { v: '30d', l: '30z' },
+              { v: '90d', l: '90z' },
+              { v: 'year', l: 'An' },
+            ] as Array<{ v: Period; l: string }>).map((opt) => (
+              <button
+                key={opt.v}
+                className={period === opt.v ? 'on' : ''}
+                onClick={() => setPeriod(opt.v)}
+              >
+                {opt.l}
+              </button>
+            ))}
           </div>
           <button
             className="btn btn-secondary"
             // Redirecționează la pagina Rapoarte cu luna curentă pre-selectată.
             // Avem deja un generator complet acolo (PDF + Excel, filtre,
             // preview live) — nu mai dublez logica de export aici.
-            onClick={() => navigate('/reports?preset=this-month')}
+            // Mapează perioada curentă a Dashboard-ului la preset-ul echivalent
+            // al paginii Rapoarte, ca utilizatorul să vadă același range.
+            onClick={() => {
+              const presetMap: Record<Period, string> = {
+                '7d': 'last-30',
+                '30d': 'last-30',
+                '90d': 'this-quarter',
+                'year': 'ytd',
+              };
+              navigate(`/reports?preset=${presetMap[period]}`);
+            }}
             title="Generează raport detaliat"
           >
             <Download size={14} /> Export
@@ -613,7 +688,7 @@ export function Dashboard() {
           points={sparkBalance}
         />
         <KpiCard
-          label="Venituri (luna curentă)"
+          label={`Venituri (${range.label})`}
           value={overviewLoading ? 0 : totalIncome}
           delta={incomeDelta?.label ?? null}
           deltaPositive={incomeDelta?.positive}
@@ -621,7 +696,7 @@ export function Dashboard() {
           points={sparkIncome}
         />
         <KpiCard
-          label="Cheltuieli (luna curentă)"
+          label={`Cheltuieli (${range.label})`}
           value={overviewLoading ? 0 : totalExpenses}
           delta={expenseDelta?.label ?? null}
           deltaPositive={expenseDelta?.positive}
@@ -789,7 +864,7 @@ export function Dashboard() {
           <div className="card-head">
             <div>
               <div className="card-title">Distribuție pe categorii</div>
-              <div className="card-sub">Cheltuieli · {monthLabel}</div>
+              <div className="card-sub">Cheltuieli · {range.label}</div>
             </div>
           </div>
           <CategoryDonut data={donutSlices} monthLabel={monthLabel} />
