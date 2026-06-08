@@ -2,8 +2,14 @@ import { prisma } from '../../shared/prisma.js';
 import { z } from 'zod';
 
 export const overviewSchema = z.object({
+  // Mode 1: month + year → calendar-month overview (default for Dashboard).
   month: z.coerce.number().min(1).max(12).optional(),
   year: z.coerce.number().min(2000).optional(),
+  // Mode 2: startDate + endDate (ISO yyyy-MM-dd) → arbitrary range,
+  // used by Dashboard's "7z / 30z / 90z / An" period selector.
+  // If both modes are sent, startDate/endDate take precedence.
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 export const byCategorySchema = z.object({
@@ -56,12 +62,21 @@ export class StatisticsService {
     params?: z.infer<typeof overviewSchema>
   ) {
     const now = new Date();
-    const month = params?.month ?? now.getMonth() + 1;
-    const year = params?.year ?? now.getFullYear();
-
-    // Calculate start and end dates for the month
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    // Date-range mode wins if both are provided. Otherwise fall back to
+    // the month/year mode (default for backwards-compat with Dashboard).
+    let startDate: Date;
+    let endDate: Date;
+    if (params?.startDate && params?.endDate) {
+      startDate = new Date(params.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(params.endDate);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      const month = params?.month ?? now.getMonth() + 1;
+      const year = params?.year ?? now.getFullYear();
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    }
 
     // Get total income
     const incomeResult = await prisma.transaction.aggregate({

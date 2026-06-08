@@ -3,6 +3,8 @@ import { api } from './api';
 export interface OverviewParams {
   month?: number;
   year?: number;
+  startDate?: string; // ISO yyyy-MM-dd, overrides month/year if set
+  endDate?: string;
 }
 
 export interface ByCategoryParams {
