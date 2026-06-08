@@ -11,7 +11,6 @@ import { statisticsService } from '../../services/statistics.service';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
 import { budgetsService } from '../../services/budgets.service';
-import { api } from '../../services/api';
 import { Category } from '../../types/shared';
 import { CHART_COLORS } from '../../styles/colors';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -553,34 +552,7 @@ export function Dashboard() {
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
   const getCategory = (id: string) => categories.find((c) => c.id === id);
 
-  const [isExporting, setIsExporting] = useState(false);
-
-  const handleExport = async () => {
-    setIsExporting(true);
-    try {
-      const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-      const lastDay = new Date(currentYear, currentMonth, 0).getDate();
-      const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-      const response = await api.get('/reports/export/pdf', {
-        params: { startDate, endDate },
-        responseType: 'blob',
-      });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `faro-dashboard-${currentYear}-${String(currentMonth).padStart(2, '0')}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success('Raport exportat.');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Eroare la exportul raportului.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  // Exportul live pe pagina Reports — Dashboard doar redirecționează acolo.
 
   const currentUser = useAuthStore((s) => s.user);
   const firstName = currentUser?.firstName?.trim() || '';
@@ -607,8 +579,15 @@ export function Dashboard() {
             <button>90z</button>
             <button>An</button>
           </div>
-          <button className="btn btn-secondary" onClick={handleExport} disabled={isExporting}>
-            <Download size={14} /> {isExporting ? 'Se exportă...' : 'Export'}
+          <button
+            className="btn btn-secondary"
+            // Redirecționează la pagina Rapoarte cu luna curentă pre-selectată.
+            // Avem deja un generator complet acolo (PDF + Excel, filtre,
+            // preview live) — nu mai dublez logica de export aici.
+            onClick={() => navigate('/reports?preset=this-month')}
+            title="Generează raport detaliat"
+          >
+            <Download size={14} /> Export
           </button>
           <button
             className="btn btn-primary"

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowUp,
@@ -92,12 +93,31 @@ function MiniLine({ data, color }: { data: number[]; color: string }) {
 export function Reports() {
   const now = new Date();
 
+  // Optional URL preset (?preset=this-month) — used when navigating from
+  // Dashboard's "Export" button so the user lands on the report for the
+  // month they were looking at, ready to PDF/Excel.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPreset: Preset = (() => {
+    const fromUrl = searchParams.get('preset');
+    const valid: Preset[] = ['this-month', 'last-30', 'this-quarter', 'ytd', 'last-year', 'custom'];
+    return valid.includes(fromUrl as Preset) ? (fromUrl as Preset) : 'ytd';
+  })();
+
   // ===== Builder state =====
   const [reportType, setReportType] = useState<ReportType>('expense');
-  const [preset, setPreset] = useState<Preset>('ytd');
-  const ytd = rangeForPreset('ytd');
-  const [startDate, setStartDate] = useState(ytd.start);
-  const [endDate, setEndDate] = useState(ytd.end);
+  const [preset, setPreset] = useState<Preset>(initialPreset);
+  const initialRange = rangeForPreset(initialPreset);
+  const [startDate, setStartDate] = useState(initialRange.start);
+  const [endDate, setEndDate] = useState(initialRange.end);
+
+  // Strip the URL param after applying so a manual refresh doesn't keep
+  // forcing the same preset.
+  useEffect(() => {
+    if (searchParams.get('preset')) {
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
   const [categoriesInitialized, setCategoriesInitialized] = useState(false);
   // Builder always starts expanded — both on desktop and mobile. Earlier
