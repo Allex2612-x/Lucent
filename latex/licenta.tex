@@ -369,7 +369,7 @@ JSON Web Token este un standard deschis (RFC 7519) care definește o modalitate 
 
 Este important de subliniat că JWT-ul nu este criptat: payload-ul este vizibil pentru oricine deține token-ul. Semnătura HMAC-SHA256~\cite{ref:hmac}, calculată cu un secret cunoscut doar de server, asigură că dacă cineva modifică payload-ul, semnătura nu se mai potrivește la verificare. Astfel, JWT garantează autenticitatea și integritatea datelor, nu confidențialitatea lor.
 
-Modul de funcționare al autentificării JWT este prezentat în Figura~\ref{fig:f14}. În aplicația FARO am implementat un model dual-token, larg utilizat în aplicațiile web moderne. Access token-ul cu durată scurtă (15 minute) este trimis la fiecare cerere în header-ul Authorization. Acest token autentifică cererea și permite serverului să identifice utilizatorul fără a interoga baza de date. Refresh token-ul cu durată lungă (7 zile) este stocat într-un cookie \texttt{httpOnly} \texttt{Secure} \texttt{SameSite=None}. Acest token este folosit doar pentru a obține un nou access token când cel curent expiră, fără a forța utilizatorul să se autentifice din nou.
+În aplicația FARO am implementat un model dual-token, larg utilizat în aplicațiile web moderne, care va fi descris în detaliu în Capitolul~4. Access token-ul cu durată scurtă (15 minute) este trimis la fiecare cerere în header-ul Authorization. Acest token autentifică cererea și permite serverului să identifice utilizatorul fără a interoga baza de date. Refresh token-ul cu durată lungă (7 zile) este stocat într-un cookie \texttt{httpOnly} \texttt{Secure} \texttt{SameSite=None}. Acest token este folosit doar pentru a obține un nou access token când cel curent expiră, fără a forța utilizatorul să se autentifice din nou.
 
 Avantajul acestui model este că, în cazul în care un access token este compromis, fereastra de exploatare este limitată la 15 minute. Cookie-ul cu refresh token este protejat împotriva atacurilor XSS prin atributul \texttt{httpOnly} (JavaScript nu îl poate citi) și împotriva atacurilor CSRF prin atributul \texttt{SameSite} -- ambele vulnerabilități fiind catalogate în OWASP Top 10~\cite{ref:owasp}.
 
@@ -380,7 +380,7 @@ Google Gemini este o familie de modele de inteligență artificială dezvoltate 
 Pentru aplicația FARO am utilizat modelul \texttt{gemini-2.5-flash-lite}, ales pentru următoarele motive:
 
 \begin{itemize}[leftmargin=2cm,itemsep=2pt]
-  \item \textbf{Multimodal} -- capacitatea de a procesa imagini este esențială pentru funcționalitatea de scanare a bonurilor fiscale (vezi Figura~\ref{fig:f12});
+  \item \textbf{Multimodal} -- capacitatea de a procesa imagini este esențială pentru funcționalitatea de scanare a bonurilor fiscale (detaliată în Capitolul~4);
   \item \textbf{Cost și disponibilitate} -- modelul oferă o cotă gratuită generoasă de 1000 de cereri pe zi pe contul gratuit Google AI Studio, suficientă pentru utilizarea individuală și pentru demonstrație;
   \item \textbf{Latență mică} -- răspunde în 1-3 secunde pentru cereri text, 3-5 secunde pentru cereri cu imagine;
   \item \textbf{Output JSON structurat} -- modelul suportă modul \texttt{responseMimeType: "application/json"}, care garantează că răspunsul este JSON valid, fără a fi necesară parsare regex.
@@ -394,7 +394,7 @@ SDK-ul oficial Google (\texttt{@google/generative-ai}) este folosit pentru integ
 
 Resend este un serviciu modern de trimitere a email-urilor transacționale, lansat în 2023. Spre deosebire de soluțiile clasice (SendGrid, Mailgun), Resend oferă un API minimalist și un SDK TypeScript-first, ceea ce simplifică semnificativ integrarea în aplicațiile moderne. \cite{ref:resend}
 
-În aplicația FARO, Resend este utilizat exclusiv pentru email-urile de resetare a parolei (Figura~\ref{fig:f15}). Modul de funcționare: utilizatorul solicită resetarea introducând adresa de email, serverul generează un token aleator de 24 de bytes (codificat hex, 48 de caractere) și calculează hash-ul SHA-256, hash-ul este stocat într-un map in-memory cu durata de viață de 1 oră, tokenul original este inclus într-un link care pointează la pagina de resetare, iar serverul construiește un email HTML branded și îl trimite prin API-ul Resend.
+În aplicația FARO, Resend este utilizat exclusiv pentru email-urile de resetare a parolei. Modul de funcționare: utilizatorul solicită resetarea introducând adresa de email, serverul generează un token aleator de 24 de bytes (codificat hex, 48 de caractere) și calculează hash-ul SHA-256, hash-ul este stocat într-un map in-memory cu durata de viață de 1 oră, tokenul original este inclus într-un link care pointează la pagina de resetare, iar serverul construiește un email HTML branded și îl trimite prin API-ul Resend.
 
 Utilizatorul primește email-ul, accesează link-ul, introduce noua parolă. Serverul re-calculează hash-ul, îl caută în map, validează expirarea, hash-uiește noua parolă cu bcrypt și o salvează. Stocarea hash-ului în loc de tokenul original este o măsură suplimentară de securitate: chiar dacă cineva ar avea acces la map-ul intern, nu ar putea genera link-uri valide, pentru că nu poate inversa hash-ul SHA-256.
 
@@ -412,7 +412,7 @@ Caracteristicile esențiale ale Railway pentru proiectul FARO includ:
   \item \textbf{Variabile de mediu} -- configurabile prin dashboard sau prin referințe între servicii.
 \end{itemize}
 
-Arhitectura de deployment pentru FARO (Figura~\ref{fig:f18}) include trei servicii distincte într-un singur proiect Railway: PostgreSQL (plugin oficial Railway, expus intern pe portul 5432), Backend faro-backend (Express + Prisma, expus public pe portul 4000 cu un domeniu \texttt{*.up.railway.app}) și Frontend faro-frontend (bundle Vite servit static prin pachetul \texttt{serve}, expus public pe portul 3000).
+Arhitectura de deployment pentru FARO include trei servicii distincte într-un singur proiect Railway: PostgreSQL (plugin oficial Railway, expus intern pe portul 5432), Backend faro-backend (Express + Prisma, expus public pe portul 4000 cu un domeniu \texttt{*.up.railway.app}) și Frontend faro-frontend (bundle Vite servit static prin pachetul \texttt{serve}, expus public pe portul 3000).
 
 % =============================================================================
 % CAPITOLUL 3 — DESCRIEREA GENERALĂ A PROIECTULUI
@@ -470,7 +470,7 @@ Responsabil pentru operațiunile CRUD asupra tranzacțiilor:
   \item listă paginată (10 tranzacții pe pagină) cu filtre pe segment (toate / venituri / cheltuieli / recurente), perioadă, categorii și interval de sumă;
   \item căutare în descriere și sumă;
   \item adăugare manuală a unei tranzacții prin formular;
-  \item scanare bon fiscal cu OCR Gemini (Figura~\ref{fig:f12}), cu preview-ul bonului digital înainte de salvare;
+  \item scanare bon fiscal cu OCR Gemini, cu preview-ul bonului digital înainte de salvare;
   \item editare și ștergere;
   \item suport pentru tranzacții recurente (zilnice, săptămânale, lunare, anuale) cu generare automată a instanțelor;
   \item export al tranzacțiilor în format PDF sau Excel;
@@ -487,7 +487,7 @@ Permite planificarea cheltuielilor:
   \item creare și editare bugete cu interfață vizuală;
   \item selector pentru navigarea între luni;
   \item click pe un buget redirecționează la lista de tranzacții filtrată pe acea categorie și perioadă;
-  \item avertizare la depășirea limitei (atât în UI cât și prin notificare in-app, Figura~\ref{fig:f16}).
+  \item avertizare la depășirea limitei (atât în UI cât și prin notificare in-app).
 \end{itemize}
 
 \subsection*{Modulul Categorii}
@@ -523,9 +523,9 @@ Permite personalizarea aplicației:
   \item notificări (activarea/dezactivarea alertelor de buget).
 \end{itemize}
 
-În plus față de funcționalitățile specifice modulelor, aplicația include și componente transversale: bara de navigare laterală cu acces la toate modulele și butonul de deconectare; bara de sus cu breadcrumb, căutare globală (deschisă cu Ctrl+K), buton pentru asistentul AI (Figura~\ref{fig:f17}), clopoțel de notificări cu badge pentru mesajele necitite și buton pentru adăugare rapidă; asistent AI conversațional accesibil în orice moment ca drawer lateral, care răspunde la întrebări libere despre finanțele utilizatorului folosind Gemini; paleta de căutare care permite navigarea rapidă către orice pagină sau tranzacție; suport pentru mod întunecat aplicat global prin CSS custom properties.
+În plus față de funcționalitățile specifice modulelor, aplicația include și componente transversale: bara de navigare laterală cu acces la toate modulele și butonul de deconectare; bara de sus cu breadcrumb, căutare globală (deschisă cu Ctrl+K), buton pentru asistentul AI, clopoțel de notificări cu badge pentru mesajele necitite și buton pentru adăugare rapidă; asistent AI conversațional accesibil în orice moment ca drawer lateral, care răspunde la întrebări libere despre finanțele utilizatorului folosind Gemini; paleta de căutare care permite navigarea rapidă către orice pagină sau tranzacție; suport pentru mod întunecat aplicat global prin CSS custom properties.
 
-Aplicația suportă patru metode de autentificare: cont local cu email și parolă (cu hashing bcrypt cost factor 10~\cite{ref:bcrypt}), sign in cu Google prin OAuth 2.0~\cite{ref:oauth2}, sign in cu Facebook prin OAuth 2.0~\cite{ref:oauth2} și resetare parolă prin email cu link securizat~\cite{ref:resend} (Figura~\ref{fig:f15}).
+Aplicația suportă patru metode de autentificare: cont local cu email și parolă (cu hashing bcrypt cost factor 10~\cite{ref:bcrypt}), sign in cu Google prin OAuth 2.0~\cite{ref:oauth2}, sign in cu Facebook prin OAuth 2.0~\cite{ref:oauth2} și resetare parolă prin email cu link securizat~\cite{ref:resend}.
 
 \section{Planificarea lucrărilor}
 

@@ -1,0 +1,15 @@
+# LaTeX build artifacts
+*.aux
+*.toc
+*.lof
+*.lot
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# PDF e generat — îl ținem outside repo, regenerăm cu latexmk -pdf
+licenta.pdf
