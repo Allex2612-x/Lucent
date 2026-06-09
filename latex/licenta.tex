@@ -137,24 +137,24 @@
   \pagestyle{empty}
   \centering
 
-  % --- Doua sigle (UPT stanga, Facultatea AC dreapta) ---
-  \vspace*{0.5cm}
-  \begin{minipage}{0.45\textwidth}
-    \centering
+  % --- Doua sigle (UPT + Facultatea AC) centrate ca un singur bloc ---
+  % Sunt asezate cu \hspace intre ele si centrate impreuna, nu in minipages
+  % separate care le-ar impinge la marginile paginii.
+  \vspace*{0.3cm}
+  {\centering
     \IfFileExists{figuri/logo-upt.png}{%
-      \includegraphics[height=2.2cm]{figuri/logo-upt.png}%
+      \raisebox{-0.5\height}{\includegraphics[height=1.6cm]{figuri/logo-upt.png}}%
     }{%
-      \fbox{\parbox{4cm}{\centering\vspace{0.6cm}\textit{\color{gray}[ logo UPT ]}\vspace{0.6cm}}}%
-    }
-  \end{minipage}\hfill
-  \begin{minipage}{0.45\textwidth}
-    \centering
+      \raisebox{-0.5\height}{\fbox{\parbox{3cm}{\centering\vspace{0.4cm}\textit{\color{gray}[ logo UPT ]}\vspace{0.4cm}}}}%
+    }%
+    \hspace{1.5cm}%
     \IfFileExists{figuri/logo-ac.png}{%
-      \includegraphics[height=2.2cm]{figuri/logo-ac.png}%
+      \raisebox{-0.5\height}{\includegraphics[height=1.6cm]{figuri/logo-ac.png}}%
     }{%
-      \fbox{\parbox{4cm}{\centering\vspace{0.6cm}\textit{\color{gray}[ logo Facultatea AC ]}\vspace{0.6cm}}}%
-    }
-  \end{minipage}
+      \raisebox{-0.5\height}{\fbox{\parbox{3cm}{\centering\vspace{0.4cm}\textit{\color{gray}[ logo AC ]}\vspace{0.4cm}}}}%
+    }%
+    \par
+  }
 
   \vspace{1.2cm}
 
