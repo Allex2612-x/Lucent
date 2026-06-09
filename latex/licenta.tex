@@ -126,35 +126,45 @@
 \begin{document}
 
 % --------------------------- Pagina de garda --------------------------------
-% Template Valentin Plamadeala (Sesiunea Iunie 2025): logo UPT sus, institutie
-% centrata, "LUCRARE DE DIPLOMĂ" mare, titlu proiect italic, Absolvent dreapta,
-% Coordonator stanga, oras+anul+sesiunea jos.
+% Template Valentin Plamadeala (Sesiunea Iunie 2025): doua sigle sus
+% (UPT + Facultatea de Automatica si Calculatoare) centrate side-by-side,
+% institutie centrata pe 3 linii, "LUCRARE DE DIPLOMĂ" mare, titlu proiect
+% italic, Absolvent dreapta, Coordonator stanga, oras+anul+sesiunea jos.
 %
-% NOTA logo: pune sigla oficiala UPT la `figuri/logo-upt.png` (sau .pdf). Daca
-% lipseste, blocul \IfFileExists genereaza automat un placeholder vizibil.
+% NOTA: cele 2 sigle sunt in figuri/logo-upt.png si figuri/logo-ac.png.
+% Daca lipsesc, blocul \IfFileExists genereaza placeholder vizibil.
 \begin{titlepage}
   \pagestyle{empty}
   \centering
 
-  % --- Logo UPT (sus, centrat) ---
-  \IfFileExists{figuri/logo-upt.png}{%
-    \includegraphics[width=10cm]{figuri/logo-upt.png}\par
-  }{%
-    \IfFileExists{figuri/logo-upt.pdf}{%
-      \includegraphics[height=3cm]{figuri/logo-upt.pdf}\par
+  % --- Doua sigle (UPT stanga, Facultatea AC dreapta) ---
+  \vspace*{0.5cm}
+  \begin{minipage}{0.45\textwidth}
+    \centering
+    \IfFileExists{figuri/logo-upt.png}{%
+      \includegraphics[height=2.2cm]{figuri/logo-upt.png}%
     }{%
-      \fbox{\parbox{4cm}{\centering\vspace{0.8cm}\textit{\color{gray}[ logo UPT ]}\vspace{0.8cm}}}\par
-    }%
-  }
+      \fbox{\parbox{4cm}{\centering\vspace{0.6cm}\textit{\color{gray}[ logo UPT ]}\vspace{0.6cm}}}%
+    }
+  \end{minipage}\hfill
+  \begin{minipage}{0.45\textwidth}
+    \centering
+    \IfFileExists{figuri/logo-ac.png}{%
+      \includegraphics[height=2.2cm]{figuri/logo-ac.png}%
+    }{%
+      \fbox{\parbox{4cm}{\centering\vspace{0.6cm}\textit{\color{gray}[ logo Facultatea AC ]}\vspace{0.6cm}}}%
+    }
+  \end{minipage}
 
-  \vspace{0.8cm}
+  \vspace{1.2cm}
+
   {\large Universitatea Politehnica Timișoara\par}
   \vspace{0.2cm}
   {\large Facultatea de Automatică și Calculatoare\par}
   \vspace{0.2cm}
   {\large Automatică și Informatică Aplicată\par}
 
-  \vspace{3cm}
+  \vfill
 
   {\Huge\bfseries LUCRARE DE DIPLOMĂ\par}
 
@@ -164,7 +174,7 @@
   \vspace{0.2cm}
   {\LARGE\itshape gestiunea finanțelor personale\par}
 
-  \vspace{3.5cm}
+  \vfill
 
   \begin{flushright}
     {\large Absolvent\par}
@@ -172,7 +182,7 @@
     {\large Alexandru Marcuța\par}
   \end{flushright}
 
-  \vspace{1.2cm}
+  \vspace{0.8cm}
 
   \begin{flushleft}
     {\large Coordonator\par}
@@ -180,10 +190,10 @@
     {\large [Titlu. Nume Prenume]\par}
   \end{flushleft}
 
-  \vfill
+  \vspace{1.5cm}
 
   {\large Timișoara, 2026\par}
-  \vspace{0.4cm}
+  \vspace{0.2cm}
   {\large Sesiunea Iunie 2026\par}
 \end{titlepage}
 
@@ -595,7 +605,10 @@ Această planificare a permis o dezvoltare incrementală: fiecare modul a fost c
 % =============================================================================
 % BIBLIOGRAFIE
 % =============================================================================
-\chapter*{BIBLIOGRAFIE}
+% \begin{thebibliography} genereaza automat un \chapter*{\bibname}, deci
+% redenumim \bibname si lasam thebibliography sa creeze singur titlul.
+% Adaugam manual in TOC pentru ca \chapter* nu o face automat.
+\renewcommand{\bibname}{BIBLIOGRAFIE}
 \addcontentsline{toc}{chapter}{BIBLIOGRAFIE}
 
 \begin{thebibliography}{99}
