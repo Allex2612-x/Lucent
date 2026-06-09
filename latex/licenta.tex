@@ -222,9 +222,9 @@ Gestionarea responsabilă a finanțelor personale a devenit, în ultimul deceniu
 
 Aplicațiile web și mobile dedicate finanțelor personale au apărut ca răspuns la această nevoie. Ele oferă utilizatorului o imagine consolidată a tuturor veniturilor și cheltuielilor, posibilitatea de a stabili bugete pe categorii, rapoarte vizuale care evidențiază tendințele lunare și alerte care îl atenționează când o categorie este pe punctul de a fi depășită. Astfel de aplicații nu înlocuiesc consultanța financiară profesională, dar acoperă un gol important: oferă utilizatorului obișnuit instrumentele necesare pentru a-și înțelege propriul comportament financiar și pentru a lua decizii informate. \cite{ref:finapp}
 
-În contextul tehnologiei moderne, dezvoltarea unei aplicații de finanțe personale presupune mai multe provocări tehnice non-triviale. În primul rând, introducerea tranzacțiilor trebuie să fie cât mai facilă, ceea ce înseamnă reducerea numărului de pași necesari pentru a adăuga o cheltuială. În al doilea rând, datele financiare sunt sensibile și necesită mecanisme de securitate riguroase precum hashing-ul parolelor, token-uri cu expirare scurtă și comunicare cifrată. În al treilea rând, vizualizarea trebuie să fie clară pe orice dispozitiv, de la monitor desktop la telefonul mobil. În al patrulea rând, integrarea cu servicii moderne precum modelele de inteligență artificială permite automatizarea unor sarcini repetitive cum ar fi încadrarea automată a tranzacțiilor în categorii sau extragerea datelor din bonurile fiscale.
+În contextul tehnologiei moderne, dezvoltarea unei aplicații de finanțe personale presupune mai multe provocări tehnice non-triviale. În primul rând, introducerea tranzacțiilor trebuie să fie cât mai facilă, ceea ce înseamnă reducerea numărului de pași necesari pentru a adăuga o cheltuială. În al doilea rând, datele financiare sunt sensibile și necesită mecanisme de securitate riguroase precum hashing-ul parolelor~\cite{ref:bcrypt}, token-uri cu expirare scurtă~\cite{ref:jwt} și comunicare cifrată conform recomandărilor OWASP~\cite{ref:owasp}. În al treilea rând, vizualizarea trebuie să fie clară pe orice dispozitiv, de la monitor desktop la telefonul mobil. În al patrulea rând, integrarea cu servicii moderne precum modelele de inteligență artificială multimodale~\cite{ref:gemini} permite automatizarea unor sarcini repetitive cum ar fi încadrarea automată a tranzacțiilor în categorii sau extragerea datelor din bonurile fiscale.
 
-Tehnologia web modernă oferă astăzi un ecosistem matur pentru construirea unor astfel de aplicații. Bibliotecile front-end precum React permit construirea de interfețe interactive complexe folosind o arhitectură bazată pe componente reutilizabile. Pe partea de back-end, Node.js împreună cu Express oferă un model de dezvoltare ușor de înțeles și rapid, iar bazele de date relaționale precum PostgreSQL asigură integritatea datelor printr-un sistem de constrângeri și relații strict definite. Aceste tehnologii, combinate cu servicii moderne de inteligență artificială precum Google Gemini, permit dezvoltarea unei aplicații complete în câteva luni de muncă individuală.
+Tehnologia web modernă oferă astăzi un ecosistem matur pentru construirea unor astfel de aplicații. Bibliotecile front-end precum React~\cite{ref:react} permit construirea de interfețe interactive complexe folosind o arhitectură bazată pe componente reutilizabile. Pe partea de back-end, Node.js~\cite{ref:nodejs} împreună cu Express~\cite{ref:express} oferă un model de dezvoltare ușor de înțeles și rapid, iar bazele de date relaționale precum PostgreSQL~\cite{ref:postgres} asigură integritatea datelor printr-un sistem de constrângeri și relații strict definite. Aceste tehnologii, combinate cu servicii moderne de inteligență artificială precum Google Gemini~\cite{ref:gemini}, permit dezvoltarea unei aplicații complete în câteva luni de muncă individuală.
 
 Răspândirea aplicațiilor web ca alternativă la cele desktop sau mobile native este motivată de portabilitate: utilizatorul nu trebuie să instaleze nimic, accesează aplicația prin browser de pe orice dispozitiv, iar autorul nu trebuie să mențină pachete separate pentru iOS, Android, Windows și macOS. Pentru o aplicație de gestiune a finanțelor personale, unde utilizatorul ar putea introduce o tranzacție pe telefon imediat după ce a făcut o achiziție și apoi o ar putea vizualiza pe laptop seara, modelul web responsive este natural.
 
@@ -291,7 +291,7 @@ Avantajele majore ale React-ului includ:
   \item \textbf{JSX} -- o sintaxă declarativă care permite scrierea structurii interfeței direct în cod JavaScript/TypeScript, facilitând citirea și menținerea aplicațiilor complexe.
 \end{itemize}
 
-În cadrul aplicației FARO am utilizat versiunea React 18.3, care introduce conceptul de concurrent rendering -- un mecanism prin care browser-ul poate întrerupe randările lente pentru a răspunde mai rapid input-urilor utilizatorului. Alături de React am folosit React Router 6.24 pentru rutare declarativă între pagini, TanStack Query 5.51 pentru gestionarea stării provenite de la server (cache, refetch automat, invalidate selectiv), Zustand 4.5 pentru starea client-side (utilizatorul autentificat, token-ul de acces) și Lucent React pentru iconițele cu stil linie.
+În cadrul aplicației FARO am utilizat versiunea React 18.3~\cite{ref:react}, care introduce conceptul de concurrent rendering -- un mecanism prin care browser-ul poate întrerupe randările lente pentru a răspunde mai rapid input-urilor utilizatorului. Alături de React am folosit React Router 6.24~\cite{ref:reactrouter} pentru rutare declarativă între pagini, TanStack Query 5.51~\cite{ref:tanstack} pentru gestionarea stării provenite de la server (cache, refetch automat, invalidate selectiv), Zustand 4.5~\cite{ref:zustand} pentru starea client-side (utilizatorul autentificat, token-ul de acces) și Lucent React pentru iconițele cu stil linie.
 
 \section{TypeScript}
 
@@ -305,7 +305,7 @@ Tiparea statică oferă avantaje semnificative pentru proiectele de dimensiuni m
 
 Vite este un instrument modern de dezvoltare front-end, creat de Evan You (autorul Vue.js), care a câștigat o popularitate semnificativă datorită vitezei sale. Vite oferă două componente esențiale: un server de dezvoltare cu Hot Module Replacement (HMR) și un bundler de producție bazat pe Rollup. \cite{ref:vite}
 
-Spre deosebire de bundler-ele clasice precum Webpack, care procesează întreaga aplicație înainte de a oferi un server local, Vite folosește modulele native ES (ES Modules) pe care browserele moderne le suportă direct. Acest lucru permite pornirea serverului de dezvoltare aproape instant, indiferent de mărimea proiectului, și actualizarea sub o secundă a modificărilor în browser.
+Spre deosebire de bundler-ele clasice precum Webpack, care procesează întreaga aplicație înainte de a oferi un server local, Vite folosește modulele native ES (ES Modules)~\cite{ref:mdn-esm} pe care browserele moderne le suportă direct. Acest lucru permite pornirea serverului de dezvoltare aproape instant, indiferent de mărimea proiectului, și actualizarea sub o secundă a modificărilor în browser.
 
 Pentru build-ul de producție, Vite folosește Rollup, un bundler optimizat pentru output minimal. În cazul aplicației FARO, build-ul rezultat este de aproximativ 511 KB de JavaScript (148 KB după compresie gzip) și 32 KB de CSS -- dimensiuni rezonabile pentru o aplicație web cu funcționalități multiple.
 
@@ -318,18 +318,18 @@ Express este cel mai popular framework HTTP pentru Node.js. Oferă o sintaxă mi
 În cadrul aplicației FARO, Express este utilizat ca framework HTTP de bază pentru toate endpoint-urile REST. Modul de funcționare al API-ului REST este reprezentat în Figura~\ref{fig:f11}. Middleware-ele aplicate global la fiecare cerere includ:
 
 \begin{itemize}[leftmargin=2cm,itemsep=2pt]
-  \item \textbf{helmet} -- setează automat header-e HTTP de securitate (X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security etc.);
+  \item \textbf{helmet}~\cite{ref:helmet} -- setează automat header-e HTTP de securitate (X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security etc.), conform recomandărilor OWASP~\cite{ref:owasp};
   \item \textbf{cors} -- controlează ce origini au voie să acceseze API-ul (whitelist explicit pentru frontend);
   \item \textbf{morgan} -- logging-ul cererilor HTTP în terminal pe parcursul dezvoltării;
   \item \textbf{cookieParser} -- parsează automat cookie-urile primite în header-ul Cookie;
-  \item \textbf{passport} -- middleware standardizat pentru autentificarea OAuth cu Google și Facebook.
+  \item \textbf{passport}~\cite{ref:passport} -- middleware standardizat pentru autentificarea OAuth 2.0~\cite{ref:oauth2} cu Google și Facebook.
 \end{itemize}
 
 \section{Prisma ORM}
 
 Prisma este un ORM (Object-Relational Mapper) modern pentru Node.js și TypeScript, construit în jurul ideii de schemă declarativă unică. Spre deosebire de ORM-urile clasice (TypeORM, Sequelize) care impun decoratori sau clase moștenite, Prisma definește schema într-un fișier separat (\texttt{schema.prisma}) cu o sintaxă proprie, din care generează automat un client TypeScript type-safe. \cite{ref:prisma}
 
-Beneficiile principale ale Prisma includ tiparea end-to-end (fiecare query oferă autocomplete pentru câmpurile disponibile, iar rezultatul este tipat exact pe baza relațiilor incluse), query-uri parametrizate automat (Prisma traduce orice apel JavaScript în SQL cu parametri pe canal separat, ceea ce elimină complet riscul de SQL injection), migrări versionate (comanda \texttt{prisma migrate} generează fișiere SQL versionate pentru fiecare modificare a schemei) și Prisma Studio (o interfață grafică de tip web pentru explorarea și editarea datelor în mod direct, utilă pentru debugging).
+Beneficiile principale ale Prisma includ tiparea end-to-end (fiecare query oferă autocomplete pentru câmpurile disponibile, iar rezultatul este tipat exact pe baza relațiilor incluse), query-uri parametrizate automat (Prisma traduce orice apel JavaScript în SQL cu parametri pe canal separat, ceea ce elimină complet riscul de SQL injection -- una dintre vulnerabilitățile din categoria A03 OWASP Top 10~\cite{ref:owasp}), migrări versionate (comanda \texttt{prisma migrate} generează fișiere SQL versionate pentru fiecare modificare a schemei) și Prisma Studio (o interfață grafică de tip web pentru explorarea și editarea datelor în mod direct, utilă pentru debugging).
 
 În aplicația FARO am utilizat Prisma 6.4 cu PostgreSQL ca furnizor de bază de date. Schema completă este definită în fișierul \texttt{backend/prisma/schema.prisma} și include șase modele: User, Category, Transaction, Budget, BudgetCategory și Notification. Clientul Prisma generat este folosit în toate serviciile backend pentru orice operațiune cu baza de date.
 
@@ -367,11 +367,11 @@ Răspunsurile sunt returnate în format JSON, cu o structură consistentă: \tex
 
 JSON Web Token este un standard deschis (RFC 7519) care definește o modalitate compactă și sigură de a transmite informații între părți sub forma unui obiect JSON. Un token JWT este format din trei părți separate prin punct: antetul (header), conținutul (payload) și semnătura (signature). Primele două părți sunt codate în Base64URL, adică citibile de oricine, iar a treia este o semnătură criptografică care garantează integritatea celorlalte două. \cite{ref:jwt}
 
-Este important de subliniat că JWT-ul nu este criptat: payload-ul este vizibil pentru oricine deține token-ul. Semnătura HMAC-SHA256, calculată cu un secret cunoscut doar de server, asigură că dacă cineva modifică payload-ul, semnătura nu se mai potrivește la verificare. Astfel, JWT garantează autenticitatea și integritatea datelor, nu confidențialitatea lor.
+Este important de subliniat că JWT-ul nu este criptat: payload-ul este vizibil pentru oricine deține token-ul. Semnătura HMAC-SHA256~\cite{ref:hmac}, calculată cu un secret cunoscut doar de server, asigură că dacă cineva modifică payload-ul, semnătura nu se mai potrivește la verificare. Astfel, JWT garantează autenticitatea și integritatea datelor, nu confidențialitatea lor.
 
 Modul de funcționare al autentificării JWT este prezentat în Figura~\ref{fig:f14}. În aplicația FARO am implementat un model dual-token, larg utilizat în aplicațiile web moderne. Access token-ul cu durată scurtă (15 minute) este trimis la fiecare cerere în header-ul Authorization. Acest token autentifică cererea și permite serverului să identifice utilizatorul fără a interoga baza de date. Refresh token-ul cu durată lungă (7 zile) este stocat într-un cookie \texttt{httpOnly} \texttt{Secure} \texttt{SameSite=None}. Acest token este folosit doar pentru a obține un nou access token când cel curent expiră, fără a forța utilizatorul să se autentifice din nou.
 
-Avantajul acestui model este că, în cazul în care un access token este compromis, fereastra de exploatare este limitată la 15 minute. Cookie-ul cu refresh token este protejat împotriva atacurilor XSS prin atributul \texttt{httpOnly} (JavaScript nu îl poate citi) și împotriva atacurilor CSRF prin atributul \texttt{SameSite}.
+Avantajul acestui model este că, în cazul în care un access token este compromis, fereastra de exploatare este limitată la 15 minute. Cookie-ul cu refresh token este protejat împotriva atacurilor XSS prin atributul \texttt{httpOnly} (JavaScript nu îl poate citi) și împotriva atacurilor CSRF prin atributul \texttt{SameSite} -- ambele vulnerabilități fiind catalogate în OWASP Top 10~\cite{ref:owasp}.
 
 \section{Google Gemini -- multimodal AI}
 
@@ -437,11 +437,11 @@ Pentru o vedere de ansamblu mai detaliată asupra modului în care componentele 
 
 \placeholderfig{1.1}{Schema bloc a aplicației — vedere cloud}
 
-Comunicarea client-server se realizează exclusiv prin HTTPS, cu autentificare bazată pe token-uri JWT transmise în header-ul Authorization. Refresh token-ul este stocat într-un cookie \texttt{httpOnly} \texttt{Secure} \texttt{SameSite=None}, ceea ce îl protejează atât împotriva atacurilor XSS (JavaScript-ul din browser nu îl poate citi) cât și împotriva atacurilor CSRF (cookie-ul nu este trimis automat la cereri inițiate de alte site-uri).
+Comunicarea client-server se realizează exclusiv prin HTTPS, cu autentificare bazată pe token-uri JWT~\cite{ref:jwt} transmise în header-ul Authorization. Refresh token-ul este stocat într-un cookie \texttt{httpOnly} \texttt{Secure} \texttt{SameSite=None}, ceea ce îl protejează atât împotriva atacurilor XSS (JavaScript-ul din browser nu îl poate citi) cât și împotriva atacurilor CSRF (cookie-ul nu este trimis automat la cereri inițiate de alte site-uri), conform OWASP Top 10~\cite{ref:owasp}.
 
-Pe parte de implementare, fiecare modul al backend-ului urmează aceeași structură: un fișier de rute (\texttt{*.routes.ts}) definește endpoint-urile HTTP, un controller (\texttt{*.controller.ts}) extrage parametrii și răspunde, iar un serviciu (\texttt{*.service.ts}) implementează logica de business și interogările Prisma. Validarea cererilor primite este realizată prin biblioteca Zod, care permite definirea declarativă a schemelor și generarea automată a tipurilor TypeScript.
+Pe parte de implementare, fiecare modul al backend-ului urmează aceeași structură: un fișier de rute (\texttt{*.routes.ts}) definește endpoint-urile HTTP, un controller (\texttt{*.controller.ts}) extrage parametrii și răspunde, iar un serviciu (\texttt{*.service.ts}) implementează logica de business și interogările Prisma~\cite{ref:prisma}. Validarea cererilor primite este realizată prin biblioteca Zod~\cite{ref:zod}, care permite definirea declarativă a schemelor și generarea automată a tipurilor TypeScript~\cite{ref:typescript}.
 
-Frontend-ul folosește React Router pentru navigarea între pagini, TanStack Query pentru gestionarea cache-ului de server și Zustand pentru starea client-side (utilizatorul autentificat, token-ul de acces). Fiecare pagină este organizată ca un feature module în directorul \texttt{src/features/}, conținând componenta principală împreună cu sub-componentele specifice paginii.
+Frontend-ul folosește React Router~\cite{ref:reactrouter} pentru navigarea între pagini, TanStack Query~\cite{ref:tanstack} pentru gestionarea cache-ului de server și Zustand~\cite{ref:zustand} pentru starea client-side (utilizatorul autentificat, token-ul de acces). Fiecare pagină este organizată ca un feature module în directorul \texttt{src/features/}, conținând componenta principală împreună cu sub-componentele specifice paginii.
 
 \section{Funcționalitățile aplicației}
 
@@ -455,7 +455,7 @@ Pagina de start a aplicației, care oferă o privire de ansamblu asupra stării 
   \item salutul personalizat în funcție de ora din zi (dimineața / ziua / seara);
   \item trei carduri KPI cu sold curent, venituri și cheltuieli pentru perioada aleasă, fiecare însoțit de un sparkline care arată tendința pe ultimele luni;
   \item selector pentru perioada de analiză (7 zile / 30 zile / 90 zile / un an);
-  \item alertă pentru tranzacțiile neobișnuite (cu z-score peste 2 față de media istorică a categoriei);
+  \item alertă pentru tranzacțiile neobișnuite (cu z-score~\cite{ref:zscore} peste 2 față de media istorică a categoriei);
   \item grafic linie cu evoluția veniturilor și cheltuielilor pe ultimele 12 luni;
   \item grafic donut cu distribuția cheltuielilor pe categorii;
   \item listă cu ultimele 5 tranzacții;
@@ -525,7 +525,7 @@ Permite personalizarea aplicației:
 
 În plus față de funcționalitățile specifice modulelor, aplicația include și componente transversale: bara de navigare laterală cu acces la toate modulele și butonul de deconectare; bara de sus cu breadcrumb, căutare globală (deschisă cu Ctrl+K), buton pentru asistentul AI (Figura~\ref{fig:f17}), clopoțel de notificări cu badge pentru mesajele necitite și buton pentru adăugare rapidă; asistent AI conversațional accesibil în orice moment ca drawer lateral, care răspunde la întrebări libere despre finanțele utilizatorului folosind Gemini; paleta de căutare care permite navigarea rapidă către orice pagină sau tranzacție; suport pentru mod întunecat aplicat global prin CSS custom properties.
 
-Aplicația suportă patru metode de autentificare: cont local cu email și parolă (cu hashing bcrypt cost factor 10), sign in cu Google prin OAuth 2.0, sign in cu Facebook prin OAuth 2.0 și resetare parolă prin email cu link securizat (Figura~\ref{fig:f15}).
+Aplicația suportă patru metode de autentificare: cont local cu email și parolă (cu hashing bcrypt cost factor 10~\cite{ref:bcrypt}), sign in cu Google prin OAuth 2.0~\cite{ref:oauth2}, sign in cu Facebook prin OAuth 2.0~\cite{ref:oauth2} și resetare parolă prin email cu link securizat~\cite{ref:resend} (Figura~\ref{fig:f15}).
 
 \section{Planificarea lucrărilor}
 
@@ -644,6 +644,45 @@ Railway Corporation, \emph{Railway Documentation}, 2026. \url{https://docs.railw
 
 \bibitem{ref:gantt}
 Wilson, J.~M., \emph{Gantt charts: A centenary appreciation}, European Journal of Operational Research, vol.~149, nr.~2, 2003, pp.~430--437.
+
+\bibitem{ref:owasp}
+OWASP Foundation, \emph{OWASP Top 10:2021 -- The Ten Most Critical Web Application Security Risks}, 2021. \url{https://owasp.org/Top10/}
+
+\bibitem{ref:bcrypt}
+Provos, N., Mazières, D., \emph{A Future-Adaptable Password Scheme}, USENIX Annual Technical Conference, 1999.
+
+\bibitem{ref:oauth2}
+Hardt, D. (Ed.), \emph{The OAuth 2.0 Authorization Framework}, RFC 6749, IETF, 2012. \url{https://datatracker.ietf.org/doc/html/rfc6749}
+
+\bibitem{ref:hmac}
+Krawczyk, H., Bellare, M., Canetti, R., \emph{HMAC: Keyed-Hashing for Message Authentication}, RFC 2104, IETF, 1997. \url{https://datatracker.ietf.org/doc/html/rfc2104}
+
+\bibitem{ref:tanstack}
+Dominik, T., \emph{TanStack Query -- Powerful asynchronous state management for TypeScript and JavaScript}, 2026. \url{https://tanstack.com/query}
+
+\bibitem{ref:zustand}
+Pmndrs, \emph{Zustand -- A small, fast and scalable bearbones state-management solution}, 2026. \url{https://github.com/pmndrs/zustand}
+
+\bibitem{ref:zscore}
+Howell, D.~C., \emph{Statistical Methods for Psychology}, 8th ed., Cengage Learning, 2013, capitolul 4 (Sampling Distributions and Z-scores).
+
+\bibitem{ref:reactrouter}
+Remix Software, \emph{React Router Documentation}, v6, 2026. \url{https://reactrouter.com/en/main}
+
+\bibitem{ref:mdn-esm}
+Mozilla Developer Network, \emph{JavaScript modules}, 2026. \url{https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules}
+
+\bibitem{ref:helmet}
+Helmet Contributors, \emph{Helmet.js -- Help secure Express apps with various HTTP headers}, 2026. \url{https://helmetjs.github.io/}
+
+\bibitem{ref:passport}
+Hanson, J., \emph{Passport.js -- Simple, unobtrusive authentication for Node.js}, 2026. \url{https://www.passportjs.org/}
+
+\bibitem{ref:zod}
+McCloskey, C., \emph{Zod -- TypeScript-first schema validation with static type inference}, 2026. \url{https://zod.dev/}
+
+\bibitem{ref:upt}
+Universitatea Politehnica Timișoara, \emph{Identitate vizuală -- Sigla oficială UPT}, 2026. \url{https://www.upt.ro/}
 
 \end{thebibliography}
 
