@@ -94,9 +94,26 @@
 \begin{document}
 
 % --------------------------- Pagina de garda --------------------------------
+% NOTA: pentru ca logo-ul UPT sa apara, descarca sigla oficiala de pe
+%   https://www.upt.ro/ (sectiunea "Identitate vizuala")
+% si pune-o ca `figuri/logo-upt.png` (sau .pdf). Daca nu este prezent
+% fisierul, blocul \IfFileExists genereaza automat un placeholder.
 \begin{titlepage}
   \pagestyle{empty}
   \centering
+
+  % --- Logo UPT (sus, centrat) ---
+  \IfFileExists{figuri/logo-upt.png}{%
+    \includegraphics[height=3.2cm]{figuri/logo-upt.png}%
+  }{%
+    \IfFileExists{figuri/logo-upt.pdf}{%
+      \includegraphics[height=3.2cm]{figuri/logo-upt.pdf}%
+    }{%
+      \fbox{\parbox{4cm}{\centering\vspace{0.8cm}\textit{\color{gray}[ logo UPT ]}\vspace{0.8cm}}}%
+    }%
+  }
+
+  \vspace{0.6cm}
 
   {\large\textbf{UNIVERSITATEA POLITEHNICA TIMIȘOARA}\par}
   \vspace{0.3cm}
@@ -115,46 +132,6 @@
   \vspace{1.5cm}
 
   {\large\textit{Proiect de diplomă}\par}
-
-  \vfill
-
-  \begin{flushright}
-    {\large\textbf{Absolvent:}\par}
-    \vspace{0.2cm}
-    {\large Alexandru Marcuța\par}
-  \end{flushright}
-
-  \vspace{1cm}
-
-  \begin{flushleft}
-    {\large\textbf{Conducător științific:}\par}
-    \vspace{0.2cm}
-    {\large [Titlu. Nume Prenume]\par}
-  \end{flushleft}
-
-  \vfill
-
-  {\large\textbf{Timișoara}\par}
-  {\large\textbf{2026}\par}
-\end{titlepage}
-
-\begin{titlepage}
-  \pagestyle{empty}
-  \centering
-
-  {\large\textbf{UNIVERSITATEA POLITEHNICA TIMIȘOARA}\par}
-  \vspace{0.3cm}
-  {\large\textbf{FACULTATEA DE AUTOMATICĂ ȘI CALCULATOARE}\par}
-  \vspace{0.3cm}
-  {\large\textbf{SPECIALIZAREA AUTOMATICĂ ȘI INFORMATICĂ APLICATĂ}\par}
-
-  \vfill
-
-  {\Huge\bfseries\itshape FARO\par}
-  \vspace{0.5cm}
-  {\LARGE\bfseries Platformă web pentru\par}
-  \vspace{0.2cm}
-  {\LARGE\bfseries gestiunea finanțelor personale\par}
 
   \vfill
 
