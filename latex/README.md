@@ -1,6 +1,8 @@
 # LaTeX — Lucrare de diplomă FARO
 
-Fișierul `licenta.tex` este sursa LaTeX a lucrării. **Pagina de titlu** urmează template-ul lui Valentin Plămădeală (Sesiunea Iunie 2025, UPT FAC), iar **restul conținutului** păstrează structura modelată după lucrarea Giuliei Barbu (capitole 1-7 cu placeholders pentru toate cele 29 de figuri pe care le-ai generat).
+Fișierul `licenta.tex` conține **doar capitolele 1-3** (pregătite pentru prima trimitere la profesoară). **Pagina de titlu** urmează template-ul lui Valentin Plămădeală (Sesiunea Iunie 2025, UPT FAC), iar **restul conținutului** păstrează structura modelată după lucrarea Giuliei Barbu.
+
+> Capitolele 4-7 (PROIECTAREA ÎN DETALIU, UTILIZAREA APLICAȚIEI, TESTAREA APLICAȚIEI, CONCLUZII) și placeholder-ele pentru figurile 4, 5.1-5.6, 6, 7, 8, 8.1-8.6, 9, 10, 12, 13, 14-17, 18 se vor adăuga după primirea feedback-ului profesoarei.
 
 ## Cum compilezi (recomandat: Overleaf, fără instalare)
 
@@ -47,40 +49,17 @@ latexmk -pdf licenta.tex
 - **Coordonator** aliniat la stânga
 - Timișoara, 2026 + Sesiunea Iunie 2026 jos
 
-## Cele 29 de figuri așteptate (placeholders deja în text)
+## Figurile folosite în capitolele 1-3 (placeholders deja în text)
 
-| # | Descriere |
-|---|---|
-| Fig. 1 | Schema bloc generală a aplicației |
-| Fig. 1.1 | Schema bloc a aplicației — vedere cloud |
-| Fig. 2 | Modelul V de dezvoltare |
-| Fig. 3 | Diagrama Gantt |
-| Fig. 4 | Schema tehnologiilor utilizate |
-| Fig. 5.1 | Arhitectura modulului Dashboard |
-| Fig. 5.2 | Arhitectura modulului Tranzacții |
-| Fig. 5.3 | Arhitectura modulului Bugete |
-| Fig. 5.4 | Arhitectura modulului Categorii |
-| Fig. 5.5 | Arhitectura modulului Rapoarte |
-| Fig. 5.6 | Arhitectura modulului Setări |
-| Fig. 6 | Structura fișierelor proiectului |
-| Fig. 7 | Schema bazei de date (Entity-Relationship) |
-| Fig. 8 | Structurile tuturor tabelelor (consolidat) |
-| Fig. 8.1 | Structura tabelei User |
-| Fig. 8.2 | Structura tabelei Category |
-| Fig. 8.3 | Structura tabelei Transaction |
-| Fig. 8.4 | Structura tabelei Budget |
-| Fig. 8.5 | Structura tabelei BudgetCategory |
-| Fig. 8.6 | Structura tabelei Notification |
-| Fig. 9 | Flux de scanare a bonului fiscal (OCR) |
-| Fig. 10 | Flux de autentificare JWT cu refresh rotation |
-| Fig. 11 | Modul de funcționare al API-ului REST |
-| Fig. 12 | Modul de funcționare al scanării bonului (OCR) |
-| Fig. 13 | Arhitectura aplicației — vedere de ansamblu |
-| Fig. 14 | Modul de funcționare al autentificării JWT |
-| Fig. 15 | Modul de funcționare al resetării parolei |
-| Fig. 16 | Modul de funcționare al notificărilor de buget |
-| Fig. 17 | Modul de funcționare al asistentului AI |
-| Fig. 18 | Arhitectura de deployment pe Railway |
+| # | Descriere | Capitol |
+|---|---|---|
+| Fig. 1 | Schema bloc generală a aplicației | Cap 3 |
+| Fig. 1.1 | Schema bloc a aplicației — vedere cloud | Cap 3 |
+| Fig. 2 | Modelul V de dezvoltare | Cap 3 |
+| Fig. 3 | Diagrama Gantt | Cap 3 |
+| Fig. 11 | Modul de funcționare al API-ului REST | Cap 2 |
+
+> Restul figurilor (4, 5.1-5.6, 6, 7, 8, 8.1-8.6, 9, 10, 12, 13, 14-17, 18) vor fi adăugate odată cu capitolele 4-7, după primirea feedback-ului profesoarei.
 
 Când vrei să înlocuiești un placeholder cu imaginea reală:
 
@@ -107,7 +86,7 @@ Când vrei să înlocuiești un placeholder cu imaginea reală:
 
 ✅ **Capitolul 3 — DESCRIEREA GENERALĂ** (Schema bloc + Schema cloud + funcționalități pe 6 module + Modelul V + Diagrama Gantt cu tabel + Schema tehnologii + Arhitectura modulelor)
 
-🟡 **Capitolele 4-7** — scheletul există cu titluri și placeholder-uri pentru figurile aferente; aici lași loc pentru text după ce trimiți primele 3 capitole la profesoară
+🟡 **Capitolele 4-7** — eliminate temporar din document. Vor fi adăugate după primirea feedback-ului profesoarei pe capitolele 1-3.
 
 ✅ **Bibliografie** — 14 referințe
 
