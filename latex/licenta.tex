@@ -367,7 +367,12 @@ REST (Representational State Transfer) este un stil arhitectural pentru proiecta
 
 Modul de funcționare al unui API REST, prezentat în Figura~\ref{fig:f11}, presupune că fiecare cerere este auto-conținută (stateless): serverul nu păstrează informații despre starea sesiunii între cereri, ci toate datele necesare procesării sunt incluse în cererea însăși (de obicei prin header-ul Authorization care conține un token). Această proprietate permite scalarea orizontală a serverelor și simplifică modelul mental al aplicației.
 
-\placeholderfig{11}{Modul de funcționare al API-ului REST}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figuri/fig-11.png}
+  \caption{Modul de funcționare al API-ului REST}
+  \label{fig:f11}
+\end{figure}
 
 În cadrul aplicației FARO, API-ul REST este expus de backend-ul Express sub prefixul \texttt{/api}, iar resursele principale sunt grupate pe module: \texttt{/api/auth/*} pentru autentificare, \texttt{/api/users/*} pentru gestiunea profilului, \texttt{/api/categories/*} pentru categorii, \texttt{/api/transactions/*} pentru tranzacții, \texttt{/api/budgets/*} pentru bugete, \texttt{/api/statistics/*} pentru agregate, \texttt{/api/notifications/*} pentru notificări in-app, \texttt{/api/reports/*} pentru export PDF/Excel și \texttt{/api/insights/*} pentru insights AI.
 
@@ -435,7 +440,12 @@ Aplicația FARO este o platformă web destinată gestiunii finanțelor personale
 
 Arhitectura aplicației, prezentată în schema bloc din Figura~\ref{fig:f1}, este organizată pe trei niveluri principale, conform paradigmei client-server.
 
-\placeholderfig{1}{Schema bloc generală a aplicației}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figuri/fig-1.png}
+  \caption{Schema bloc generală a aplicației}
+  \label{fig:f1}
+\end{figure}
 
 Nivelul Client este reprezentat de aplicația web single-page construită cu React, care rulează direct în browser-ul utilizatorului. Această aplicație gestionează interacțiunea cu utilizatorul, randarea interfețelor și comunicarea cu serverul prin cereri HTTPS asincrone. Întreaga interfață este responsive, adaptându-se automat la dimensiunea ecranului, de la desktop la mobil.
 
@@ -445,7 +455,12 @@ Nivelul Servicii Externe include două integrări cloud apelate exclusiv din ser
 
 Pentru o vedere de ansamblu mai detaliată asupra modului în care componentele aplicației sunt distribuite în cloud (servicii Railway pentru backend + bază de date, CDN-ul Vercel pentru frontend, endpoint-urile Google și Resend), Figura~\ref{fig:f1.1} ilustrează schema bloc în context cloud.
 
-\placeholderfig{1.1}{Schema bloc a aplicației — vedere cloud}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figuri/fig-1.1.png}
+  \caption{Schema bloc a aplicației --- vedere cloud}
+  \label{fig:f1.1}
+\end{figure}
 
 Comunicarea client-server se realizează exclusiv prin HTTPS, cu autentificare bazată pe token-uri JWT~\cite{ref:jwt} transmise în header-ul Authorization. Refresh token-ul este stocat într-un cookie \texttt{httpOnly} \texttt{Secure} \texttt{SameSite=None}, ceea ce îl protejează atât împotriva atacurilor XSS (JavaScript-ul din browser nu îl poate citi) cât și împotriva atacurilor CSRF (cookie-ul nu este trimis automat la cereri inițiate de alte site-uri), conform OWASP Top 10~\cite{ref:owasp}.
 
@@ -543,7 +558,12 @@ Aplicația suportă patru metode de autentificare: cont local cu email și parol
 
 Dezvoltarea aplicației FARO a urmat modelul în V al ciclului de viață software, prezentat în Figura~\ref{fig:f2}. Acest model este o variantă a modelului clasic în cascadă, în care fiecare etapă de specificare de pe ramura stângă este pereche cu o etapă corespunzătoare de validare de pe ramura dreaptă. Spre exemplu, analiza cerințelor utilizatorului determină ce trebuie validat prin teste de acceptare, iar proiectarea detaliată dictează formele testelor unitare. \cite{ref:vmodel}
 
-\placeholderfig{2}{Modelul V de dezvoltare}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figuri/fig-2.png}
+  \caption{Modelul V de dezvoltare}
+  \label{fig:f2}
+\end{figure}
 
 Avantajele alegerii modelului în V pentru acest proiect au inclus trasabilitatea clară între cerințe și teste (fiecare cerință funcțională din etapa inițială are un caz de test corespunzător în etapa de validare), detectarea timpurie a defectelor (planurile de testare sunt scrise în paralel cu specificațiile, ceea ce forțează identificarea ambiguităților înainte de a începe codarea) și documentarea structurată (fiecare etapă produce un livrabil specific, precum specificații, arhitectură, cod și raport de testare, ceea ce facilitează redactarea documentației finale).
 
@@ -581,7 +601,12 @@ Planificarea aplicației FARO a urmat un calendar de aproximativ șase luni, str
   \end{tabularx}
 \end{table}
 
-\placeholderfig{3}{Diagrama Gantt}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{figuri/fig-3.png}
+  \caption{Diagrama Gantt}
+  \label{fig:f3}
+\end{figure}
 
 Cele patru faze majore identificabile în calendar sunt:
 
