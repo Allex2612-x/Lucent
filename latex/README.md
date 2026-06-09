@@ -1,6 +1,6 @@
 # LaTeX — Lucrare de diplomă FARO
 
-Fișierul `licenta.tex` este sursa LaTeX a lucrării, după template-ul lucrării lui **Valentin Plămădeală** (Informatica Zi, UPT FAC, Sesiunea Iunie 2025), adaptat la proiectul tău FARO.
+Fișierul `licenta.tex` este sursa LaTeX a lucrării. **Pagina de titlu** urmează template-ul lui Valentin Plămădeală (Sesiunea Iunie 2025, UPT FAC), iar **restul conținutului** păstrează structura modelată după lucrarea Giuliei Barbu (capitole 1-7 cu placeholders pentru toate cele 29 de figuri pe care le-ai generat).
 
 ## Cum compilezi (recomandat: Overleaf, fără instalare)
 
@@ -13,14 +13,12 @@ Fișierul `licenta.tex` este sursa LaTeX a lucrării, după template-ul lucrări
 
 Gata, PDF-ul apare pe partea dreaptă. Îl poți descărca de la **Menu → Download PDF**.
 
-## Cum compilezi local (dacă vrei pe calculatorul tău)
+## Cum compilezi local
 
 Instalează MacTeX (pe macOS):
 ```bash
 brew install --cask mactex
 ```
-
-Sau MikTeX pe Windows: [miktex.org/download](https://miktex.org/download)
 
 Apoi din directorul `latex/`:
 ```bash
@@ -28,92 +26,99 @@ pdflatex licenta.tex
 pdflatex licenta.tex    # rulează de DOUĂ ori ca să se rezolve TOC + referințele
 ```
 
-Sau cu `latexmk` (face singur câte compilări sunt necesare):
+Sau cu `latexmk`:
 ```bash
 latexmk -pdf licenta.tex
 ```
 
-## Logo UPT pe pagina de gardă
+## Logo UPT pe pagina de titlu
 
-Pe pagina de gardă lași loc pentru sigla UPT sus, centrat. Ca să apară:
-
-1. Descarcă sigla oficială UPT de pe [upt.ro](https://www.upt.ro/) (secțiunea „Identitate vizuală") sau caută `logo upt` pe Google Images în format PNG transparent.
+1. Descarcă sigla oficială UPT de pe [upt.ro](https://www.upt.ro/) („Identitate vizuală") sau caută `logo upt png transparent` pe Google Images.
 2. Pune fișierul ca `latex/figuri/logo-upt.png` (sau `.pdf` dacă ai PDF vectorial).
-3. Recompilezi — apare automat. Dacă nu există fișierul, în locul lui apare un dreptunghi gri cu textul `[ logo UPT ]` (placeholder care îți semnalează că lipsește).
+3. Recompilezi — apare automat sus pe pagina de titlu. Dacă fișierul lipsește, în locul lui apare un dreptunghi gri `[ logo UPT ]`.
 
-## Ce conține deja (capitolele 1-3)
+## Pagina de titlu (template Valentin)
 
-✅ **Pagina de gardă** (template Valentin) — logo UPT + UPT/FAC/AIA + **LUCRARE DE DIPLOMĂ** + titlul proiectului în italic + Absolvent (dreapta) + Coordonator (stânga) + Timișoara 2026 + Sesiunea Iunie 2026
+- Logo UPT sus, centrat
+- Universitatea Politehnica Timișoara / Facultatea de Automatică și Calculatoare / Automatică și Informatică Aplicată
+- **LUCRARE DE DIPLOMĂ** mare bold
+- Titlul proiectului în italic dedesubt
+- **Absolvent** aliniat la dreapta
+- **Coordonator** aliniat la stânga
+- Timișoara, 2026 + Sesiunea Iunie 2026 jos
 
-✅ **Rezumat** — paragraf abstract care sintetizează tema, stack-ul și contribuțiile
+## Cele 29 de figuri așteptate (placeholders deja în text)
 
-✅ **Cuprins, Listă de figuri, Listă de tabele** — auto-generate, numerotare romană (i, ii, iii…) pentru front matter
+| # | Descriere |
+|---|---|
+| Fig. 1 | Schema bloc generală a aplicației |
+| Fig. 1.1 | Schema bloc a aplicației — vedere cloud |
+| Fig. 2 | Modelul V de dezvoltare |
+| Fig. 3 | Diagrama Gantt |
+| Fig. 4 | Schema tehnologiilor utilizate |
+| Fig. 5.1 | Arhitectura modulului Dashboard |
+| Fig. 5.2 | Arhitectura modulului Tranzacții |
+| Fig. 5.3 | Arhitectura modulului Bugete |
+| Fig. 5.4 | Arhitectura modulului Categorii |
+| Fig. 5.5 | Arhitectura modulului Rapoarte |
+| Fig. 5.6 | Arhitectura modulului Setări |
+| Fig. 6 | Structura fișierelor proiectului |
+| Fig. 7 | Schema bazei de date (Entity-Relationship) |
+| Fig. 8 | Structurile tuturor tabelelor (consolidat) |
+| Fig. 8.1 | Structura tabelei User |
+| Fig. 8.2 | Structura tabelei Category |
+| Fig. 8.3 | Structura tabelei Transaction |
+| Fig. 8.4 | Structura tabelei Budget |
+| Fig. 8.5 | Structura tabelei BudgetCategory |
+| Fig. 8.6 | Structura tabelei Notification |
+| Fig. 9 | Flux de scanare a bonului fiscal (OCR) |
+| Fig. 10 | Flux de autentificare JWT cu refresh rotation |
+| Fig. 11 | Modul de funcționare al API-ului REST |
+| Fig. 12 | Modul de funcționare al scanării bonului (OCR) |
+| Fig. 13 | Arhitectura aplicației — vedere de ansamblu |
+| Fig. 14 | Modul de funcționare al autentificării JWT |
+| Fig. 15 | Modul de funcționare al resetării parolei |
+| Fig. 16 | Modul de funcționare al notificărilor de buget |
+| Fig. 17 | Modul de funcționare al asistentului AI |
+| Fig. 18 | Arhitectura de deployment pe Railway |
 
-✅ **Capitolul 1 — Introducere** (6 secțiuni)
-  - 1.1 Motivația alegerii temei
-  - 1.2 Obiectivele generale ale lucrării (tehnice + de cercetare)
-  - 1.3 Relevanța științifică și gradul de noutate (contribuții originale + context)
-  - 1.4 Strategia cercetării și metodologia folosită (abordare + instrumente)
-  - 1.5 Structura lucrării
-  - 1.6 Limitele lucrării
+Când vrei să înlocuiești un placeholder cu imaginea reală:
 
-✅ **Capitolul 2 — Studii anterioare** (8 secțiuni de tip literature review)
-  - 2.1 Aplicații financiare existente (Mint, YNAB, Revolut, Firefly III…)
-  - 2.2 Tehnologii frontend (React vs Vue vs Angular, Vite, TypeScript)
-  - 2.3 Tehnologii backend (Node vs Deno vs Bun, Express vs Fastify, Prisma vs Drizzle)
-  - 2.4 Baze de date (PostgreSQL vs MySQL vs SQLite, JSONB)
-  - 2.5 Securitate (JWT, bcrypt, OAuth 2.0, OWASP)
-  - 2.6 LLM multimodale (Gemini vs GPT-4V vs Claude, Tesseract vs LLM)
-  - 2.7 Servicii externe (Resend, Railway vs Vercel vs Render)
-  - 2.8 Concluzii
-
-✅ **Capitolul 3 — Metodologie și arhitectura sistemului** (8 secțiuni)
-  - 3.1 Analiza cerințelor (funcționale + non-funcționale + scenarii)
-  - 3.2 Arhitectura generală (principii + schema bloc + flux date)
-  - 3.3 Selecția tehnologiilor (criterii + stack frontend + backend + servicii)
-  - 3.4 Modelarea datelor (schema relațională + JSONB pentru bonuri)
-  - 3.5 Securitate și performanță (JWT, validare, CORS, optimizări)
-  - 3.6 Designul detailat al modulelor (6 module, fiecare descris)
-  - 3.7 Procesul de dezvoltare (Modelul V + Gantt cu tabel real)
-  - 3.8 Concluzii arhitecturale
-
-✅ **Bibliografie** — 30 de referințe numerotate `[1]`, `[2]`, … în stil IEEE, citate inline în text exact acolo unde apare claim-ul
-
-🟡 **Capitolele 4-6** — se vor adăuga după ce trimiți primele 3 capitole la profesoară:
-  - Cap 4 — Implementarea prototipului
-  - Cap 5 — Rezultate și evaluare
-  - Cap 6 — Concluzii și dezvoltări viitoare
-
-## Cum completezi capitolele 4-6
-
-Când vrei să înlocuiești un placeholder de figură cu o imagine reală:
-
-1. Pune fișierul imagine (PNG/JPG/PDF) într-un subfolder `figuri/` în același loc cu `licenta.tex`.
+1. Pune fișierul ca `latex/figuri/fig-N.png` (de ex. `figuri/fig-5.1.png`).
 2. Înlocuiește `\placeholderfig{N}{Descriere}` cu:
    ```latex
    \begin{figure}[H]
      \centering
-     \includegraphics[width=0.85\textwidth]{figuri/numefisier.png}
+     \includegraphics[width=0.85\textwidth]{figuri/fig-N.png}
      \caption{Descriere}
      \label{fig:fN}
    \end{figure}
    ```
 
-## Convenții folosite (template Valentin Plămădeală)
+## Ce conține deja documentul
+
+✅ **Pagina de titlu** stil Valentin (logo UPT + LUCRARE DE DIPLOMĂ + Absolvent dreapta + Coordonator stânga + Sesiunea Iunie 2026)
+
+✅ **Cuprins, Lista figurilor, Lista tabelelor** — auto-generate
+
+✅ **Capitolul 1 — INTRODUCERE** (complet: Context general, Tema proiectului, Structura pe capitole)
+
+✅ **Capitolul 2 — FUNDAMENTAREA TEORETICĂ** (complet: 11 tehnologii — React, TypeScript, Vite, Node.js+Express, Prisma, PostgreSQL, REST API, JWT, Gemini, Resend, Railway)
+
+✅ **Capitolul 3 — DESCRIEREA GENERALĂ** (Schema bloc + Schema cloud + funcționalități pe 6 module + Modelul V + Diagrama Gantt cu tabel + Schema tehnologii + Arhitectura modulelor)
+
+🟡 **Capitolele 4-7** — scheletul există cu titluri și placeholder-uri pentru figurile aferente; aici lași loc pentru text după ce trimiți primele 3 capitole la profesoară
+
+✅ **Bibliografie** — 14 referințe
+
+## Convenții folosite
 
 - **Font:** Latin Modern (12pt)
 - **Line spacing:** 1.5 (`\onehalfspacing`)
 - **Indent prim rând:** 1 cm
 - **Margini:** sus/jos 2.5cm, stânga 3cm, dreapta 2.5cm
-- **Capitole:** numerotate „1 Introducere", „2 Studii anterioare", fără „CAPITOLUL X"
-- **Header:** titlul capitolului curent în partea de sus-stânga (italic), număr pagină jos-centrat
-- **Front matter:** numerotare romană (i, ii, iii) începând cu Rezumatul
-- **Content matter:** numerotare arabă (1, 2, 3) începând cu Capitolul 1
-- **Citări:** stil numeric `[1]`, `[2]`, generate automat din `\cite{ref:xxx}` + `\bibitem{ref:xxx}`
-- **Tabele:** stil booktabs cu linii orizontale subțiri
-
-## Note pentru profesoară
-
-Lucrarea respectă formatul standard UPT (Universitatea Politehnica Timișoara) după template-ul folosit recent (2025) de Valentin Plămădeală, absolvent al specializării Informatica Zi de la aceeași facultate (Automatică și Calculatoare). Singura adaptare față de template-ul original este denumirea specializării, schimbată în „Automatică și Informatică Aplicată" pentru a corespunde profilului absolventului.
-
-Pentru orice modificare de format cerută de profesoară (font diferit, dimensiune diferită, alt stil de header, ordinea secțiunilor în capitolul 1), editezi preambulul din `licenta.tex` (primele ~90 de linii) sau capitolul respectiv.
+- **Header:** titlul aplicației (italic, mic) în stânga
+- **Footer:** facultate stânga + număr pagină dreapta
+- **Capitole:** stil clasic UPT, „CAPITOLUL X TITLU" centrat
+- **Citări:** `\cite{ref:xxx}` + `\bibitem{ref:xxx}`
+- **Figuri:** `\placeholderfig{N}{Descriere}` generează automat un dreptunghi gri vizibil + caption + label
