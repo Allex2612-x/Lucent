@@ -33,9 +33,17 @@ Sau cu `latexmk` (face singur câte compilări sunt necesare):
 latexmk -pdf licenta.tex
 ```
 
+## Logo UPT pe pagina de gardă
+
+Pe pagina de gardă lași loc pentru sigla UPT sus, centrat. Ca să apară:
+
+1. Descarcă sigla oficială UPT de pe [upt.ro](https://www.upt.ro/) (secțiunea „Identitate vizuală”) sau caută `logo upt` pe Google Images în format PNG transparent.
+2. Pune fișierul ca `latex/figuri/logo-upt.png` (sau `.pdf` dacă ai PDF vectorial).
+3. Recompilezi — apare automat. Dacă nu există fișierul, în locul lui apare un dreptunghi gri cu textul `[ logo UPT ]` (placeholder care îți semnalează că lipsește).
+
 ## Ce conține deja
 
-✅ **Pagina de gardă** — Universitatea Politehnica Timișoara, FAC, AIA + titlul FARO + Absolvent + Conducător + Timișoara 2026 (două pagini, cum a făcut Giulia)
+✅ **Pagina de gardă** — sigla UPT (placeholder dacă nu pui fișierul) + Universitatea Politehnica Timișoara + FAC + AIA + titlul FARO + Absolvent + Conducător + Timișoara 2026
 
 ✅ **Cuprins automat** — generat de LaTeX din `\chapter` și `\section`
 
