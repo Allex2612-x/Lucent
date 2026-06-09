@@ -585,121 +585,12 @@ Cele patru faze majore identificabile în calendar sunt:
 Această planificare a permis o dezvoltare incrementală: fiecare modul a fost complet funcțional la sfârșitul perioadei alocate, astfel încât la final aplicația a fost gata pentru deploy fără o fază lungă de integrare. Faza de polish, deși aparent mai scurtă, a inclus o serie de iterații vizuale și de optimizare a experienței utilizatorului care nu erau previzibile la începutul proiectului.
 
 % =============================================================================
-% CAPITOLUL 4 — PROIECTAREA ÎN DETALIU (schelet, completezi tu cu schemele)
+% NOTĂ: Capitolele 4-7 (PROIECTAREA ÎN DETALIU, UTILIZAREA APLICAȚIEI,
+% TESTAREA APLICAȚIEI, CONCLUZII) vor fi adăugate ulterior, după primirea
+% feedback-ului profesoarei asupra capitolelor 1-3. Toate placeholder-ele
+% pentru figurile 4, 5.1-5.6, 6, 7, 8, 8.1-8.6, 9, 10, 12, 13, 14-17, 18
+% rămân pregătite pentru momentul respectiv.
 % =============================================================================
-\chapter{PROIECTAREA ÎN DETALIU}
-
-\section{Considerații privind implementarea}
-
-% TODO: scrie despre considerațiile de implementare (stack, decizii).
-% Referă Figura 4 — Schema tehnologiilor utilizate.
-\placeholderfig{4}{Schema tehnologiilor utilizate}
-
-% TODO
-
-\section{Arhitectura programului}
-
-% TODO: descriere arhitectură generală + arhitectură pe fiecare modul.
-\placeholderfig{13}{Arhitectura aplicației — vedere de ansamblu}
-
-\placeholderfig{5.1}{Arhitectura modulului Dashboard}
-\placeholderfig{5.2}{Arhitectura modulului Tranzacții}
-\placeholderfig{5.3}{Arhitectura modulului Bugete}
-\placeholderfig{5.4}{Arhitectura modulului Categorii}
-\placeholderfig{5.5}{Arhitectura modulului Rapoarte}
-\placeholderfig{5.6}{Arhitectura modulului Setări}
-
-% TODO
-
-\section{Structura fișierelor}
-
-% TODO: descriere structură monorepo + tree.
-\placeholderfig{6}{Structura fișierelor proiectului}
-
-% TODO
-
-\section{Descrierea modulelor}
-
-% TODO: pentru fiecare modul/funcționalitate critică, descriere + secvențe de cod:
-% - Autentificare (bcrypt, JWT, cookie httpOnly, axios interceptor)
-% - Resetare parolă (token + SHA256, Resend)
-% - Validare buget (algoritm checkBudget)
-% - Notificări (creare condiționată)
-% - OCR Bonuri (prompt + apel Gemini multimodal)
-% - Sugestie categorie AI
-% - Recurring (generateInstances + prisma.$transaction)
-% - Anomalii (z-score)
-% - Charts SVG (donut math + line chart)
-%
-% Referă figurile: 9, 10, 12, 14, 15, 16, 17
-
-\placeholderfig{9}{Flux de scanare a bonului fiscal (OCR)}
-\placeholderfig{10}{Flux de autentificare JWT cu refresh rotation}
-\placeholderfig{12}{Modul de funcționare al scanării bonului (OCR)}
-\placeholderfig{14}{Modul de funcționare al autentificării JWT}
-\placeholderfig{15}{Modul de funcționare al resetării parolei}
-\placeholderfig{16}{Modul de funcționare al notificărilor de buget}
-\placeholderfig{17}{Modul de funcționare al asistentului AI}
-
-% TODO
-
-\section{Structura bazei de date}
-
-% TODO: descriere schemă + fiecare tabelă în parte.
-\placeholderfig{7}{Schema bazei de date (Entity-Relationship)}
-\placeholderfig{8}{Structurile tuturor tabelelor (consolidat)}
-
-\placeholderfig{8.1}{Structura tabelei User}
-\placeholderfig{8.2}{Structura tabelei Category}
-\placeholderfig{8.3}{Structura tabelei Transaction}
-\placeholderfig{8.4}{Structura tabelei Budget}
-\placeholderfig{8.5}{Structura tabelei BudgetCategory}
-\placeholderfig{8.6}{Structura tabelei Notification}
-
-\placeholderfig{18}{Arhitectura de deployment pe Railway}
-
-% TODO
-
-% =============================================================================
-% CAPITOLUL 5 — UTILIZAREA APLICAȚIEI (schelet)
-% =============================================================================
-\chapter{UTILIZAREA APLICAȚIEI}
-
-% TODO: capturi de ecran pentru fiecare modul + descriere flux utilizator.
-
-% =============================================================================
-% CAPITOLUL 6 — TESTAREA APLICAȚIEI (schelet)
-% =============================================================================
-\chapter{TESTAREA APLICAȚIEI}
-
-\section{Obiectivele testării}
-% TODO
-
-\section{Funcțiile testate}
-% TODO
-
-\section{Mediul de testare}
-\subsection{Utilizatorii vizați}
-% TODO
-\subsection{Cerințe hardware și software}
-% TODO
-
-\section{Metodologia de testare}
-\subsection{Impactul asupra funcționării}
-% TODO
-\subsection{Raportul de testare}
-% TODO: tabel cu cazurile de test
-
-% =============================================================================
-% CAPITOLUL 7 — CONCLUZII (schelet)
-% =============================================================================
-\chapter{CONCLUZII}
-
-\section{Privire de ansamblu asupra aplicației}
-% TODO
-
-\section{Direcții de dezvoltare}
-% TODO
 
 % =============================================================================
 % BIBLIOGRAFIE
