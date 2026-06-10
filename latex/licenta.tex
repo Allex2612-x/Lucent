@@ -123,6 +123,14 @@
   \end{figure}
 }
 
+% Numerotare manuala a figurilor: in loc de "Figura 2.1, 3.1, 3.2..." (auto
+% generata de report class cu prefixul de capitol), folosim numere fixe
+% (1, 1.1, 2, 3, 4, ... 18) care corespund 1:1 cu numele fisierelor
+% PNG din folderul figuri/. Inainte de fiecare figura setezi numarul ei cu
+% \renewcommand{\manualfignum}{N}.
+\newcommand*{\manualfignum}{0}
+\renewcommand{\thefigure}{\manualfignum}
+
 % =============================================================================
 \begin{document}
 
@@ -368,6 +376,7 @@ REST (Representational State Transfer) este un stil arhitectural pentru proiecta
 
 Modul de funcționare al unui API REST, prezentat în Figura~\ref{fig:f11}, presupune că fiecare cerere este auto-conținută (stateless): serverul nu păstrează informații despre starea sesiunii între cereri, ci toate datele necesare procesării sunt incluse în cererea însăși (de obicei prin header-ul Authorization care conține un token). Această proprietate permite scalarea orizontală a serverelor și simplifică modelul mental al aplicației.
 
+\renewcommand{\manualfignum}{11}
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.85\textwidth]{figuri/fig-11.png}
@@ -441,6 +450,7 @@ Aplicația FARO este o platformă web destinată gestiunii finanțelor personale
 
 Arhitectura aplicației, prezentată în schema bloc din Figura~\ref{fig:f1}, este organizată pe trei niveluri principale, conform paradigmei client-server.
 
+\renewcommand{\manualfignum}{1}
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth]{figuri/fig-1.png}
@@ -456,6 +466,7 @@ Nivelul Servicii Externe include două integrări cloud apelate exclusiv din ser
 
 Pentru o vedere de ansamblu mai detaliată asupra modului în care componentele aplicației sunt distribuite în cloud (servicii Railway pentru backend + bază de date, CDN-ul Vercel pentru frontend, endpoint-urile Google și Resend), Figura~\ref{fig:f1.1} ilustrează schema bloc în context cloud.
 
+\renewcommand{\manualfignum}{1.1}
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth]{figuri/fig-1.1.png}
@@ -559,6 +570,7 @@ Aplicația suportă patru metode de autentificare: cont local cu email și parol
 
 Dezvoltarea aplicației FARO a urmat modelul în V al ciclului de viață software, prezentat în Figura~\ref{fig:f2}. Acest model este o variantă a modelului clasic în cascadă, în care fiecare etapă de specificare de pe ramura stângă este pereche cu o etapă corespunzătoare de validare de pe ramura dreaptă. Spre exemplu, analiza cerințelor utilizatorului determină ce trebuie validat prin teste de acceptare, iar proiectarea detaliată dictează formele testelor unitare. \cite{ref:vmodel}
 
+\renewcommand{\manualfignum}{2}
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.85\textwidth]{figuri/fig-2.png}
@@ -602,6 +614,7 @@ Planificarea aplicației FARO a urmat un calendar de aproximativ șase luni, str
   \end{tabularx}
 \end{table}
 
+\renewcommand{\manualfignum}{3}
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.95\textwidth]{figuri/fig-3.png}
