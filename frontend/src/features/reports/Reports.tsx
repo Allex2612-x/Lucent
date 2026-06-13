@@ -66,30 +66,6 @@ function rangeForPreset(preset: Preset) {
   return { start: today, end: today };
 }
 
-function MiniLine({ data, color }: { data: number[]; color: string }) {
-  if (!data || data.length === 0) return <div style={{ height: 38 }} />;
-  const W = 160;
-  const H = 38;
-  const padY = 4;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const step = data.length > 1 ? W / (data.length - 1) : 0;
-  const y = (v: number) => padY + (1 - (v - min) / range) * (H - 2 * padY);
-  const pts = data.map((v, i) => `${(i * step).toFixed(1)},${y(v).toFixed(1)}`);
-  const line = `M ${pts.join(' L ')}`;
-  const last = data[data.length - 1]!;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: H, display: 'block' }}>
-      <path d={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
-      {data.map((v, i) => (
-        <circle key={i} cx={(i * step).toFixed(1)} cy={y(v).toFixed(1)} r={1.5} fill={color} opacity={0.5} />
-      ))}
-      <circle cx={((data.length - 1) * step).toFixed(1)} cy={y(last).toFixed(1)} r={2.5} fill="#fff" stroke={color} strokeWidth={1.5} />
-    </svg>
-  );
-}
-
 export function Reports() {
   const now = new Date();
 
@@ -170,13 +146,10 @@ export function Reports() {
       }),
   });
 
-  const { data: trendData, refetch: refetchTrend } = useQuery({
+  const { refetch: refetchTrend } = useQuery({
     queryKey: ['statistics', 'monthly-trend', startDate, endDate],
     queryFn: () => statisticsService.getMonthlyTrend({ startDate, endDate }),
   });
-
-  const trendPoints: Array<{ month: number; year: number; income: number; expenses: number }> =
-    trendData?.data?.data || [];
 
   // ===== Derived rows =====
   const rows = useMemo(() => {
@@ -193,12 +166,6 @@ export function Reports() {
     const total = filtered.reduce((s, r) => s + Number(r.total), 0);
     return filtered.map((r, idx) => {
       const cat = allCategories.find((c) => c.id === r.categoryId);
-      const series =
-        fetchType === 'income'
-          ? trendPoints.map((p) => p.income)
-          : fetchType === 'expense'
-          ? trendPoints.map((p) => p.expenses)
-          : trendPoints.map((p) => p.income + p.expenses);
       return {
         catId: r.categoryId,
         cat: r.categoryName,
@@ -208,10 +175,9 @@ export function Reports() {
         count: Number(r.count || 0),
         subtotal: Number(r.total),
         share: total > 0 ? (Number(r.total) / total) * 100 : 0,
-        spark: series.slice(-12),
       };
     });
-  }, [categoryData, allCategories, trendPoints, fetchType, selectedCategoryIds]);
+  }, [categoryData, allCategories, selectedCategoryIds]);
 
   const total = rows.reduce((s, r) => s + r.subtotal, 0);
   const count = rows.reduce((s, r) => s + r.count, 0);
@@ -889,7 +855,6 @@ export function Reports() {
                     <tr>
                       <th>Categorie</th>
                       <th style={{ width: 60 }}>TX</th>
-                      <th style={{ width: 180 }}>Evoluție lunară</th>
                       <th className="ta-right" style={{ width: 170 }}>% din total</th>
                       <th className="ta-right" style={{ width: 140 }}>Subtotal</th>
                     </tr>
@@ -923,9 +888,6 @@ export function Reports() {
                             </div>
                           </td>
                           <td className="num" style={{ color: 'var(--text-2)' }}>{r.count}</td>
-                          <td>
-                            <MiniLine data={r.spark} color={r.color} />
-                          </td>
                           <td className="ta-right">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
                               <div className="pbar" style={{ width: 70 }}>
@@ -945,8 +907,6 @@ export function Reports() {
                     <tr style={{ background: 'var(--bg-subtle)' }}>
                       <td style={{ fontWeight: 600 }}>Total general</td>
                       <td className="num" style={{ fontWeight: 600 }}>{count}</td>
-                      <td />
-
                       <td className="ta-right num" style={{ fontWeight: 600 }}>100%</td>
                       <td className="ta-right num" style={{ fontWeight: 700, fontSize: 14 }}>
                         {fmt(total)}{' '}

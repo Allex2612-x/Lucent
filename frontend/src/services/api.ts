@@ -47,6 +47,30 @@ api.interceptors.request.use(
 // wipes the error toast that the login form was about to show.
 const AUTH_EXEMPT_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password'];
 
+// Shared in-flight refresh promise so concurrent 401s (e.g. a page that fires
+// several queries at once with an expired access token) coalesce into ONE
+// /auth/refresh round-trip instead of each firing their own and racing on the
+// rotated refresh cookie.
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = api
+      .post('/auth/refresh', {}, { withCredentials: true })
+      .then((res) => {
+        const token: string | undefined = res.data?.data?.accessToken;
+        if (!token) return null;
+        const state = useAuthStore.getState();
+        if (state.user) state.setAuth(state.user, token);
+        return token;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -57,17 +81,21 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       try {
-        const res = await api.post('/auth/refresh', {}, { withCredentials: true });
-        if (res.data?.data?.accessToken) {
-          const state = useAuthStore.getState();
-          if (state.user) {
-            state.setAuth(state.user, res.data.data.accessToken);
-          }
-          originalRequest.headers.Authorization = `Bearer ${res.data.data.accessToken}`;
+        const token = await refreshAccessToken();
+        if (token) {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed for a protected endpoint — log out and redirect.
+        // Refresh failed for a protected endpoint — best-effort clear the
+        // server-side refresh cookie (mirrors the manual logout buttons), then
+        // wipe local state and redirect. /auth/logout always returns 200 so it
+        // won't recurse into this 401 branch.
+        try {
+          await api.post('/auth/logout');
+        } catch {
+          // ignore — still clear local session and redirect
+        }
         useAuthStore.getState().logout();
         window.location.href = '/login';
         return Promise.reject(refreshError);

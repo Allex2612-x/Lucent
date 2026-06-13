@@ -67,16 +67,24 @@ export function Header({ onOpenDrawer }: HeaderProps = {}) {
 
   const markAllReadMutation = useMutation({
     mutationFn: () => notificationsService.markAllAsRead(),
-    onMutate: () => {
-      // Optimistic: zero the counter right away so the dot disappears
-      // before the network round-trip resolves.
-      queryClient.setQueryData(['notifications', 'unread-count'], {
-        data: { data: { count: 0 } },
-      });
+    onMutate: async () => {
+      // Cancel the in-flight 30s poll so it can't land after our optimistic
+      // write and momentarily restore the non-zero count (the dot flicker).
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'unread-count'] });
+      const previous = queryClient.getQueryData(['notifications', 'unread-count']);
+      // Write in the SAME shape the queryFn returns ({ success, data: { count } })
+      // so the `select` reads the real value instead of relying on `|| 0`.
+      queryClient.setQueryData(['notifications', 'unread-count'], { success: true, data: { count: 0 } });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(['notifications', 'unread-count'], context.previous);
+      }
     },
     onSuccess: () => {
+      // Invalidating the parent prefix also covers ['notifications','unread-count'].
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     },
   });
 
@@ -178,7 +186,7 @@ export function Header({ onOpenDrawer }: HeaderProps = {}) {
               top: 'calc(100% + 6px)',
               right: 0,
               minWidth: 200,
-              background: '#fff',
+              background: 'var(--bg-surface)',
               border: '1px solid var(--border)',
               borderRadius: 12,
               boxShadow: 'var(--shadow-lg)',

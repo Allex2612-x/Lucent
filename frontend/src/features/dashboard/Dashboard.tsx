@@ -10,6 +10,7 @@ import { Select } from '../../components/ui/Select';
 import { statisticsService } from '../../services/statistics.service';
 import { transactionsService, TransactionData } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
+import { formatShortDate } from '../../utils/dateFormat';
 import { budgetsService } from '../../services/budgets.service';
 import { Category } from '../../types/shared';
 import { CHART_COLORS } from '../../styles/colors';
@@ -276,6 +277,12 @@ function CategoryDonut({ data, monthLabel }: { data: DonutSlice[]; monthLabel: s
   let acc = -Math.PI / 2;
   const arcs = data.map((d) => {
     const a = (d.value / total) * Math.PI * 2;
+    // A single slice covering (nearly) the whole circle has coincident arc
+    // endpoints, which SVG renders as nothing — draw a full stroked ring instead.
+    if (a >= Math.PI * 2 - 1e-6) {
+      acc += a;
+      return { ...d, fullRing: true as const };
+    }
     const x1 = cx + R * Math.cos(acc);
     const y1 = cy + R * Math.sin(acc);
     const x2 = cx + R * Math.cos(acc + a);
@@ -292,9 +299,13 @@ function CategoryDonut({ data, monthLabel }: { data: DonutSlice[]; monthLabel: s
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
       <svg viewBox="0 0 200 200" width="170" height="170" style={{ flex: '0 0 170px' }}>
-        {arcs.map((a, i) => (
-          <path key={i} d={a.path} fill={a.color} />
-        ))}
+        {arcs.map((a, i) =>
+          'fullRing' in a ? (
+            <circle key={i} cx={cx} cy={cy} r={(R + r) / 2} fill="none" stroke={a.color} strokeWidth={R - r} />
+          ) : (
+            <path key={i} d={a.path} fill={a.color} />
+          ),
+        )}
         <text x="100" y="92" textAnchor="middle" fontSize="11" fill="#8c8879" letterSpacing="0.04em">
           CHELTUIELI
         </text>
@@ -789,7 +800,7 @@ export function Dashboard() {
                       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
                         Media „{a.categoryName}":{' '}
                         <span className="num">{fmt(a.meanAmount, 0)} RON</span> ·{' '}
-                        {new Date(a.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
+                        {formatShortDate(a.date)}
                       </div>
                     </div>
                     <div
@@ -954,7 +965,7 @@ export function Dashboard() {
                         </span>
                         <span style={{ color: 'var(--text-3)' }}>·</span>
                         <span>
-                          {new Date(t.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
+                          {formatShortDate(t.date)}
                         </span>
                       </div>
                     </div>

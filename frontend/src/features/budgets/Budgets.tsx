@@ -531,11 +531,18 @@ export function Budgets() {
 
   const { data: byCategoryData } = useQuery({
     queryKey: ['statistics', 'by-category', selectedMonth, selectedYear],
-    queryFn: () =>
-      statisticsService.getByCategory({
-        startDate: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`,
+    queryFn: () => {
+      const mm = String(selectedMonth).padStart(2, '0');
+      // Bound to the selected calendar month. Without endDate the backend
+      // aggregates every expense from the 1st onward (future months included),
+      // inflating every per-category card's "spent".
+      const lastDay = String(new Date(selectedYear, selectedMonth, 0).getDate()).padStart(2, '0');
+      return statisticsService.getByCategory({
+        startDate: `${selectedYear}-${mm}-01`,
+        endDate: `${selectedYear}-${mm}-${lastDay}`,
         type: 'expense',
-      }),
+      });
+    },
   });
 
   const budgets: Budget[] = budgetsResponse?.data?.data || [];
@@ -593,12 +600,19 @@ export function Budgets() {
     };
   });
 
-  // Flatten for the hero header stats.
-  const cards: BudgetCardData[] = items.flatMap((it) => (it.kind === 'total' ? [it.data] : it.entries));
-  const totalSpent = cards.reduce((s, c) => s + c.spent, 0);
-  const totalLimit = cards.reduce((s, c) => s + c.limit, 0);
+  // The synthetic "total" card mirrors month-wide expenses, so it must NOT be
+  // summed together with per-category entries (whose spend is a subset of that
+  // same month total) — otherwise the hero double-counts spend and miscounts
+  // cards. Keep them separate and derive the hero from a single source.
+  const totalCard = items.find((it) => it.kind === 'total')?.data ?? null;
+  const categoryCards: BudgetCardData[] = items.flatMap((it) =>
+    it.kind === 'total' ? [] : it.entries,
+  );
+  const totalSpent = totalCard ? totalCard.spent : categoryCards.reduce((s, c) => s + c.spent, 0);
+  const totalLimit = totalCard ? totalCard.limit : categoryCards.reduce((s, c) => s + c.limit, 0);
   const totalPct = totalLimit > 0 ? Math.min((totalSpent / totalLimit) * 100, 100) : 0;
-  const stats = cards.reduce(
+  // Status tallies only make sense for real categories.
+  const stats = categoryCards.reduce(
     (acc, c) => {
       const ratio = c.limit > 0 ? c.spent / c.limit : 0;
       if (ratio >= 1) acc.over++;
@@ -913,7 +927,7 @@ export function Budgets() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12, color: '#d6d8e3' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
-              {cards.length} categorii active
+              {categoryCards.length} categorii active
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--expense)' }} />
@@ -934,7 +948,7 @@ export function Budgets() {
       {/* Per-category cards */}
       {isLoading ? (
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>Se încarcă...</div>
-      ) : cards.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="card" style={{ padding: 0 }}>
           <EmptyState
             icon={WalletIcon}

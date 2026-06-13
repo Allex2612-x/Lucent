@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, List, Tag, ArrowRight } from 'lucide-react';
 import { transactionsService } from '../../services/transactions.service';
 import { categoriesService } from '../../services/categories.service';
+import { formatFullDate } from '../../utils/dateFormat';
 
 interface SearchPaletteProps {
   open: boolean;
@@ -52,6 +53,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rowRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Reset state each time the palette opens
   useEffect(() => {
@@ -103,7 +105,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           kind: 'transaction',
           id: t.id,
           primary: t.description || (cat?.name ?? 'Tranzacție'),
-          secondary: `${cat?.name ?? '—'} · ${new Date(t.date).toLocaleDateString('ro-RO')}`,
+          secondary: `${cat?.name ?? '—'} · ${formatFullDate(t.date)}`,
           href: '/transactions',
           icon: <List size={14} />,
           rightSlot: (
@@ -143,7 +145,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           kind: 'transaction',
           id: t.id,
           primary: t.description || cat?.name || 'Tranzacție',
-          secondary: `${cat?.name ?? '—'} · ${new Date(t.date).toLocaleDateString('ro-RO')}`,
+          secondary: `${cat?.name ?? '—'} · ${formatFullDate(t.date)}`,
           href: '/transactions',
           icon: <List size={14} />,
           rightSlot: (
@@ -168,6 +170,11 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   useEffect(() => {
     setActiveIndex(0);
   }, [query, results.length]);
+
+  // Keep the keyboard-highlighted row visible when arrowing past the fold.
+  useEffect(() => {
+    rowRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex]);
 
   const onResultPick = (r: Result) => {
     navigate(r.href);
@@ -209,7 +216,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 'min(640px, 92vw)',
-          background: '#fff',
+          background: 'var(--bg-surface)',
           borderRadius: 14,
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--border)',
@@ -275,6 +282,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             results.map((r, i) => (
               <button
                 key={`${r.kind}-${r.id}`}
+                ref={(el) => { rowRefs.current[i] = el; }}
                 type="button"
                 onClick={() => onResultPick(r)}
                 onMouseEnter={() => setActiveIndex(i)}
@@ -286,7 +294,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
                   alignItems: 'center',
                   padding: '11px 18px',
                   border: 'none',
-                  background: i === activeIndex ? 'var(--bg-subtle)' : '#fff',
+                  background: i === activeIndex ? 'var(--bg-subtle)' : 'var(--bg-surface)',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                   textAlign: 'left',

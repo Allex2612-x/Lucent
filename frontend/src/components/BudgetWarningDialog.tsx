@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { Button } from './ui/Button';
 
@@ -10,7 +11,10 @@ export interface BudgetWarningPayload {
   budgetLimit?: number;
   newTotal?: number;
   overage?: number;
+  affectedMonths?: Array<{ month: number; year: number; overage: number }>;
 }
+
+const MONTH_NAMES = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
 
 interface BudgetWarningDialogProps {
   warning: BudgetWarningPayload | null;
@@ -128,6 +132,22 @@ export function BudgetWarningDialog({
                   </>
                 )}
               </div>
+
+              {warning.affectedMonths && warning.affectedMonths.length > 1 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginBottom: 8 }}>
+                    Luni afectate de tranzacția recurentă
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 6, columnGap: 12, fontSize: 12.5 }}>
+                    {warning.affectedMonths.map((m) => (
+                      <Fragment key={`${m.year}-${m.month}`}>
+                        <span style={{ color: 'var(--text-2)' }}>{MONTH_NAMES[m.month - 1]} {m.year}</span>
+                        <span className="num" style={{ color: 'var(--expense)', fontWeight: 600 }}>+ {fmt(m.overage)} RON</span>
+                      </Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

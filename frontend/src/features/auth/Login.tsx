@@ -26,12 +26,18 @@ export function Login() {
       setError(`Eroare OAuth: ${oauthErr}`);
       window.history.replaceState({}, '', '/login');
     } else if (token) {
+      // Scrub the JWT from the address bar / history BEFORE any await, so it
+      // never lingers in the URL, browser history, or referrer headers — and a
+      // reload can't re-run this effect against the now-stale token.
+      window.history.replaceState({}, '', '/login');
       (async () => {
         try {
           const res = await api.get('/users/me', { headers: { Authorization: `Bearer ${token}` } });
           if (res.data?.success) {
             setAuth(res.data.data, token);
             navigate('/');
+          } else {
+            setError('Nu am putut finaliza autentificarea OAuth.');
           }
         } catch (e: any) {
           setError('Nu am putut finaliza autentificarea OAuth.');

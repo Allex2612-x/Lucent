@@ -1722,15 +1722,14 @@ button.card:active { transform: translateY(0); }
     padding: 14px !important;
   }
 
-  /* Detail table — drop the noisy middle columns (TX count, sparkline,
-     percentage bar) on mobile. Keep just Categorie + Subtotal so each
-     row fits the screen without sideways scroll. */
+  /* Detail table — drop the noisy middle columns (TX count, percentage bar)
+     on mobile. Keep just Categorie + Subtotal so each row fits the screen
+     without sideways scroll. Columns are now: 1 Categorie, 2 TX,
+     3 % din total, 4 Subtotal. */
   .reports-preview table.tbl thead th:nth-child(2),
   .reports-preview table.tbl thead th:nth-child(3),
-  .reports-preview table.tbl thead th:nth-child(4),
   .reports-preview table.tbl tbody td:nth-child(2),
-  .reports-preview table.tbl tbody td:nth-child(3),
-  .reports-preview table.tbl tbody td:nth-child(4) {
+  .reports-preview table.tbl tbody td:nth-child(3) {
     display: none;
   }
   .reports-preview table.tbl th,
@@ -1831,6 +1830,16 @@ html, body { overflow-x: hidden; }
 
 /* --- Branded text selection --- */
 ::selection { background: var(--accent-soft); color: var(--accent-ink); }
+
+/* --- App-boot auth-verification spinner --- */
+.faro-boot-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--accent);
+  animation: spin .7s linear infinite;
+}
 
 /* --- Refined, unobtrusive scrollbars --- */
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }

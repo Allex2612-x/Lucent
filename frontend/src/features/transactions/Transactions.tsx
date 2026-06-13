@@ -27,6 +27,7 @@ import type { ReceiptData } from '../../utils/receiptOcr';
 import { useCategorySuggestion } from '../../hooks/useCategorySuggestion';
 import { Sparkles, Camera, Loader2 } from 'lucide-react';
 import { runReceiptOcr } from '../../utils/receiptOcr';
+import { formatShortDate } from '../../utils/dateFormat';
 import { CategoryIcon } from '../../components/CategoryIcon';
 import { BudgetWarningDialog, BudgetWarningPayload } from '../../components/BudgetWarningDialog';
 
@@ -273,12 +274,16 @@ export function Transactions() {
         return;
       }
     }
-    const payload: TransactionData = formData.isRecurring
-      ? formData
-      : { ...formData, isRecurring: false, frequency: undefined, repetitionCount: undefined };
     if (editingTransaction) {
-      updateMutation.mutate({ id: editingTransaction.id, data: payload });
+      // An edit must never change recurring-series membership (the form can't
+      // faithfully round-trip it anyway), so omit those fields entirely. The
+      // backend also strips them defensively.
+      const { isRecurring, frequency, repetitionCount, ...editPayload } = formData;
+      updateMutation.mutate({ id: editingTransaction.id, data: editPayload as TransactionData });
     } else {
+      const payload: TransactionData = formData.isRecurring
+        ? formData
+        : { ...formData, isRecurring: false, frequency: undefined, repetitionCount: undefined };
       createMutation.mutate({ data: payload });
     }
   };
@@ -1018,7 +1023,7 @@ export function Transactions() {
                       </td>
                       <td>
                         <div style={{ fontSize: 13 }}>
-                          {tDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
+                          {formatShortDate(tDate)}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }} className="mono">
                           {/* tDate is parsed from YYYY-MM-DD which JS treats as
