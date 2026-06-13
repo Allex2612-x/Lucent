@@ -157,6 +157,12 @@ export class StatisticsService {
         const end = new Date(params.endDate);
         end.setHours(23, 59, 59, 999);
         whereClause.date.lte = end;
+      } else if (params.startDate) {
+        // Defensive: a caller that sends only startDate must not silently
+        // aggregate every expense from that day forward (across future months).
+        // Default the upper bound to the end of startDate's calendar month.
+        const start = new Date(params.startDate);
+        whereClause.date.lte = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59, 999);
       }
     }
 

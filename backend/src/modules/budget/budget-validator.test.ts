@@ -393,10 +393,10 @@ describe('BudgetValidator', () => {
         new Date('2024-01-25'),
       ];
 
-      // Each new transaction is 100
-      // Each check: 450 + 100 = 550 (exceeds 500 by 50)
-      // Note: Each instance is checked independently against the current budget state
-      // Since all three dates are in the same month, we get three entries for the same month
+      // Each new transaction is 100, and all three land in January.
+      // The cumulative projection is 450 + 3*100 = 750 against the 500 limit,
+      // so the month is reported ONCE with the full overage of 250 — not three
+      // independent 50-overage entries (the old per-instance bug).
       const result = await BudgetValidator.checkRecurringBudget(
         testUserId,
         testCategoryId,
@@ -405,12 +405,9 @@ describe('BudgetValidator', () => {
       );
 
       expect(result).not.toBeNull();
-      expect(result?.affectedMonths).toHaveLength(3);
-      // All three instances exceed the budget for January 2024
+      expect(result?.affectedMonths).toHaveLength(1);
       expect(result?.affectedMonths).toEqual([
-        { month: 1, year: 2024, overage: 50 },
-        { month: 1, year: 2024, overage: 50 },
-        { month: 1, year: 2024, overage: 50 },
+        { month: 1, year: 2024, overage: 250 },
       ]);
     });
   });

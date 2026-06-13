@@ -122,6 +122,20 @@ export class CategoryService {
     if (!category) throw new NotFoundError('Category not found');
     if (category.isDefault) throw new BadRequestError('Cannot delete default categories');
 
+    // The Transaction.category and BudgetCategory.category relations are
+    // required with no onDelete cascade, so deleting a category still in use
+    // would raise a raw Prisma FK error (P2003) and surface as a 500. Block it
+    // with a clear message the user can act on.
+    const [txCount, budgetCount] = await Promise.all([
+      prisma.transaction.count({ where: { categoryId } }),
+      prisma.budgetCategory.count({ where: { categoryId } }),
+    ]);
+    if (txCount > 0 || budgetCount > 0) {
+      throw new BadRequestError(
+        'Nu poți șterge o categorie folosită de tranzacții sau bugete. Reasignează sau șterge mai întâi elementele asociate.'
+      );
+    }
+
     await prisma.category.delete({
       where: { id: categoryId }
     });

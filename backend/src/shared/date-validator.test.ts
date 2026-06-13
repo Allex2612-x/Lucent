@@ -125,20 +125,16 @@ describe('DateValidator', () => {
       expect(DateValidator.isFutureDate(tenYearsLater)).toBe(true);
     });
 
-    it('should be timezone-aware using local timezone', () => {
-      // Set a specific time in the local timezone
-      const now = new Date('2024-03-15T14:30:00');
-      vi.setSystemTime(now);
+    it('compares at day level in a timezone-stable (UTC) frame', () => {
+      // The app receives transaction dates as bare 'YYYY-MM-DD' strings, which
+      // JS parses to UTC midnight; isFutureDate compares in the UTC calendar
+      // frame so the verdict is identical on every server timezone. Mock "now"
+      // as a UTC instant and feed bare date strings, mirroring production.
+      vi.setSystemTime(new Date('2024-03-15T14:30:00Z'));
 
-      // Create dates using local timezone constructor
-      const today = new Date(2024, 2, 15); // Month is 0-indexed (2 = March)
-      expect(DateValidator.isFutureDate(today)).toBe(false);
-
-      const tomorrow = new Date(2024, 2, 16);
-      expect(DateValidator.isFutureDate(tomorrow)).toBe(true);
-
-      const yesterday = new Date(2024, 2, 14);
-      expect(DateValidator.isFutureDate(yesterday)).toBe(false);
+      expect(DateValidator.isFutureDate(new Date('2024-03-15'))).toBe(false); // today
+      expect(DateValidator.isFutureDate(new Date('2024-03-16'))).toBe(true);  // tomorrow
+      expect(DateValidator.isFutureDate(new Date('2024-03-14'))).toBe(false); // yesterday
     });
 
     it('should handle edge case of exactly one day difference', () => {

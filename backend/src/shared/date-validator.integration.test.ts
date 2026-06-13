@@ -70,28 +70,20 @@ describe('DateValidator - Integration Tests', () => {
   describe('Requirement 2.6: Compare dates at day level', () => {
     it('should ignore time component when comparing', () => {
       const now = new Date();
-      
-      // Create dates with different times but same day
-      const morning = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        8, 0, 0
-      );
-      
-      const evening = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        20, 0, 0
-      );
-      
-      const midnight = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        0, 0, 0
-      );
+
+      // Same UTC day, different times of day. Built in the UTC frame (matching
+      // how isFutureDate compares) so the result is timezone-stable.
+      const morning = new Date(Date.UTC(
+        now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8, 0, 0
+      ));
+
+      const evening = new Date(Date.UTC(
+        now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 20, 0, 0
+      ));
+
+      const midnight = new Date(Date.UTC(
+        now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0
+      ));
       
       // All should be considered "today" regardless of time
       expect(DateValidator.isFutureDate(morning)).toBe(false);
@@ -101,30 +93,32 @@ describe('DateValidator - Integration Tests', () => {
 
     it('should correctly identify next day even with earlier time', () => {
       const now = new Date();
-      
-      // Tomorrow at midnight (earliest possible time)
-      const tomorrowMidnight = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 1,
-        0, 0, 0
-      );
-      
+
+      // Tomorrow at UTC midnight. The app receives dates as bare 'YYYY-MM-DD'
+      // strings (parsed to UTC midnight) and isFutureDate compares in the UTC
+      // calendar frame, so build the fixture the same way to stay
+      // timezone-stable regardless of the test runner's local zone.
+      const tomorrowMidnight = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1
+      ));
+
       // Should be considered future date
       expect(DateValidator.isFutureDate(tomorrowMidnight)).toBe(true);
     });
 
     it('should correctly identify yesterday even with later time', () => {
       const now = new Date();
-      
-      // Yesterday at 23:59:59 (latest possible time)
-      const yesterdayEnd = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() - 1,
+
+      // Yesterday at UTC end-of-day (same UTC-frame rationale as above).
+      const yesterdayEnd = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() - 1,
         23, 59, 59
-      );
-      
+      ));
+
       // Should not be considered future date
       expect(DateValidator.isFutureDate(yesterdayEnd)).toBe(false);
     });

@@ -22,13 +22,32 @@ model User {
   // budget_near_limit notifications for this user. The pre-submit
   // budget warning dialog still fires — this only silences the bell.
   budgetNotifications Boolean @default(true)
+  // Bumped whenever every outstanding refresh token for this user must be
+  // invalidated (e.g. after a password reset). The refresh token carries
+  // this value and is rejected when it no longer matches.
+  tokenVersion Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  categories    Category[]
-  transactions  Transaction[]
-  budgets       Budget[]
-  notifications Notification[]
+  categories          Category[]
+  transactions        Transaction[]
+  budgets             Budget[]
+  notifications       Notification[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Category {

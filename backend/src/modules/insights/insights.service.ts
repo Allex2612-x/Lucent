@@ -169,9 +169,15 @@ Reguli:
     console.log('[insights] OK, generated', content.length, 'chars');
   } catch (err: any) {
     console.error('[insights] generation failed:', err?.message || err);
-    // Fall back to a simple deterministic insight so the UI still shows something.
-    content =
-      'Nu am putut genera insight-ul săptămânal automat acum (probabil cheia API nu este configurată). Verifică GEMINI_API_KEY pe backend sau încearcă din nou.';
+    // Only the getClient() path signals a genuinely missing/misconfigured key.
+    // Every other failure (429 rate-limit, 5xx, network/timeout, or a
+    // SAFETY/RECITATION block where response.text() throws) is transient and
+    // unrelated to the key — don't send the user to debug GEMINI_API_KEY.
+    const keyMissing =
+      typeof err?.message === 'string' && err.message.includes('GEMINI_API_KEY');
+    content = keyMissing
+      ? 'Nu am putut genera insight-ul săptămânal: cheia GEMINI_API_KEY nu este configurată pe backend.'
+      : 'Nu am putut genera insight-ul săptămânal automat acum. Încearcă din nou mai târziu.';
   }
 
   const insight: WeeklyInsight = {

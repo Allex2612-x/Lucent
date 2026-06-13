@@ -151,55 +151,78 @@ export class BudgetValidator {
     amount: number,
     dates: Date[]
   ): Promise<BudgetWarningData | null> {
-    const affectedMonths: Array<{
-      month: number;
-      year: number;
-      overage: number;
-    }> = [];
-
-    // Check each transaction instance against its respective month's budget
-    for (const date of dates) {
-      const warning = await this.checkBudget(userId, categoryId, amount, date);
-      
-      if (warning) {
-        affectedMonths.push({
-          month: warning.month,
-          year: warning.year,
-          overage: warning.overage,
-        });
-      }
+    // Bucket the instance dates by (year, month). Calling checkBudget once per
+    // instance is wrong: it recomputes spend from the DB each time (the new
+    // instances aren't persisted yet), so several instances landing in the same
+    // month each compare against the same DB state and never see the cumulative
+    // overage. Instead, count how many instances fall in each month and project
+    // currentSpent + amount * count against the limit, once per month.
+    const buckets = new Map<string, { month: number; year: number; count: number }>();
+    for (const d of dates) {
+      const month = d.getMonth() + 1;
+      const year = d.getFullYear();
+      const key = `${year}-${month}`;
+      const b = buckets.get(key) ?? { month, year, count: 0 };
+      b.count += 1;
+      buckets.set(key, b);
     }
 
-    // Return aggregated warning data with affected months
-    if (affectedMonths.length > 0) {
-      // Use the first affected month for the main warning data
-      const firstAffectedDate = dates.find((date) => {
-        const month = date.getMonth() + 1;
-        const year = date.getFullYear();
-        return affectedMonths.some((am) => am.month === month && am.year === year);
+    const affectedMonths: Array<{ month: number; year: number; overage: number }> = [];
+    let primaryWarning: BudgetWarningData | null = null;
+
+    for (const { month, year, count } of buckets.values()) {
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+      let monthWarning: BudgetWarningData | null = null;
+
+      // Per-category budget for this month.
+      const budget = await prisma.budget.findFirst({
+        where: { userId, month, year, isTotal: false },
+        include: { categories: { where: { categoryId }, include: { category: true } } },
       });
-
-      if (!firstAffectedDate) {
-        return null;
+      if (budget && budget.categories.length > 0) {
+        const bc = budget.categories[0]!;
+        const budgetLimit = Number(bc.limitAmount);
+        const tx = await prisma.transaction.findMany({
+          where: { userId, categoryId, type: 'expense', date: { gte: startOfMonth, lte: endOfMonth } },
+        });
+        const currentSpent = tx.reduce((s, t) => s + Number(t.amount), 0);
+        const newTotal = currentSpent + Number(amount) * count; // cumulative across same-month instances
+        if (newTotal > budgetLimit) {
+          monthWarning = {
+            categoryId, categoryName: bc.category.name, month, year,
+            currentSpent, budgetLimit, newTotal, overage: newTotal - budgetLimit,
+          };
+        }
       }
 
-      const firstWarning = await this.checkBudget(
-        userId,
-        categoryId,
-        amount,
-        firstAffectedDate
-      );
-
-      if (!firstWarning) {
-        return null;
+      // Total monthly budget for this month.
+      const totalBudget = await prisma.budget.findFirst({ where: { userId, month, year, isTotal: true } });
+      if (totalBudget) {
+        const allTx = await prisma.transaction.findMany({
+          where: { userId, type: 'expense', date: { gte: startOfMonth, lte: endOfMonth } },
+        });
+        const currentSpent = allTx.reduce((s, t) => s + Number(t.amount), 0);
+        const newTotal = currentSpent + Number(amount) * count;
+        const totalLimit = Number(totalBudget.totalLimit);
+        if (newTotal > totalLimit) {
+          const cat = await prisma.category.findUnique({ where: { id: categoryId }, select: { name: true } });
+          const totalWarning: BudgetWarningData = {
+            categoryId, categoryName: monthWarning?.categoryName || cat?.name || 'Buget total', month, year,
+            currentSpent, budgetLimit: totalLimit, newTotal, overage: newTotal - totalLimit,
+          };
+          if (!monthWarning || totalWarning.overage > monthWarning.overage) monthWarning = totalWarning;
+        }
       }
 
-      return {
-        ...firstWarning,
-        affectedMonths,
-      };
+      if (monthWarning) {
+        affectedMonths.push({ month, year, overage: monthWarning.overage });
+        if (!primaryWarning) primaryWarning = monthWarning;
+      }
     }
 
-    return null;
+    if (affectedMonths.length === 0 || !primaryWarning) return null;
+    return { ...primaryWarning, affectedMonths };
   }
 }

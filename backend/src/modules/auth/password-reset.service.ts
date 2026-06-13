@@ -7,17 +7,9 @@ import {
   passwordResetEmailText,
 } from '../../shared/email.js';
 
-interface ResetEntry {
-  userId: string;
-  email: string;
-  tokenHash: string;
-  expiresAt: number;
-  used: boolean;
-}
-
-// In-memory store. Sufficient for a single-process demo / licență; in
-// production this should live in Redis or a DB table so it survives restarts.
-const store = new Map<string, ResetEntry>();
+// Reset tokens are persisted in the DB (PasswordResetToken) so they survive
+// process restarts/redeploys and work across multiple instances behind a load
+// balancer. We store only the SHA-256 hash, never the raw token.
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function sha256(s: string) {
@@ -42,12 +34,24 @@ export async function requestPasswordReset(email: string) {
   }
   const token = crypto.randomBytes(24).toString('hex'); // 48 chars
   const tokenHash = sha256(token);
-  store.set(tokenHash, {
-    userId: user.id,
-    email: user.email,
-    tokenHash,
-    expiresAt: Date.now() + TOKEN_TTL_MS,
-    used: false,
+
+  // Invalidate any prior unused tokens for this user, sweep expired/used rows,
+  // then persist the fresh one.
+  await prisma.passwordResetToken.deleteMany({
+    where: {
+      OR: [
+        { userId: user.id, usedAt: null },
+        { expiresAt: { lt: new Date() } },
+        { usedAt: { not: null } },
+      ],
+    },
+  });
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
+    },
   });
 
   // Build the reset link from the frontend origin (so emails point to
@@ -86,17 +90,23 @@ export async function consumePasswordReset(token: string, newPassword: string) {
     throw new Error('Parola nouă trebuie să aibă cel puțin 6 caractere.');
   }
   const tokenHash = sha256(token);
-  const entry = store.get(tokenHash);
-  if (!entry || entry.used || entry.expiresAt < Date.now()) {
+  const entry = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+  if (!entry || entry.usedAt || entry.expiresAt < new Date()) {
     throw new Error('Token-ul este invalid sau a expirat.');
   }
   const hashed = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({
-    where: { id: entry.userId },
-    data: { password: hashed },
-  });
-  entry.used = true;
-  // Free the entry now that it's been used
-  store.delete(tokenHash);
+  // Atomically: set the new password, bump tokenVersion (revokes every
+  // outstanding refresh token for this user — critical when the reset is
+  // because the password was compromised), and mark the token used.
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: entry.userId },
+      data: { password: hashed, tokenVersion: { increment: 1 } },
+    }),
+    prisma.passwordResetToken.update({
+      where: { tokenHash },
+      data: { usedAt: new Date() },
+    }),
+  ]);
   return { ok: true };
 }

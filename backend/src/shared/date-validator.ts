@@ -37,24 +37,25 @@ export class DateValidator {
    * @returns true if date is in the future, false otherwise
    */
   static isFutureDate(date: Date): boolean {
-    // Get current date in user's local timezone
     const now = new Date();
-    
-    // Normalize both dates to midnight (start of day) for day-level comparison
-    // This ensures we compare dates, not timestamps
-    const normalizedInput = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
+
+    // Compare both the input and "now" in the SAME UTC calendar frame so the
+    // result is independent of the server's local timezone. A bare
+    // 'YYYY-MM-DD' string is parsed by `new Date(val)` as UTC midnight, so its
+    // UTC y/m/d fields are exactly the user's intended calendar date — using
+    // local fields here would drift by a day on any server running behind UTC.
+    const normalizedInput = Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate()
     );
-    
-    const normalizedNow = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
+
+    const normalizedNow = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
     );
-    
-    // Compare timestamps of normalized dates
-    return normalizedInput.getTime() > normalizedNow.getTime();
+
+    return normalizedInput > normalizedNow;
   }
 }

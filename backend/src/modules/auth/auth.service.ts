@@ -10,6 +10,7 @@ export const registerSchema = z.object({
   password: z.string().min(6),
   firstName: z.string().min(2),
   lastName: z.string().min(2),
+  currency: z.enum(['RON', 'EUR', 'USD']).default('RON'),
 });
 
 export const loginSchema = z.object({
@@ -35,6 +36,7 @@ export class AuthService {
         password: hashedPassword,
         firstName: data.firstName,
         lastName: data.lastName,
+        currency: data.currency,
       },
     });
 
@@ -52,7 +54,7 @@ export class AuthService {
     });
 
     const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ userId: user.id }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ userId: user.id, tokenVersion: user.tokenVersion }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     return { user, accessToken, refreshToken };
   }
@@ -84,29 +86,37 @@ export class AuthService {
     }
 
     const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ userId: user.id }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ userId: user.id, tokenVersion: user.tokenVersion }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     return { user, accessToken, refreshToken };
   }
 
   static async refreshTokens(refreshToken: string) {
+    let decoded: { userId: string; tokenVersion?: number };
     try {
-      const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { userId: string };
-      
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-      });
-
-      if (!user) {
-        throw new UnauthorizedError('User not found');
-      }
-
-      const newAccessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: '15m' });
-      const newRefreshToken = jwt.sign({ userId: user.id }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-
-      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+      decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { userId: string; tokenVersion?: number };
     } catch (error) {
       throw new UnauthorizedError('Invalid refresh token');
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    // Reject refresh tokens minted before the user's tokenVersion was bumped
+    // (e.g. after a password reset). Tokens without the claim are treated as
+    // version 0 for backwards-compat with sessions issued before this change.
+    if ((decoded.tokenVersion ?? 0) !== user.tokenVersion) {
+      throw new UnauthorizedError('Refresh token has been revoked');
+    }
+
+    const newAccessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: '15m' });
+    const newRefreshToken = jwt.sign({ userId: user.id, tokenVersion: user.tokenVersion }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 }

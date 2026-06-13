@@ -120,9 +120,9 @@ export class TransactionService {
     }>
   ) {
     // Use Prisma transaction for atomic batch creation
-    return await prisma.$transaction(async (tx) => {
-      const created = [];
-      
+    const created = await prisma.$transaction(async (tx) => {
+      const rows = [];
+
       for (const instance of instances) {
         const transaction = await tx.transaction.create({
           data: {
@@ -131,11 +131,27 @@ export class TransactionService {
           },
           include: { category: true }
         });
-        created.push(transaction);
+        rows.push(transaction);
       }
-      
-      return created;
+
+      return rows;
     });
+
+    // Mirror the single-create path: fire budget notifications once per distinct
+    // (category, year-month) the expense instances land in. Done AFTER the batch
+    // commits so the spend recompute sees the new rows, and deduped because the
+    // budget_exceeded branch is intentionally non-idempotent (one call per month,
+    // not one per instance, so the bell isn't spammed).
+    const seen = new Set<string>();
+    for (const i of instances) {
+      if (i.type !== 'expense') continue;
+      const key = `${i.categoryId}-${i.date.getFullYear()}-${i.date.getMonth()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      await NotificationService.checkAndCreateBudgetNotifications(userId, i.categoryId, i.date);
+    }
+
+    return created;
   }
 
   static async getTransactionById(userId: string, id: string) {
@@ -152,23 +168,28 @@ export class TransactionService {
     const transaction = await prisma.transaction.findFirst({ where: { id, userId } });
     if (!transaction) throw new NotFoundError('Transaction not found');
 
+    // A plain edit must never mutate recurring-series membership. Drop any
+    // isRecurring / frequency / repetitionCount coming from the client so a
+    // single-instance edit can't silently orphan the row from its group.
+    const { isRecurring, frequency, repetitionCount, ...safe } = data as any;
+
     const updatedTransaction = await prisma.transaction.update({
       where: { id },
       data: {
-        ...data,
-        ...(data.date ? { date: new Date(data.date) } : {})
+        ...safe,
+        ...(safe.date ? { date: new Date(safe.date) } : {})
       },
       include: { category: true }
     });
 
     // Check and create budget notifications if this is an expense
     // Use the updated type if provided, otherwise use the original type
-    const finalType = data.type || transaction.type;
+    const finalType = safe.type || transaction.type;
     if (finalType === 'expense') {
       await NotificationService.checkAndCreateBudgetNotifications(
         userId,
-        data.categoryId || transaction.categoryId,
-        data.date ? new Date(data.date) : transaction.date
+        safe.categoryId || transaction.categoryId,
+        safe.date ? new Date(safe.date) : transaction.date
       );
     }
 

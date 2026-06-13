@@ -52,6 +52,6 @@ export async function loginOrSignupFromOAuth(profile: OAuthProfile) {
   }
 
   const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ userId: user.id }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  const refreshToken = jwt.sign({ userId: user.id, tokenVersion: user.tokenVersion }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
   return { user, accessToken, refreshToken };
 }
