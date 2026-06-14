@@ -35,6 +35,7 @@
 \usepackage{hyperref}            % link-uri active in PDF
 \usepackage{tabularx}            % tabele cu coloane flexibile
 \usepackage{booktabs}            % \toprule \midrule \bottomrule
+\usepackage{longtable}           % tabele care se întind pe mai multe pagini
 \usepackage{enumitem}            % \begin{itemize}[customize]
 \usepackage{pdflscape}           % paginile peisaj
 \usepackage{multicol}
@@ -109,27 +110,64 @@
   framexrightmargin=5pt,
 }
 
-% Marcaj vizual pentru "[Insert Figura N: descriere]" — placeholder
-% pentru schemele pe care le inserezi tu in Word/LaTeX dupa export.
+% listings nu cunoaște nativ JavaScript/TypeScript — îl definim ca să meargă
+% [language=JavaScript] și să coloreze cuvintele-cheie corect.
+\lstdefinelanguage{JavaScript}{
+  keywords={await, async, const, let, var, function, return, if, else, for, while,
+    new, class, extends, super, import, from, export, default, try, catch, finally,
+    throw, typeof, instanceof, this, null, undefined, true, false, void, public,
+    private, static, interface, type, enum, implements, as, of, in, yield},
+  sensitive=true,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+  morestring=[b]`,
+}
+
+% Numerotare continuă a figurilor și tabelelor (Figura 1, 2, 3, ... pe toată
+% lucrarea), fără prefix de capitol și fără resetare la fiecare capitol.
+% \counterwithout face parte din nucleul LaTeX (TeX Live 2023+).
+\counterwithout{figure}{chapter}
+\renewcommand{\thefigure}{\arabic{figure}}
+\counterwithout{table}{chapter}
+\renewcommand{\thetable}{\arabic{table}}
+
+% Placeholder vizual pentru o figură/schemă pe care o adaugi tu mai târziu.
+% Primul argument = slug pentru \label (fig:f<slug>); al doilea = legenda.
+% Numărul figurii este atribuit automat de \caption.
 \newcommand{\placeholderfig}[2]{%
   \begin{figure}[H]
     \centering
     \fbox{\parbox{0.85\textwidth}{%
-      \centering\vspace{1.5cm}%
-      \textit{\color{gray}[ Inserează aici imaginea — Figura #1: #2 ]}%
-      \vspace{1.5cm}}}%
+      \centering\vspace{1.4cm}%
+      \textit{\color{gray}[ Inserează aici imaginea: #2 ]}%
+      \vspace{1.4cm}}}%
     \caption{#2}
     \label{fig:f#1}
   \end{figure}
 }
 
-% Numerotare manuala a figurilor: in loc de "Figura 2.1, 3.1, 3.2..." (auto
-% generata de report class cu prefixul de capitol), folosim numere fixe
-% (1, 1.1, 2, 3, 4, ... 18) care corespund 1:1 cu numele fisierelor
-% PNG din folderul figuri/. Inainte de fiecare figura setezi numarul ei cu
-% \renewcommand{\manualfignum}{N}.
-\newcommand*{\manualfignum}{0}
-\renewcommand{\thefigure}{\manualfignum}
+% \autofig{N}{Legendă}  sau  \autofig[lățime]{N}{Legendă}
+% Dacă fișierul figuri/fig-N.png există, îl include automat; altfel afișează
+% un placeholder cu legenda corectă. Astfel poți adăuga imaginile pur și
+% simplu copiind fișierele fig-N.png în folderul figuri/, FĂRĂ a edita LaTeX.
+% N corespunde numerotării tale (1, 1.1, 4, 5.1, 8.3, 18 etc.).
+\newcommand{\autofig}[3][0.9]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{figuri/fig-#2.png}{%
+      \includegraphics[width=#1\textwidth]{figuri/fig-#2.png}%
+    }{%
+      \fbox{\parbox{0.85\textwidth}{%
+        \centering\vspace{1.4cm}%
+        \textit{\color{gray}[ Inserează aici: figuri/fig-#2.png --- #3 ]}%
+        \vspace{1.4cm}}}%
+    }%
+    \caption{#3}
+    \label{fig:f#2}
+  \end{figure}
+}
 
 % =============================================================================
 \begin{document}
@@ -283,20 +321,22 @@ Aplicația prezintă șase module funcționale principale, fiecare corespunzând
 
 \section{Structura pe capitole}
 
-Lucrarea este structurată în șase capitole, conform următoarei organizări:
+Lucrarea este structurată în șapte capitole, conform următoarei organizări:
 
 \begin{itemize}[leftmargin=2cm,itemsep=4pt]
   \item \textbf{CAPITOLUL 1. INTRODUCERE.} Acest capitol cuprinde o introducere în ceea ce înseamnă aplicațiile web pentru finanțe personale, motivația din spatele proiectului și câteva informații generale despre aplicația FARO.
 
   \item \textbf{CAPITOLUL 2. FUNDAMENTAREA TEORETICĂ.} Acest capitol cuprinde toate tehnologiile, limbajele de programare și serviciile externe necesare pentru crearea aplicației, oferind pentru fiecare o scurtă descriere și justificarea alegerii.
 
-  \item \textbf{CAPITOLUL 3. DESCRIEREA GENERALĂ A PROIECTULUI.} În acest capitol sunt prezentate o descriere sumară a aplicației, schema bloc, arhitectura pe module, structura bazei de date, funcționalitățile oferite și planificarea lucrărilor prin ciclul de viață V și diagrama Gantt.
+  \item \textbf{CAPITOLUL 3. DESCRIEREA GENERALĂ A PROIECTULUI.} În acest capitol sunt prezentate o descriere sumară a aplicației, schema bloc, funcționalitățile pe care aceasta le oferă și planificarea lucrărilor prin ciclul de viață V și diagrama Gantt.
 
-  \item \textbf{CAPITOLUL 4. UTILIZAREA APLICAȚIEI.} În acest capitol sunt prezentate interfețele aplicației și modul în care acestea trebuie utilizate astfel încât utilizatorul să poată accesa cu ușurință toate funcționalitățile.
+  \item \textbf{CAPITOLUL 4. PROIECTAREA ÎN DETALIU.} În acest capitol sunt prezentate considerațiile privind implementarea, arhitectura programului pe module, structura fișierelor și descrierea bazei de date. Totodată, sunt prezentate în detaliu funcționalitățile aplicației și modul lor de realizare, însoțite de fragmente de cod sursă relevante.
 
-  \item \textbf{CAPITOLUL 5. TESTAREA APLICAȚIEI.} Acest capitol face referire la următoarele aspecte: obiectivele testării, funcțiile care au fost testate, mediul de testare incluzând utilizatorii vizați și cerințele hardware, metodologia de testare prezentând impactul asupra funcționării, precum și raportul final de testare.
+  \item \textbf{CAPITOLUL 5. UTILIZAREA APLICAȚIEI.} În acest capitol sunt prezentate interfețele aplicației și modul în care acestea trebuie utilizate astfel încât utilizatorul să poată accesa cu ușurință toate funcționalitățile.
 
-  \item \textbf{CAPITOLUL 6. CONCLUZII.} Acest capitol este cel de încheiere, în care sunt prezentate ideile inovatoare ale aplicației, la ce nevoi răspunde aceasta și care ar putea fi soluțiile viitoare de îmbunătățire și dezvoltare.
+  \item \textbf{CAPITOLUL 6. TESTAREA APLICAȚIEI.} Acest capitol face referire la următoarele aspecte: obiectivele testării, funcțiile care au fost testate, mediul de testare incluzând utilizatorii vizați și cerințele hardware, metodologia de testare prezentând impactul asupra funcționării, precum și raportul final de testare.
+
+  \item \textbf{CAPITOLUL 7. CONCLUZII.} Acest capitol este cel de încheiere, în care sunt prezentate ideile inovatoare ale aplicației, la ce nevoi răspunde aceasta și care ar putea fi soluțiile viitoare de îmbunătățire și dezvoltare.
 \end{itemize}
 
 % =============================================================================
@@ -383,13 +423,7 @@ REST (Representational State Transfer) este un stil arhitectural pentru proiecta
 
 Modul de funcționare al unui API REST, prezentat în Figura~\ref{fig:f11}, presupune că fiecare cerere este auto-conținută (stateless): serverul nu păstrează informații despre starea sesiunii între cereri, ci toate datele necesare procesării sunt incluse în cererea însăși (de obicei prin header-ul Authorization care conține un token). Această proprietate permite scalarea orizontală a serverelor și simplifică modelul mental al aplicației.
 
-\renewcommand{\manualfignum}{1}
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{figuri/fig-11.png}
-  \caption{Modul de funcționare al API-ului REST}
-  \label{fig:f11}
-\end{figure}
+\autofig[0.85]{11}{Modul de funcționare al API-ului REST}
 
 În cadrul aplicației FARO, API-ul REST este expus de backend-ul Express sub prefixul \texttt{/api}, iar resursele principale sunt grupate pe module: \texttt{/api/auth/*} pentru autentificare, \texttt{/api/users/*} pentru gestiunea profilului, \texttt{/api/categories/*} pentru categorii, \texttt{/api/transactions/*} pentru tranzacții, \texttt{/api/budgets/*} pentru bugete, \texttt{/api/statistics/*} pentru agregate, \texttt{/api/notifications/*} pentru notificări in-app, \texttt{/api/reports/*} pentru export PDF/Excel și \texttt{/api/insights/*} pentru insights AI.
 
@@ -457,13 +491,7 @@ Aplicația FARO este o platformă web destinată gestiunii finanțelor personale
 
 Arhitectura aplicației, prezentată în schema bloc din Figura~\ref{fig:f1}, este organizată pe trei niveluri principale, conform paradigmei client-server.
 
-\renewcommand{\manualfignum}{2}
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\textwidth]{figuri/fig-1.png}
-  \caption{Schema bloc generală a aplicației}
-  \label{fig:f1}
-\end{figure}
+\autofig[0.9]{1}{Schema bloc generală a aplicației}
 
 Nivelul Client este reprezentat de aplicația web single-page construită cu React, care rulează direct în browser-ul utilizatorului. Această aplicație gestionează interacțiunea cu utilizatorul, randarea interfețelor și comunicarea cu serverul prin cereri HTTPS asincrone. Întreaga interfață este responsive, adaptându-se automat la dimensiunea ecranului, de la desktop la mobil.
 
@@ -473,13 +501,7 @@ Nivelul Servicii Externe include două integrări cloud apelate exclusiv din ser
 
 Pentru o vedere de ansamblu mai detaliată asupra modului în care componentele aplicației sunt distribuite în cloud (servicii Railway pentru backend + bază de date, CDN-ul Vercel pentru frontend, endpoint-urile Google și Resend), Figura~\ref{fig:f1.1} ilustrează schema bloc în context cloud.
 
-\renewcommand{\manualfignum}{2.1}
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\textwidth]{figuri/fig-1.1.png}
-  \caption{Schema bloc a aplicației --- vedere cloud}
-  \label{fig:f1.1}
-\end{figure}
+\autofig[0.9]{1.1}{Schema bloc a aplicației --- vedere cloud}
 
 Comunicarea client-server se realizează exclusiv prin HTTPS, cu autentificare bazată pe token-uri JWT~\cite{ref:jwt} transmise în header-ul Authorization. Refresh token-ul este stocat într-un cookie \texttt{httpOnly} \texttt{Secure} \texttt{SameSite=None}, ceea ce îl protejează atât împotriva atacurilor XSS (JavaScript-ul din browser nu îl poate citi) cât și împotriva atacurilor CSRF (cookie-ul nu este trimis automat la cereri inițiate de alte site-uri), conform OWASP Top 10~\cite{ref:owasp}.
 
@@ -577,13 +599,7 @@ Aplicația suportă patru metode de autentificare: cont local cu email și parol
 
 Dezvoltarea aplicației FARO a urmat modelul în V al ciclului de viață software, prezentat în Figura~\ref{fig:f2}. Acest model este o variantă a modelului clasic în cascadă, în care fiecare etapă de specificare de pe ramura stângă este pereche cu o etapă corespunzătoare de validare de pe ramura dreaptă. Spre exemplu, analiza cerințelor utilizatorului determină ce trebuie validat prin teste de acceptare, iar proiectarea detaliată dictează formele testelor unitare. \cite{ref:vmodel}
 
-\renewcommand{\manualfignum}{3}
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{figuri/fig-2.png}
-  \caption{Modelul V de dezvoltare}
-  \label{fig:f2}
-\end{figure}
+\autofig[0.85]{2}{Modelul V --- ciclul de viață al dezvoltării}
 
 Avantajele alegerii modelului în V pentru acest proiect au inclus trasabilitatea clară între cerințe și teste (fiecare cerință funcțională din etapa inițială are un caz de test corespunzător în etapa de validare), detectarea timpurie a defectelor (planurile de testare sunt scrise în paralel cu specificațiile, ceea ce forțează identificarea ambiguităților înainte de a începe codarea) și documentarea structurată (fiecare etapă produce un livrabil specific, precum specificații, arhitectură, cod și raport de testare, ceea ce facilitează redactarea documentației finale).
 
@@ -621,13 +637,7 @@ Planificarea aplicației FARO a urmat un calendar de aproximativ șase luni, str
   \end{tabularx}
 \end{table}
 
-\renewcommand{\manualfignum}{4}
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.95\textwidth]{figuri/fig-3.png}
-  \caption{Diagrama Gantt}
-  \label{fig:f3}
-\end{figure}
+\autofig[0.95]{3}{Diagrama Gantt --- planificarea proiectului}
 
 Cele patru faze majore identificabile în calendar sunt:
 
@@ -641,7 +651,401 @@ Cele patru faze majore identificabile în calendar sunt:
 Această planificare a permis o dezvoltare incrementală: fiecare modul a fost complet funcțional la sfârșitul perioadei alocate, astfel încât la final aplicația a fost gata pentru deploy fără o fază lungă de integrare. Faza de polish, deși aparent mai scurtă, a inclus o serie de iterații vizuale și de optimizare a experienței utilizatorului care nu erau previzibile la începutul proiectului.
 
 % =============================================================================
-% CAPITOLUL 4 — UTILIZAREA APLICAȚIEI
+% CAPITOLUL 4 — PROIECTAREA ÎN DETALIU
+% =============================================================================
+\chapter{PROIECTAREA ÎN DETALIU}
+
+\section{Considerații privind implementarea}
+
+Alegerea stivei tehnologice pentru aplicația FARO a fost ghidată de trei criterii principale: maturitatea și gradul de adopție al instrumentelor, omogenitatea limbajului de programare pe întreaga aplicație și disponibilitatea unui ecosistem capabil să susțină atât interfața interactivă, cât și procesarea de date și integrarea cu servicii de inteligență artificială. Întreaga aplicație este scrisă în limbajul TypeScript \cite{ref:typescript}, atât pe partea de client, cât și pe partea de server, ceea ce permite reutilizarea tipurilor de date, reduce categoriile de erori detectabile la compilare și uniformizează experiența de dezvoltare într-un singur depozit de cod de tip \emph{monorepo}.
+
+Interfața cu utilizatorul este construită cu biblioteca React 18 \cite{ref:react}, organizată ca o aplicație de tip \emph{Single Page Application}, și este compilată cu instrumentul Vite \cite{ref:vite}, ales pentru pornirea rapidă a serverului de dezvoltare și pentru optimizarea pachetelor de producție. Pentru gestiunea stării de pe server (datele provenite din interogări) se folosește TanStack Query \cite{ref:tanstack}, care oferă mecanisme de \emph{cache}, reîmprospătare automată și invalidare a datelor, iar pentru starea globală a clientului (sesiunea utilizatorului) se folosește biblioteca Zustand \cite{ref:zustand}, mai ușoară decât soluțiile clasice bazate pe flux centralizat. Navigarea între pagini este realizată prin React Router, iar comunicarea cu serverul se face prin biblioteca axios.
+
+Pe partea de server, aplicația rulează pe platforma Node.js \cite{ref:nodejs}, folosind cadrul de lucru Express \cite{ref:express} pentru expunerea unei interfețe de programare de tip REST \cite{ref:rest}. Accesul la baza de date relațională PostgreSQL \cite{ref:postgres} este mijlocit de ORM-ul Prisma \cite{ref:prisma}, care generează un client tipizat pornind de la schema declarativă a bazei de date și gestionează migrările acesteia. Componentele de inteligență artificială --- recunoașterea optică a bonurilor fiscale, sugerarea automată a categoriei și asistentul conversațional --- sunt construite peste modelul Google Gemini 2.5 Flash Lite \cite{ref:gemini}, ales pentru raportul favorabil între cost, latență și capacitatea de a procesa atât text, cât și imagini. Trimiterea mesajelor de poștă electronică (de exemplu, pentru resetarea parolei) este delegată serviciului Resend \cite{ref:resend}, iar întreaga aplicație, împreună cu baza de date PostgreSQL, este desfășurată pe platforma Railway \cite{ref:railway}. Ansamblul tehnologiilor utilizate este sintetizat în Figura~\ref{fig:f4}.
+
+\autofig{4}{Schema tehnologiilor utilizate}
+
+\section{Arhitectura programului}
+
+Din punct de vedere arhitectural, aplicația FARO este structurată pe niveluri, separând clar responsabilitățile fiecărei componente. Nivelul de prezentare este reprezentat de aplicația client de tip SPA, care rulează în browserul utilizatorului și comunică exclusiv prin apeluri HTTP cu serverul. Nivelul de comunicare este o interfață de programare REST \cite{ref:rest}, expusă de serverul Express, care primește cererile, le validează și le rutează către modulul corespunzător. Nivelul de logică de afaceri grupează regulile aplicației (validarea bugetelor, detecția anomaliilor, generarea de rapoarte, integrarea cu serviciile de inteligență artificială) și este organizat pe module funcționale independente. În fine, nivelul de date asigură persistența prin baza de date relațională PostgreSQL, accesată exclusiv prin ORM-ul Prisma. Vederea de ansamblu a acestei arhitecturi este prezentată în Figura~\ref{fig:f13}.
+
+\autofig{13}{Arhitectura aplicației --- vedere de ansamblu}
+
+Din perspectiva utilizatorului, funcționalitățile aplicației sunt distribuite pe șase module (pagini) principale, fiecare corespunzând unui obiectiv distinct al gestiunii finanțelor personale. În cele ce urmează este descris pe scurt rolul fiecărui modul.
+
+\subsection{Modulul Dashboard}
+
+Modulul Dashboard reprezintă pagina de start a aplicației și oferă utilizatorului o privire de ansamblu asupra situației sale financiare. Aici sunt agregate informațiile cele mai relevante: soldul curent, totalul veniturilor și al cheltuielilor din perioada selectată, evoluția grafică a acestora, precum și avertismentele generate de detectorul de anomalii și de sistemul de notificări privind bugetele. Datele afișate sunt obținute prin interogări către modulele de statistici și notificări de pe server. Arhitectura acestui modul este prezentată în Figura~\ref{fig:f5.1}.
+
+\autofig{5.1}{Arhitectura modulului --- Dashboard}
+
+\subsection{Modulul Tranzacții}
+
+Modulul Tranzacții permite utilizatorului să gestioneze înregistrările financiare individuale --- venituri și cheltuieli. Pe lângă operațiile clasice de creare, modificare și ștergere, modulul integrează două funcționalități asistate de inteligență artificială: scanarea bonurilor fiscale prin recunoaștere optică a caracterelor și sugerarea automată a categoriei pe baza descrierii tranzacției. Tot aici sunt gestionate tranzacțiile recurente, generate periodic de motorul dedicat de pe server. Arhitectura modulului este ilustrată în Figura~\ref{fig:f5.2}.
+
+\autofig{5.2}{Arhitectura modulului --- Tranzacții}
+
+\subsection{Modulul Bugete}
+
+Modulul Bugete oferă utilizatorului posibilitatea de a-și planifica și controla cheltuielile prin definirea unor limite, simple sau recurente, asociate uneia sau mai multor categorii. Pe măsură ce sunt înregistrate tranzacții, serverul verifică încadrarea în bugetele active prin componenta de validare a bugetelor și generează notificări atunci când o limită este atinsă sau depășită. Modulul afișează gradul de utilizare al fiecărui buget și starea acestuia. Arhitectura modulului este prezentată în Figura~\ref{fig:f5.3}.
+
+\autofig{5.3}{Arhitectura modulului --- Bugete}
+
+\subsection{Modulul Categorii}
+
+Modulul Categorii gestionează clasificarea tranzacțiilor în categorii de venituri și cheltuieli. Utilizatorul beneficiază de un set de categorii implicite la crearea contului și își poate defini categorii proprii, fiecare cu nume, tip, pictogramă și culoare. Categoriile reprezintă fundamentul după care sunt agregate datele în modulele de bugete și rapoarte și sunt folosite de componenta de sugerare automată a categoriei. Arhitectura modulului este ilustrată în Figura~\ref{fig:f5.4}.
+
+\autofig{5.4}{Arhitectura modulului --- Categorii}
+
+\subsection{Modulul Rapoarte}
+
+Modulul Rapoarte permite analiza detaliată a activității financiare pe intervale de timp configurabile. Utilizatorul poate vizualiza distribuția cheltuielilor pe categorii, comparația dintre venituri și cheltuieli și evoluția acestora în timp, sub formă de grafice. În plus, modulul oferă posibilitatea exportării rapoartelor în formate de tip PDF și Excel, generate de serverul de aplicație. Arhitectura modulului este prezentată în Figura~\ref{fig:f5.5}.
+
+\autofig{5.5}{Arhitectura modulului --- Rapoarte}
+
+\subsection{Modulul Setări}
+
+Modulul Setări centralizează configurarea contului și a preferințelor utilizatorului. De aici pot fi modificate datele de profil, parola de autentificare, preferințele privind notificările, precum și conturile externe asociate prin autentificare OAuth 2.0 \cite{ref:oauth2}. Tot în acest modul utilizatorul poate accesa opțiunile legate de securitatea contului și de gestiunea sesiunii. Arhitectura modulului este ilustrată în Figura~\ref{fig:f5.6}.
+
+\autofig{5.6}{Arhitectura modulului --- Setări}
+
+\section{Structura fișierelor}
+
+Codul sursă al aplicației FARO este organizat sub forma unui depozit de tip \emph{monorepo}, care reunește în aceeași rădăcină atât aplicația client (directorul \texttt{frontend}), cât și serverul de aplicație (directorul \texttt{backend}). Această organizare facilitează partajarea convențiilor de cod, sincronizarea modificărilor care afectează ambele părți și menținerea unui istoric unic al proiectului. Structura principală de directoare este prezentată în Listingul~\ref{lst:structura} și ilustrată sintetic în Figura~\ref{fig:f6}.
+
+\begin{lstlisting}[language=bash,caption={Structura proiectului}]
+faro/
+|-- frontend/
+|   |-- src/
+|   |   |-- features/        # paginile aplicatiei (dashboard, transactions, ...)
+|   |   |-- components/      # componente reutilizabile (ui, layout, charts)
+|   |   |-- services/        # apeluri catre API (axios)
+|   |   |-- store/           # stare globala (Zustand)
+|   |   |-- hooks/           # hook-uri React personalizate
+|   |   |-- routes/          # definirea rutelor
+|   |   |-- types/           # tipuri TypeScript partajate
+|   |   `-- utils/           # functii utilitare
+|   |-- public/
+|   `-- vite.config.ts
+`-- backend/
+    |-- src/
+    |   |-- modules/         # module functionale (auth, transaction, budget, ...)
+    |   |-- shared/          # cod comun (jwt, cookies, email, prisma, errors)
+    |   |-- middleware/      # middleware Express (autentificare, erori)
+    |   `-- config/          # configurari aplicatie
+    `-- prisma/
+        |-- schema.prisma    # schema bazei de date
+        `-- migrations/      # migrari versionate
+\end{lstlisting}
+
+În cadrul aplicației client, directorul \texttt{src/features} grupează codul pe pagini funcționale, fiecare subdirector (de exemplu, \texttt{dashboard}, \texttt{transactions}, \texttt{budgets}, \texttt{categories}, \texttt{reports}, \texttt{settings} și \texttt{auth}) conținând componentele specifice unui modul. Directorul \texttt{src/components} reunește componentele reutilizabile, organizate la rândul lor în elemente de interfață (\texttt{ui}), elemente de structură a paginii (\texttt{layout}) și componente de tip grafic (\texttt{charts}). Directorul \texttt{src/services} conține modulele care încapsulează apelurile HTTP către interfața REST a serverului, izolând logica de comunicare de componentele vizuale, în timp ce \texttt{src/store} găzduiește starea globală a aplicației, gestionată cu Zustand \cite{ref:zustand} (de exemplu, starea de autentificare a utilizatorului).
+
+Pe partea de server, directorul \texttt{src/modules} este nucleul aplicației și conține câte un subdirector pentru fiecare domeniu funcțional --- autentificare (\texttt{auth}), tranzacții (\texttt{transaction}), bugete (\texttt{budget}), categorii (\texttt{category}), statistici (\texttt{statistics}), notificări (\texttt{notification}), asistentul inteligent (\texttt{insights}), rapoarte (\texttt{report}) și recunoașterea bonurilor (\texttt{ocr}). Fiecare modul respectă o organizare consecventă, separând rutele, controlorul, serviciul cu logica de afaceri și, după caz, componentele specializate (de exemplu, validatorul de bugete sau detectorul de anomalii). Directorul \texttt{src/shared} conține codul comun, reutilizat de mai multe module --- generarea și verificarea jetoanelor JWT \cite{ref:jwt}, gestiunea cookie-urilor, trimiterea de e-mailuri, clientul Prisma și tratarea erorilor --- iar directorul \texttt{src/middleware} găzduiește componentele intermediare Express, cum ar fi cele de autentificare și de tratare centralizată a erorilor. Separat de codul sursă, directorul \texttt{prisma} conține schema declarativă a bazei de date (\texttt{schema.prisma}) și istoricul migrărilor versionate \cite{ref:prisma}.
+
+\autofig{6}{Structura fișierelor proiectului}
+
+Întreaga aplicație este desfășurată pe platforma Railway \cite{ref:railway}, care găzduiește, în cadrul aceluiași proiect, trei componente: serverul de aplicație Node.js, baza de date PostgreSQL și varianta compilată a interfeței. Fiecare modificare adusă în depozitul de cod declanșează automat o nouă construire și desfășurare, iar variabilele sensibile (cheile API, secretele JWT, șirul de conexiune la baza de date) sunt configurate ca variabile de mediu securizate. Arhitectura de desfășurare este prezentată în Figura~\ref{fig:f18}.
+
+\autofig{18}{Arhitectura de deployment pe Railway}
+
+\section{Descrierea modulelor}
+
+Această secțiune detaliază principalele funcționalități implementate în cadrul aplicației FARO, prezentând pentru fiecare componentă atât logica de funcționare, cât și un fragment de cod sursă real, extras din implementarea backend-ului. Fragmentele au fost trunchiate (marcate cu \verb|// ...|) pentru a evidenția doar pașii esențiali ai fiecărui algoritm.
+
+\subsection{Autentificarea}
+
+Autentificarea utilizatorilor se bazează pe un mecanism cu pereche dublă de token-uri JWT \cite{ref:jwt}, soluție care echilibrează securitatea cu experiența de utilizare. La înregistrare sau la logare, serverul emite două token-uri distincte: un \emph{access token} cu durată scurtă de viață (15 minute), semnat cu algoritmul HMAC-SHA256 \cite{ref:hmac}, folosit pentru autorizarea cererilor către API, și un \emph{refresh token} cu durată de 7 zile, transmis exclusiv printr-un cookie de tip \texttt{httpOnly}, \texttt{Secure}, \texttt{SameSite}, inaccesibil codului JavaScript din browser și astfel protejat împotriva atacurilor de tip XSS \cite{ref:owasp}. Fluxul complet de autentificare este ilustrat în Figura~\ref{fig:f14}.
+
+Parolele nu sunt stocate niciodată în clar. Înainte de salvarea în baza de date, fiecare parolă este criptată cu funcția de hashing \texttt{bcrypt} \cite{ref:bcrypt}, folosind un factor de cost (numărul de runde) egal cu 10, valoare care asigură un compromis rezonabil între rezistența la atacuri prin forță brută și timpul de răspuns. La logare, parola introdusă este comparată cu hash-ul stocat prin \texttt{bcrypt.compare}, fără a fi nevoie de decriptare. Refresh token-ul conține și un câmp \texttt{tokenVersion}, care permite invalidarea tuturor sesiunilor active ale unui utilizator (de exemplu, după o resetare de parolă), prin simpla incrementare a versiunii în baza de date.
+
+\begin{lstlisting}[language=JavaScript,caption={Inregistrarea utilizatorului si emiterea perechii de token-uri JWT}]
+static async register(data) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+  if (existingUser) {
+    throw new BadRequestError('Email is already registered');
+  }
+  // Hash-uire bcrypt cu factor de cost 10
+  const hashedPassword = await bcrypt.hash(data.password, 10);
+  const user = await prisma.user.create({
+    data: { email: data.email, password: hashedPassword, /* ... */ },
+  });
+  // ... creare categorii implicite pentru utilizatorul nou
+  const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET,
+    { expiresIn: '15m' });
+  const refreshToken = jwt.sign(
+    { userId: user.id, tokenVersion: user.tokenVersion },
+    env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return { user, accessToken, refreshToken };
+}
+\end{lstlisting}
+
+\autofig{14}{Modul de funcționare al autentificării JWT}
+
+Fluxul complet de autentificare, de la transmiterea credențialelor până la rotirea \emph{refresh token}-ului la expirarea celui de acces, este ilustrat în Figura~\ref{fig:f10}.
+
+\autofig{10}{Flux de autentificare JWT cu refresh rotation}
+
+\subsection{Autentificarea prin OAuth 2.0}
+
+Pe lângă autentificarea clasică pe bază de email și parolă, FARO oferă posibilitatea de conectare prin furnizori externi de identitate, folosind protocolul OAuth 2.0 \cite{ref:oauth2}. Sunt suportate conturile Google și Facebook, integrarea fiind realizată cu ajutorul bibliotecii \texttt{passport} \cite{ref:passport} și a strategiilor dedicate \texttt{passport-google-oauth20} și \texttt{passport-facebook}. Controllerul de OAuth verifică la pornire dacă variabilele de mediu corespunzătoare (cheile de client) sunt configurate și activează fiecare furnizor doar dacă acestea sunt prezente, expunând frontend-ului un endpoint de stare care indică ce butoane de login social trebuie afișate.
+
+După ce utilizatorul aprobă accesul la furnizorul extern, serverul primește profilul verificat (email, nume, prenume) și apelează funcția \texttt{loginOrSignupFromOAuth}. Aceasta este idempotentă: dacă există deja un cont cu acel email, contul este reutilizat; altfel se creează un cont nou cu o parolă aleatoare imposibil de ghicit. Indiferent de cale, funcția emite aceeași pereche de token-uri JWT ca autentificarea clasică, astfel încât restul aplicației nu trebuie să distingă originea sesiunii.
+
+\begin{lstlisting}[language=JavaScript,caption={Cautarea sau crearea contului dintr-un profil OAuth verificat}]
+export async function loginOrSignupFromOAuth(profile) {
+  let user = await prisma.user.findUnique({
+    where: { email: profile.email },
+  });
+  if (!user) {
+    // Parola aleatoare: satisface schema, dar nu permite login clasic
+    const placeholder = await bcrypt.hash(
+      `${profile.provider}-${profile.email}-${Date.now()}-${Math.random()}`, 10);
+    user = await prisma.user.create({
+      data: { email: profile.email, password: placeholder, /* ... */ },
+    });
+    // ... seed categorii implicite, ca la inregistrarea normala
+  }
+  const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET,
+    { expiresIn: '15m' });
+  const refreshToken = jwt.sign(
+    { userId: user.id, tokenVersion: user.tokenVersion },
+    env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return { user, accessToken, refreshToken };
+}
+\end{lstlisting}
+
+\subsection{Resetarea parolei}
+
+În cazul în care un utilizator își uită parola, aplicația pune la dispoziție un mecanism sigur de resetare bazat pe token-uri temporare. La primirea unei cereri de resetare, serverul generează un token aleatoriu de 48 de caractere folosind \texttt{crypto.randomBytes}, însă în baza de date (tabela \texttt{PasswordResetToken}) este stocat \emph{numai} hash-ul SHA-256 al acestuia, niciodată valoarea brută. Astfel, chiar și în eventualitatea compromiterii bazei de date, token-urile nu pot fi reutilizate. Tokenul are o durată de viață de o oră, iar orice token anterior nefolosit al utilizatorului este invalidat înainte de emiterea unuia nou. Pentru a preveni enumerarea conturilor, endpoint-ul returnează întotdeauna un răspuns de succes, indiferent dacă email-ul există sau nu în sistem. Fluxul complet este prezentat în Figura~\ref{fig:f15}.
+
+Link-ul de resetare este trimis utilizatorului prin email, folosind serviciul tranzacțional Resend \cite{ref:resend}. Mesajul este construit dintr-un șablon HTML branduit, însoțit de o variantă text simplă pentru clienții de email care nu interpretează HTML. La consumarea token-ului, după validarea expirării și a folosirii anterioare, noua parolă este hash-uită cu \texttt{bcrypt}, iar câmpul \texttt{tokenVersion} al utilizatorului este incrementat într-o tranzacție atomică, ceea ce revocă automat toate sesiunile active — o măsură esențială atunci când resetarea este cauzată de compromiterea parolei.
+
+\begin{lstlisting}[language=JavaScript,caption={Generarea tokenului de resetare si trimiterea email-ului prin Resend}]
+export async function requestPasswordReset(email) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    // Nu dezvaluim ce email-uri exista - raspuns ok indiferent
+    return { ok: true, token: null };
+  }
+  const token = crypto.randomBytes(24).toString('hex'); // 48 caractere
+  const tokenHash = sha256(token);
+  // ... invalideaza token-urile vechi, apoi persista hash-ul nou
+  await prisma.passwordResetToken.create({
+    data: { userId: user.id, tokenHash,
+      expiresAt: new Date(Date.now() + TOKEN_TTL_MS) },
+  });
+  const resetUrl = `${frontendBase}/reset-password?token=${token}`;
+  await sendEmail({
+    to: user.email, subject: 'Resetare parola FARO',
+    html: passwordResetEmailHtml(resetUrl, user.firstName),
+    text: passwordResetEmailText(resetUrl, user.firstName),
+  });
+  return { ok: true, token: exposeToken ? token : null };
+}
+\end{lstlisting}
+
+\autofig{15}{Modul de funcționare al resetării parolei}
+
+\subsection{Scanarea bonului fiscal (OCR)}
+
+Una dintre funcționalitățile distinctive ale aplicației FARO este posibilitatea de a adăuga o tranzacție prin simpla fotografiere a unui bon fiscal. Această capabilitate este implementată folosind modelul multimodal Google Gemini \cite{ref:gemini} (versiunea \texttt{gemini-2.5-flash-lite}), care primește imaginea bonului codificată în base64 și un prompt structurat în limba română. Spre deosebire de o recunoaștere optică clasică ce ar întoarce doar text brut, modelul este instruit să extragă întreaga structură a bonului — numele comerciantului, adresa, data și ora, lista completă de produse cu cantități și prețuri, subtotalul, TVA-ul, totalul și metoda de plată — și să răspundă strict în format JSON. Fluxul de scanare este ilustrat în Figura~\ref{fig:f12}.
+
+Răspunsul modelului este apoi curățat de eventuale delimitatoare de tip markdown și parsat în JSON. Pentru a garanta integritatea datelor introduse ulterior în baza de date, fiecare câmp trece printr-o funcție de normalizare (\texttt{normalizeReceiptData}) care validează tipul și forma valorilor: datele care nu trec validarea devin \texttt{null}, iar liniile de produs fără nume sau total valid sunt eliminate. Astfel, structura returnată către interfață este întotdeauna sigură și consistentă, iar bonul digital rezultat este suficient de compact pentru a fi stocat direct în tabela de tranzacții, fără a fi nevoie de găzduirea imaginii.
+
+\begin{lstlisting}[language=JavaScript,caption={Apelul modelului Gemini multimodal pentru scanarea bonului fiscal}]
+export async function scanReceiptWithGemini(imageBase64, mimeType) {
+  const c = getClient();
+  const model = c.getGenerativeModel({
+    model: 'gemini-2.5-flash-lite',
+    generationConfig: { responseMimeType: 'application/json' },
+  });
+  const result = await model.generateContent([
+    { text: PROMPT },
+    { inlineData: { mimeType, data: imageBase64 } },
+  ]);
+  const raw = result.response.text().trim();
+  const cleaned = raw // ... elimina ```json ... ```
+    .replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+  let parsed = {};
+  try { parsed = JSON.parse(cleaned); }
+  catch { return { amount: null, /* ... */ receiptData: null }; }
+  const data = normalizeReceiptData(parsed); // validare camp cu camp
+  return { amount: data.total, merchant: data.merchant,
+    date: data.date, raw, receiptData: data };
+}
+\end{lstlisting}
+
+\autofig{12}{Modul de funcționare al scanării bonului (OCR)}
+
+Pașii parcurși de la încărcarea fotografiei bonului până la completarea automată a câmpurilor tranzacției sunt prezentați în Figura~\ref{fig:f9}.
+
+\autofig{9}{Flux de scanare a bonului fiscal (OCR)}
+
+\subsection{Sugestia automată de categorie și asistentul AI}
+
+Pentru a reduce efortul de introducere a datelor, FARO sugerează automat o categorie atunci când utilizatorul completează descrierea unei tranzacții. Acest mecanism este implementat printr-un clasificator euristic, bazat pe reguli de potrivire a cuvintelor-cheie adaptate pieței românești. Descrierea este normalizată (litere mici, eliminarea diacriticelor și a caracterelor speciale), apoi comparată cu un set de reguli care asociază denumiri de comercianți și termeni (de exemplu \texttt{lidl}, \texttt{kaufland}, \texttt{omv}, \texttt{netflix}) cu o categorie implicită. Regula cu cel mai lung cuvânt-cheie potrivit câștigă, fiind considerată cea mai specifică, iar sistemul preferă categoriile proprii ale utilizatorului față de cele implicite, astfel încât redenumirile personalizate să fie respectate.
+
+\begin{lstlisting}[language=JavaScript,caption={Sugerarea categoriei prin potrivirea cuvintelor-cheie din descriere}]
+export function suggestCategory(description, type, userCategories) {
+  if (!description) return null;
+  const normalized = normalize(description); // litere mici, fara diacritice
+  // Alege regula cu cel mai lung cuvant-cheie potrivit (mai specific castiga)
+  let best = null;
+  for (const rule of RULES) {
+    if (type && rule.type !== type) continue;
+    for (const kw of rule.keywords) {
+      const needle = normalize(kw);
+      if (normalized.includes(needle)) {
+        if (!best || needle.length > best.keyword.length)
+          best = { rule, keyword: needle };
+      }
+    }
+  }
+  if (!best) return null;
+  // ... rezolva la o categorie reala (preferinta: a utilizatorului > implicita)
+  const confidence = Math.min(0.95, 0.4 + best.keyword.length / 40);
+  return { categoryId: picked.id, categoryName: picked.name,
+    confidence, matchedKeyword: best.keyword };
+}
+\end{lstlisting}
+
+Complementar, aplicația include un asistent financiar conversațional, de această dată construit peste modelul Gemini \cite{ref:gemini}. Asistentul generează rezumate săptămânale, sfaturi scurte personalizate și răspunde la întrebări libere despre finanțele utilizatorului. Pentru fiecare cerere, backend-ul agregă datele relevante (tranzacții pe categorii și pe luni din ultimele 30–60 de zile) și le furnizează modelului ca \emph{context}, alături de un \texttt{systemInstruction} care impune regulile de stil (răspuns concis, în română, fără cifre inventate). Răspunsurile sunt memorate temporar într-un cache cu durata de 24 de ore pentru a limita consumul de cote API. Modul de funcționare al asistentului este prezentat în Figura~\ref{fig:f17}.
+
+\begin{lstlisting}[language=JavaScript,caption={Raspunsul asistentului AI la o intrebare libera, cu datele utilizatorului drept context}]
+export async function askQuestion(userId, question) {
+  if (!question || question.trim().length < 3)
+    throw new Error('Intrebarea trebuie sa aiba cel putin 3 caractere.');
+  // ... ultimele 60 de zile de tranzactii = context suficient
+  const recent = await prisma.transaction.findMany({
+    where: { userId, date: { gte: monthAgo } },
+    include: { category: true }, orderBy: { date: 'desc' }, take: 500,
+  });
+  const summary = /* ... agregare pe luna si pe categorie */;
+  const model = getClient().getGenerativeModel({
+    model: 'gemini-2.5-flash-lite',
+    systemInstruction: systemPrompt, // raspuns scurt, fara cifre inventate
+    generationConfig: { maxOutputTokens: 250, temperature: 0.5 },
+  });
+  const result = await model.generateContent(
+    `${summary}\n\nIntrebarea utilizatorului: ${question.trim()}`);
+  return { answer: result.response.text().trim(),
+    generatedAt: new Date().toISOString() };
+}
+\end{lstlisting}
+
+\autofig{17}{Modul de funcționare al asistentului AI}
+
+\subsection{Detectorul de anomalii}
+
+Pentru a semnala cheltuielile neobișnuite, FARO implementează un detector de anomalii bazat pe scorul Z (standard score) \cite{ref:zscore}, o metodă statistică ce măsoară la câte abateri standard se află o valoare față de media unui set de date. Algoritmul parcurge toate tranzacțiile de tip cheltuială dintr-o fereastră de analiză de 90 de zile și le grupează pe categorii. Pentru fiecare categorie cu un număr suficient de tranzacții (minimum 5, pentru ca media să nu fie afectată de zgomot statistic), se calculează media și abaterea standard a sumelor.
+
+Ulterior, pentru fiecare tranzacție recentă (din ultimele 14 zile) se calculează scorul Z ca raport între diferența față de medie și abaterea standard. Tranzacțiile al căror scor depășește pragul de 2,0 abateri standard peste medie sunt marcate ca anomalii și raportate utilizatorului, ordonate descrescător după scor și limitate la primele 10 rezultate. Acest mecanism permite, de exemplu, evidențierea unei facturi neobișnuit de mari la o categorie în care cheltuielile sunt de regulă constante.
+
+\begin{lstlisting}[language=JavaScript,caption={Calculul scorului Z pe categorie pentru marcarea tranzactiilor anormale}]
+for (const [catId, list] of grouped) {
+  if (list.length < minSamples) continue; // prea putine date = medie zgomotoasa
+  const amounts = list.map((t) => Number(t.amount));
+  const mean = amounts.reduce((s, n) => s + n, 0) / amounts.length;
+  const variance =
+    amounts.reduce((s, n) => s + (n - mean) ** 2, 0) / amounts.length;
+  const std = Math.sqrt(variance);
+  if (std === 0) continue;
+  for (const t of list) {
+    if (t.date < alertStart) continue; // doar tranzactiile recente
+    const z = (Number(t.amount) - mean) / std;
+    if (z >= zThreshold) { // prag implicit: 2.0 abateri standard
+      anomalies.push({ id: t.id, amount: Number(t.amount),
+        zScore: Number(z.toFixed(2)), meanAmount: Number(mean.toFixed(2)),
+        sampleSize: list.length, /* ... */ });
+    }
+  }
+}
+anomalies.sort((a, b) => b.zScore - a.zScore);
+return anomalies.slice(0, 10);
+\end{lstlisting}
+
+\subsection{Validarea bugetelor și notificările}
+
+Sistemul de bugete permite utilizatorului să stabilească limite lunare, fie pe categorii individuale, fie un buget total pe lună. Înainte de salvarea unei tranzacții, metoda \texttt{checkBudget} verifică dacă noua cheltuială ar depăși limita stabilită. Aceasta interoghează bugetul pe categorie pentru luna și anul tranzacției (filtrând explicit după \texttt{isTotal: false} pentru a nu confunda bugetul total cu cel pe categorii), însumează cheltuielile existente din luna respectivă și verifică dacă totalul proiectat depășește limita. Suplimentar, este verificat și bugetul total lunar, iar dacă ambele sunt depășite, este afișat avertismentul cu depășirea cea mai mare. Pentru tranzacțiile recurente există metoda complementară \texttt{checkRecurringBudget}, care grupează instanțele pe luni pentru a calcula corect depășirea cumulată.
+
+Dincolo de avertismentul afișat înainte de confirmare, sistemul generează notificări persistente prin metoda \texttt{checkAndCreateBudgetNotifications}. După salvarea unei tranzacții, aceasta calculează procentul de utilizare a bugetului pe categoria respectivă și creează o notificare de tip \texttt{budget\_exceeded} la depășirea pragului de 100\%, respectiv \texttt{budget\_near\_limit} între 80\% și 100\%. Funcția respectă preferința utilizatorului de a primi sau nu astfel de notificări și este parțial idempotentă: notificarea de apropiere de limită nu se duplică dacă există deja una necitită. Modul de funcționare al notificărilor este prezentat în Figura~\ref{fig:f16}.
+
+\begin{lstlisting}[language=JavaScript,caption={Crearea notificarilor de buget in functie de procentul de utilizare}]
+const totalSpent = transactions.reduce((s, t) => s + Number(t.amount), 0);
+const percentage = limitAmount > 0 ? (totalSpent / limitAmount) * 100 : 0;
+// Buget depasit (>= 100%): notificare la fiecare tranzactie peste limita
+if (percentage >= 100) {
+  await prisma.notification.create({
+    data: { userId, type: 'budget_exceeded',
+      title: 'Limita buget depasita',
+      message: `Ai depasit limita ... ${totalSpent.toFixed(2)} RON / ...`,
+      relatedEntityId: budgetCategory.id },
+  });
+}
+// Aproape de limita (>= 80% si < 100%): doar daca nu exista deja una necitita
+else if (percentage >= 80) {
+  const existing = await prisma.notification.findFirst({
+    where: { userId, type: 'budget_near_limit',
+      relatedEntityId: budgetCategory.id, isRead: false },
+  });
+  if (!existing) {
+    await prisma.notification.create({ data: { /* ... budget_near_limit */ } });
+  }
+}
+\end{lstlisting}
+
+\autofig{16}{Modul de funcționare al notificărilor de buget}
+
+\section{Structura bazei de date}
+
+Persistența datelor în aplicația FARO este asigurată de un sistem de gestiune a bazelor de date relaționale PostgreSQL \cite{ref:postgres}, ales pentru maturitatea sa, pentru conformitatea ridicată cu standardul SQL și pentru suportul nativ al tipurilor de date avansate, precum coloanele de tip JSON binar (JSONB). Accesul la baza de date nu se realizează prin interogări SQL scrise manual, ci prin intermediul ORM-ului Prisma \cite{ref:prisma}, care expune o schemă declarativă (\texttt{schema.prisma}) ca sursă unică de adevăr pentru modelul de date. Din această schemă, Prisma generează automat un client tipat, ceea ce permite ca eventualele erori de acces la coloane sau de tipuri să fie semnalate încă din faza de compilare, înainte de execuție. Modelul fizic cuprinde șapte tabele: \texttt{User}, \texttt{PasswordResetToken}, \texttt{Category}, \texttt{Transaction}, \texttt{Budget}, \texttt{BudgetCategory} și \texttt{Notification}. Diagrama entitate-relație din Figura~\ref{fig:f7} prezintă legăturile dintre aceste entități, iar Figura~\ref{fig:f8} consolidează structurile tuturor tabelelor.
+
+\autofig{7}{Schema bazei de date (Entity-Relationship)}
+
+\autofig{8}{Structurile tuturor tabelelor (consolidat)}
+
+Integritatea referențială este garantată prin chei externe definite la nivelul relațiilor Prisma. Identificatorii primari sunt, în marea majoritate a cazurilor, șiruri de tip UUID generate automat (\texttt{@default(uuid())}), ceea ce evită expunerea unor identificatori secvențiali previzibili. Acolo unde ștergerea unei entități-părinte trebuie să atragă automat ștergerea entităților-copil, relația este declarată cu \texttt{onDelete: Cascade} (de exemplu, jetoanele de resetare a parolei și categoriile dintr-un buget). Un element particular al modelului îl constituie coloana \texttt{receiptData} din tabela \texttt{Transaction}, declarată de tip \texttt{Json} și materializată în PostgreSQL ca o coloană JSONB. Aceasta stochează reprezentarea structurată a unui bon fiscal scanat (produse pe linii, totaluri, TVA, metodă de plată), permițând afișarea unui bon digital fără a re-procesa fotografia originală; flexibilitatea formatului JSON este avantajoasă aici, întrucât structura unui bon variază de la un comerciant la altul, iar o modelare rigidă pe coloane fixe ar fi fost nepotrivită \cite{ref:dbconcepts}.
+
+\subsection{Tabela User}
+
+Tabela \texttt{User} reține conturile utilizatorilor și constituie entitatea centrală de la care pornesc toate celelalte relații. Cheia primară \texttt{id} este un UUID generat automat. Coloana \texttt{email} (\texttt{String}) este marcată ca unică, garantând la nivel de bază de date că nu pot exista două conturi cu aceeași adresă, iar \texttt{password} (\texttt{String}) păstrează parola sub formă de hash bcrypt \cite{ref:bcrypt}. Numele utilizatorului este împărțit în \texttt{firstName} și \texttt{lastName} (\texttt{String}), iar \texttt{currency} (\texttt{String}, implicit \texttt{,,RON''}) fixează moneda preferată. Câmpul opțional \texttt{avatarUrl} (\texttt{String?}) reține adresa imaginii de profil. Indicatorul \texttt{budgetNotifications} (\texttt{Boolean}, implicit \texttt{true}) controlează dacă pentru utilizator se generează notificările de depășire sau de apropiere de limita bugetului. Coloana \texttt{tokenVersion} (\texttt{Int}, implicit \texttt{0}) este incrementată ori de câte ori toate jetoanele de reîmprospătare emise pentru utilizator trebuie invalidate (de exemplu, după o resetare de parolă): jetonul de reîmprospătare poartă această valoare și este respins atunci când nu mai coincide. Coloanele temporale \texttt{createdAt} și \texttt{updatedAt} (\texttt{DateTime}) marchează momentul creării, respectiv al ultimei actualizări. Relațiile unu-la-mai-mulți leagă utilizatorul de categoriile, tranzacțiile, bugetele, notificările și jetoanele sale de resetare a parolei.
+
+\autofig{8.1}{Structura tabelei --- User}
+
+\subsection{Tabela Category}
+
+Tabela \texttt{Category} definește categoriile prin care sunt clasificate veniturile și cheltuielile. Pe lângă cheia primară \texttt{id} (UUID), aceasta conține numele categoriei \texttt{name} (\texttt{String}), precum și câmpurile opționale \texttt{icon} (\texttt{String?}) și \texttt{color} (\texttt{String?}), folosite pentru reprezentarea vizuală în interfață. Coloana \texttt{type} (\texttt{String}) distinge între categoriile de venit și cele de cheltuială (\texttt{,,income''} sau \texttt{,,expense''}). Particularitatea modelului constă în coloana \texttt{userId} (\texttt{String?}), care este opțională: o valoare \texttt{null} indică o categorie globală implicită, disponibilă tuturor utilizatorilor, în timp ce o valoare prezentă leagă categoria de un utilizator anume. Indicatorul \texttt{isDefault} (\texttt{Boolean}, implicit \texttt{false}) marchează categoriile predefinite ale sistemului, iar \texttt{createdAt} (\texttt{DateTime}) reține momentul creării. O categorie poate fi referită de mai multe tranzacții și de mai multe intrări de buget pe categorii.
+
+\autofig{8.2}{Structura tabelei --- Category}
+
+\subsection{Tabela Transaction}
+
+Tabela \texttt{Transaction} este cea mai bogată din punct de vedere structural și înregistrează fiecare operațiune financiară a utilizatorului. Cheia primară \texttt{id} este un UUID, \texttt{amount} (\texttt{Float}) reprezintă suma, iar \texttt{type} (\texttt{String}) precizează dacă este vorba de un venit sau de o cheltuială. Câmpul \texttt{description} (\texttt{String?}) este opțional, în timp ce \texttt{date} (\texttt{DateTime}) fixează data tranzacției. Cheile externe \texttt{categoryId} (\texttt{String}) și \texttt{userId} (\texttt{String}) leagă tranzacția de categoria și de utilizatorul corespunzător. Câmpul \texttt{receiptUrl} (\texttt{String?}) păstrează adresa fotografiei bonului, iar \texttt{receiptData} (\texttt{Json?}) stochează, în format JSONB, reprezentarea structurată a bonului scanat. Indicatorul \texttt{isRecurring} (\texttt{Boolean}, implicit \texttt{false}) marchează tranzacțiile recurente, care sunt completate de un grup de câmpuri dedicate: \texttt{recurringGroupId} (\texttt{String?}) este un identificator comun tuturor instanțelor dintr-o serie recurentă, \texttt{frequency} (\texttt{String?}) indică frecvența (\texttt{,,daily''}, \texttt{,,weekly''}, \texttt{,,monthly''} sau \texttt{,,yearly''}), \texttt{originalStartDate} (\texttt{DateTime?}) reține data de început a seriei, iar \texttt{sequenceNumber} (\texttt{Int?}) numerotează poziția instanței în cadrul seriei. Coloana \texttt{createdAt} (\texttt{DateTime}) marchează momentul înregistrării. Pentru performanță, tabela definește doi indecși compuși: \texttt{[userId, recurringGroupId]} și \texttt{[userId, date]}, care accelerează interogarea seriilor recurente și, respectiv, filtrarea tranzacțiilor unui utilizator pe intervale de timp.
+
+\autofig{8.3}{Structura tabelei --- Transaction}
+
+\subsection{Tabela Budget}
+
+Tabela \texttt{Budget} modelează bugetele lunare definite de utilizator. Pe lângă cheia primară \texttt{id} (UUID), aceasta conține perioada de aplicare prin coloanele \texttt{month} (\texttt{Int}) și \texttt{year} (\texttt{Int}), precum și suma maximă alocată \texttt{totalLimit} (\texttt{Float}). Indicatorul \texttt{isTotal} (\texttt{Boolean}, implicit \texttt{false}) distinge între un buget total lunar (valoarea \texttt{true}) și un buget defalcat pe categorii (valoarea \texttt{false}). Cheia externă \texttt{userId} (\texttt{String}) leagă bugetul de proprietar, iar \texttt{createdAt} (\texttt{DateTime}) reține momentul creării. O constrângere de unicitate compusă pe \texttt{[userId, month, year, isTotal]} împiedică un utilizator să dețină două bugete de același tip pentru aceeași lună. Un buget poate cuprinde mai multe intrări pe categorii, modelate de tabela \texttt{BudgetCategory}.
+
+\autofig{8.4}{Structura tabelei --- Budget}
+
+\subsection{Tabela BudgetCategory}
+
+Tabela \texttt{BudgetCategory} este tabela de legătură care descompune un buget lunar în limite individuale pe categorii, realizând relația mulți-la-mulți dintre bugete și categorii. Cheia primară \texttt{id} este un UUID, iar cheile externe \texttt{budgetId} (\texttt{String}) și \texttt{categoryId} (\texttt{String}) leagă intrarea de bugetul, respectiv de categoria corespunzătoare. Coloana \texttt{limitAmount} (\texttt{Float}) fixează plafonul alocat categoriei în cadrul bugetului, iar \texttt{createdAt} (\texttt{DateTime}) reține momentul creării. Relația cu tabela \texttt{Budget} este declarată cu \texttt{onDelete: Cascade}, astfel încât ștergerea unui buget atrage automat ștergerea tuturor limitelor sale pe categorii. O constrângere de unicitate pe \texttt{[budgetId, categoryId]} garantează că o categorie nu poate apărea de două ori în cadrul aceluiași buget.
+
+\autofig{8.5}{Structura tabelei --- BudgetCategory}
+
+\subsection{Tabela Notification}
+
+Tabela \texttt{Notification} stochează notificările afișate utilizatorului în centrul de alerte al aplicației. Cheia primară \texttt{id} este un UUID, iar cheia externă \texttt{userId} (\texttt{String}) leagă notificarea de destinatar. Coloana \texttt{type} (\texttt{String}) clasifică notificarea în una dintre categoriile \texttt{,,budget\_exceeded''}, \texttt{,,budget\_near\_limit''} sau \texttt{,,bill\_reminder''}. Câmpurile \texttt{title} (\texttt{String}) și \texttt{message} (\texttt{String}) conțin titlul și textul mesajului, iar indicatorul \texttt{isRead} (\texttt{Boolean}, implicit \texttt{false}) marchează dacă notificarea a fost citită. Câmpul opțional \texttt{relatedEntityId} (\texttt{String?}) reține identificatorul entității care a generat notificarea (de exemplu, bugetul depășit), permițând navigarea directă către aceasta din interfață. Coloana \texttt{createdAt} (\texttt{DateTime}) marchează momentul generării.
+
+\autofig{8.6}{Structura tabelei --- Notification}
+
+% =============================================================================
+% CAPITOLUL 5 — UTILIZAREA APLICAȚIEI
 % Capturile reale din aplicație sunt în figuri/screen-*.png (rezoluție retina,
 % cont demo cu date populate). Numerotare figuri: 5..13 (continuă după Gantt=4).
 % =============================================================================
@@ -652,16 +1056,10 @@ Acest capitol prezintă interfețele aplicației FARO și modul în care acestea
 
 Pentru utilizarea aplicației este nevoie doar de un browser web modern (Google Chrome, Mozilla Firefox, Safari sau Microsoft Edge) și de o conexiune la internet; nu este necesară nicio instalare locală. Întreaga interfață este organizată în jurul unei bare de navigare laterale permanente, prin care utilizatorul accesează cele șase module principale: Tabloul de bord, Tranzacții, Categorii, Bugete, Rapoarte și Setări.
 
-% Spațiu pentru o schemă opțională a fluxului de navigare (o poți desena tu
-% și înlocui placeholder-ul de mai jos cu \includegraphics).
-\renewcommand{\manualfignum}{5}
-\placeholderfig{5}{Harta de navigare a aplicației (schemă opțională)}
-
 \section{Autentificarea și crearea contului}
 
 Primul contact al utilizatorului cu aplicația are loc pe pagina de autentificare (Figura~\ref{fig:scr-login}). Aceasta este împărțită în două zone: în partea stângă un panou de prezentare cu un exemplu vizual al soldului, iar în partea dreaptă formularul propriu-zis de autentificare.
 
-\renewcommand{\manualfignum}{6}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-login.png}
@@ -682,7 +1080,6 @@ Dacă utilizatorul nu are încă un cont, accesează link-ul \emph{Creează unul
 
 După autentificare, utilizatorul ajunge pe Tabloul de bord (Figura~\ref{fig:scr-dashboard}), pagina care oferă o privire de ansamblu asupra stării financiare curente.
 
-\renewcommand{\manualfignum}{7}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-dashboard.png}
@@ -705,7 +1102,6 @@ Din bara de sus a aplicației, utilizatorul are acces permanent la căutarea glo
 
 Modulul Tranzacții (Figura~\ref{fig:scr-transactions}) este modulul central al aplicației și permite vizualizarea, filtrarea, adăugarea, editarea și ștergerea tranzacțiilor.
 
-\renewcommand{\manualfignum}{8}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-transactions.png}
@@ -717,7 +1113,6 @@ Modulul Tranzacții (Figura~\ref{fig:scr-transactions}) este modulul central al 
 
 Pentru a adăuga o tranzacție nouă, utilizatorul apasă butonul \emph{Tranzacție nouă}, care deschide formularul din Figura~\ref{fig:scr-add}.
 
-\renewcommand{\manualfignum}{9}
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.86\textwidth]{figuri/screen-add-modal.png}
@@ -731,7 +1126,6 @@ Formularul oferă două moduri de completare. În mod obișnuit, utilizatorul co
 
 Modulul Bugete (Figura~\ref{fig:scr-budgets}) permite planificarea cheltuielilor lunare, atât sub forma unui buget total pentru întreaga lună, cât și sub forma unor bugete individuale pe categorii.
 
-\renewcommand{\manualfignum}{10}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-budgets.png}
@@ -745,7 +1139,6 @@ Cardul principal afișează bugetul total al lunii curente, procentul utilizat, 
 
 Modulul Categorii (Figura~\ref{fig:scr-categories}) gestionează categoriile de venituri și de cheltuieli, grupate separat pe cele două tipuri.
 
-\renewcommand{\manualfignum}{11}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-categories.png}
@@ -759,7 +1152,6 @@ Aplicația pune la dispoziție un set de categorii predefinite (Mâncare, Transp
 
 Modulul Rapoarte (Figura~\ref{fig:scr-reports}) permite generarea unor rapoarte detaliate și exportarea lor.
 
-\renewcommand{\manualfignum}{12}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-reports.png}
@@ -773,7 +1165,6 @@ Generatorul, aflat în panoul din dreapta, funcționează în trei pași: aleger
 
 Asistentul AI (Figura~\ref{fig:scr-ai}) este accesibil în orice moment, ca un panou lateral, din butonul \emph{Asistent AI} aflat în bara de sus.
 
-\renewcommand{\manualfignum}{13}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-ai.png}
@@ -787,7 +1178,6 @@ Asistentul, alimentat de modelul Google Gemini, generează un rezumat al activit
 
 Modulul Setări (Figura~\ref{fig:scr-settings}) permite personalizarea aplicației și gestionarea contului.
 
-\renewcommand{\manualfignum}{14}
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-settings.png}
@@ -798,11 +1188,243 @@ Modulul Setări (Figura~\ref{fig:scr-settings}) permite personalizarea aplicați
 Setările sunt organizate pe file: \emph{Profil} (nume, prenume, email, monedă preferată, fus orar și fotografie de profil), \emph{Securitate} (schimbarea parolei și ștergerea contului), \emph{Preferințe} (mod întunecat, sunete, format de dată european), \emph{Notificări} (activarea sau dezactivarea alertelor de buget) și \emph{Date} (gestionarea datelor contului). Modificările sunt salvate prin apăsarea butonului \emph{Salvează modificările}.
 
 % =============================================================================
-% NOTĂ: Capitolele 5 (TESTAREA APLICAȚIEI) și 6 (CONCLUZII) vor fi adăugate
-% ulterior. Placeholder-ul \placeholderfig{5} de mai sus este pentru o schemă
-% opțională de navigare — înlocuiește-l cu o imagine sau șterge-l dacă nu o
-% folosești.
+% CAPITOLUL 6 — TESTAREA APLICAȚIEI
 % =============================================================================
+\chapter{TESTAREA APLICAȚIEI}
+
+Etapa de testare reprezintă o componentă esențială a procesului de dezvoltare a aplicației FARO, având rolul de a confirma că funcționalitățile implementate se comportă conform specificațiilor și că experiența oferită utilizatorului final este coerentă și lipsită de erori blocante. Planul de testare adoptat în cadrul acestui proiect combină două abordări complementare: pe de o parte, o testare manuală de utilizabilitate și funcționalitate, realizată prin parcurgerea efectivă a fluxurilor din interfață de către utilizatori reprezentativi, iar pe de altă parte, o testare automată a logicii de business din backend, materializată într-o suită de teste unitare și de integrare executate cu ajutorul framework-ului \emph{Vitest}. Combinarea celor două metode asigură atât validarea corectitudinii algoritmilor critici (calculul depășirilor de buget, detecția anomaliilor, generarea tranzacțiilor recurente, validarea datelor), cât și verificarea modului în care aceste rezultate sunt prezentate utilizatorului în interfața grafică. În continuare sunt prezentate obiectivele testării, funcțiile supuse verificării, mediul de testare, metodologia aplicată și raportul detaliat al cazurilor de test.
+
+\section{Obiectivele testării}
+
+Obiectivul principal al testării aplicației FARO este acela de a verifica dacă aplicația răspunde corect cerințelor funcționale stabilite în etapa de analiză și dacă interacțiunea cu interfața este intuitivă pentru utilizatorul final. Testarea de utilizabilitate urmărește validarea fluxurilor principale ale aplicației, de la autentificare și înregistrarea unei tranzacții, până la generarea unui raport sau interogarea asistentului inteligent. Prin parcurgerea acestor fluxuri se urmărește identificarea eventualelor erori de navigare, a inconsecvențelor de prezentare a informației, precum și a punctelor în care utilizatorul ar putea fi derutat de organizarea interfeței. Un obiectiv complementar îl constituie măsurarea timpului necesar finalizării sarcinilor uzuale, indicator relevant pentru aprecierea eficienței interfeței: o aplicație de gestiune financiară trebuie să permită înregistrarea rapidă a unei cheltuieli și consultarea facilă a stării bugetului, fără pași redundanți.
+
+Pe lângă testarea manuală de utilizabilitate, corectitudinea logicii de business este garantată printr-o suită de \textbf{82 de teste automate} executate cu framework-ul Vitest la nivelul backend-ului. Aceste teste validează componentele critice ale aplicației: calculul corect al cheltuielilor raportate la bugetele definite și generarea avertizărilor de depășire (\texttt{checkBudget} și \texttt{checkRecurringBudget}), generarea instanțelor pentru tranzacțiile recurente la frecvențe diferite (zilnică, săptămânală, lunară, anuală), validarea datelor introduse de utilizator (respingerea datelor din viitor, comparația la nivel de zi independentă de fusul orar) și verificarea integrității schemei de date pentru câmpurile recurenței. Spre deosebire de testarea manuală, care surprinde experiența reală de utilizare, testele automate oferă o plasă de siguranță reproductibilă, ce permite detectarea regresiilor la fiecare modificare a codului sursă \cite{ref:nodejs}.
+
+\section{Funcțiile testate}
+
+Funcționalitățile supuse procesului de testare au fost grupate logic pe module, acoperind întreaga arie funcțională a aplicației FARO:
+
+\begin{itemize}[leftmargin=2cm,itemsep=2pt]
+    \item \textbf{Autentificare} -- crearea unui cont local cu email și parolă, autentificarea prin furnizori externi OAuth 2.0 (Google și Facebook), precum și fluxul de resetare a parolei prin email \cite{ref:oauth2};
+    \item \textbf{Tranzacții} -- adăugarea manuală a unei tranzacții, adăugarea prin scanarea unui bon fiscal (OCR), editarea și ștergerea tranzacțiilor existente, configurarea tranzacțiilor recurente, filtrarea după categorie, perioadă și tip, precum și exportul listei de tranzacții;
+    \item \textbf{Bugete} -- crearea unui buget total lunar și a bugetelor defalcate pe categorii, precum și generarea avertizărilor în momentul depășirii pragurilor stabilite;
+    \item \textbf{Categorii} -- crearea, editarea și ștergerea categoriilor personalizate, alături de funcția de sugestie automată a categoriei prin inteligență artificială;
+    \item \textbf{Rapoarte} -- generarea rapoartelor pe intervale de timp și exportul acestora în formatele PDF și Excel;
+    \item \textbf{Asistent AI} -- interogarea conversațională a asistentului inteligent privind starea financiară și obținerea de recomandări personalizate;
+    \item \textbf{Dashboard} -- afișarea indicatorilor cheie (KPI), a graficelor de evoluție, funcționarea selectorului de perioadă și semnalarea anomaliilor de cheltuieli;
+    \item \textbf{Setări} -- gestionarea profilului utilizatorului, a opțiunilor de securitate (schimbarea parolei), a preferințelor aplicației și a notificărilor.
+\end{itemize}
+
+\section{Mediul de testare}
+
+\subsection{Utilizatorii vizați}
+
+Aplicația FARO se adresează unui public larg, format din persoane care doresc să își gestioneze bugetul personal într-un mod organizat și asistat de tehnologie. Profilul utilizatorului țintă îl constituie persoanele cu vârste cuprinse între 20 și 45 de ani, care dispun de venituri proprii (salariale sau din alte surse) și care manifestă interes pentru monitorizarea cheltuielilor lunare. Acest segment de utilizatori este, în general, familiarizat cu aplicațiile web moderne și cu interacțiunea prin browser, astfel încât testele de utilizabilitate au fost concepute pentru a reflecta așteptările unor utilizatori obișnuiți cu interfețe digitale, fără a presupune cunoștințe tehnice avansate. Întrucât aplicația nu definește roluri multiple, ci un singur tip de utilizator, scenariile de testare au vizat un profil unitar, ceea ce a simplificat structura cazurilor de test.
+
+\subsection{Cerințe hardware și software}
+
+Fiind o aplicație web, FARO nu necesită instalarea unui program dedicat pe dispozitivul utilizatorului, ci doar accesul printr-un browser modern și o conexiune la internet activă. Configurația minimă necesară pentru desfășurarea testelor este sintetizată în Tabelul~\ref{tab:config-testare}.
+
+\begin{table}[H]
+\centering
+\caption{Configurația necesară pentru realizarea testelor}
+\label{tab:config-testare}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Componentă} & \textbf{Cerință} \\
+\hline
+Browser web & Google Chrome, Mozilla Firefox, Safari sau Microsoft Edge (versiune actualizată) \\
+\hline
+Conexiune internet & Necesară permanent (aplicație de tip client-server) \\
+\hline
+Rezoluție minimă ecran & 1280 $\times$ 720 px \\
+\hline
+Sistem de operare & Independent (Windows, macOS, Linux) \\
+\hline
+Instalare locală & Nu este necesară \\
+\hline
+JavaScript & Activat în browser \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Metodologia de testare}
+
+Metodologia de testare adoptată se bazează pe parcurgerea sistematică a cazurilor de test definite pentru fiecare funcționalitate, urmată de consemnarea rezultatului obținut și, acolo unde este cazul, de clasificarea severității eventualelor erori întâlnite. Această abordare permite atât identificarea defectelor, cât și ierarhizarea lor în funcție de impactul asupra utilizării aplicației.
+
+\subsection{Impactul asupra funcționării}
+
+Erorile identificate în urma testării sunt clasificate în funcție de gravitatea efectului produs asupra funcționării aplicației și asupra posibilității utilizatorului de a-și finaliza sarcina. Au fost definite trei niveluri de impact:
+
+\begin{itemize}[leftmargin=2cm,itemsep=2pt]
+    \item \textbf{Ridicat} -- eroare critică, ce blochează complet finalizarea sarcinii (de exemplu, imposibilitatea autentificării sau a salvării unei tranzacții). Astfel de erori trebuie remediate prioritar, întrucât compromit utilizabilitatea aplicației;
+    \item \textbf{Moderat} -- eroare non-critică, care permite totuși finalizarea sarcinii prin pași alternativi sau cu unele neajunsuri (de exemplu, un mesaj de eroare neclar sau o reîncărcare necesară a paginii);
+    \item \textbf{Minor} -- eroare cosmetică sau de prezentare, fără impact asupra fluxului funcțional (de exemplu, o aliniere imperfectă a unui element sau o etichetă afișată inconsecvent).
+\end{itemize}
+
+\subsection{Raportul de testare}
+
+În urma parcurgerii scenariilor de testare manuală asupra interfeței aplicației FARO, completate de execuția suitei de teste automate la nivelul backend-ului, a rezultat raportul de testare prezentat în Tabelul~\ref{tab:raport-testare}. Fiecare caz de test este identificat printr-un număr ierarhic, însoțit de descrierea pasului efectuat și a rezultatului așteptat, precum și de rezultatul efectiv obținut. Toate cazurile de test au fost finalizate cu succes, nefiind identificate erori cu impact ridicat asupra funcționării.
+
+\begin{center}
+\begin{longtable}{|c|p{11cm}|c|}
+\caption{Raport de testare}\label{tab:raport-testare}\\
+\hline
+\textbf{Nr.} & \textbf{Descriere caz de test} & \textbf{Rezultat} \\
+\hline
+\endfirsthead
+\multicolumn{3}{r}{\textit{(continuare Tabelul~\ref{tab:raport-testare})}}\\
+\hline
+\textbf{Nr.} & \textbf{Descriere caz de test} & \textbf{Rezultat} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+1 & \textbf{Autentificare} & \\
+\hline
+1.1 & Autentificare cu email și parolă corecte: utilizatorul este redirecționat către dashboard & OK \\
+\hline
+1.2 & Autentificare cu parolă greșită: este afișat un mesaj de eroare, accesul este respins & OK \\
+\hline
+1.3 & Autentificare prin Google OAuth: contul este creat/asociat și sesiunea este inițiată & OK \\
+\hline
+1.4 & Autentificare prin Facebook OAuth: redirecționare corectă și autentificare reușită & OK \\
+\hline
+2 & \textbf{Înregistrare cont} & \\
+\hline
+2.1 & Crearea unui cont nou cu date valide: contul este creat și utilizatorul este logat & OK \\
+\hline
+2.2 & Înregistrare cu email deja existent: este afișat un mesaj de eroare corespunzător & OK \\
+\hline
+2.3 & Validarea parolei slabe la înregistrare: cererea este respinsă cu mesaj explicativ & OK \\
+\hline
+3 & \textbf{Resetare parolă} & \\
+\hline
+3.1 & Solicitarea resetării parolei: emailul cu link de resetare este trimis prin Resend & OK \\
+\hline
+3.2 & Setarea unei noi parole cu token valid: parola este actualizată cu succes & OK \\
+\hline
+3.3 & Folosirea unui token expirat sau invalid: operațiunea este respinsă & OK \\
+\hline
+4 & \textbf{Adăugare tranzacție manuală} & \\
+\hline
+4.1 & Adăugarea unei cheltuieli cu sumă, categorie și dată valide: tranzacția apare în listă & OK \\
+\hline
+4.2 & Adăugarea unei tranzacții cu dată din viitor: cererea este respinsă cu mesaj de validare & OK \\
+\hline
+4.3 & Adăugarea unei tranzacții recurente lunare: instanțele sunt generate corect & OK \\
+\hline
+5 & \textbf{Scanare bon fiscal (OCR)} & \\
+\hline
+5.1 & Încărcarea unei imagini cu bon: suma și data sunt extrase automat prin Gemini & OK \\
+\hline
+5.2 & Sugestia automată a categoriei pe baza conținutului bonului & OK \\
+\hline
+5.3 & Confirmarea și salvarea tranzacției extrase din bon & OK \\
+\hline
+6 & \textbf{Creare buget} & \\
+\hline
+6.1 & Crearea unui buget total lunar: valoarea este salvată și afișată pe dashboard & OK \\
+\hline
+6.2 & Crearea bugetelor defalcate pe categorii: limitele sunt asociate corect categoriilor & OK \\
+\hline
+7 & \textbf{Avertizare buget depășit} & \\
+\hline
+7.1 & Adăugarea unei cheltuieli care depășește bugetul: este generată o avertizare & OK \\
+\hline
+7.2 & Calculul corect al cheltuielilor lunare (doar tranzacții de tip cheltuială) & OK \\
+\hline
+8 & \textbf{Notificări} & \\
+\hline
+8.1 & Generarea notificării la depășirea bugetului și afișarea acesteia în interfață & OK \\
+\hline
+8.2 & Marcarea unei notificări ca citită & OK \\
+\hline
+9 & \textbf{Generare raport și export} & \\
+\hline
+9.1 & Generarea raportului pentru o perioadă selectată: datele sunt afișate corect & OK \\
+\hline
+9.2 & Exportul raportului în format PDF: fișierul este descărcat corect & OK \\
+\hline
+9.3 & Exportul raportului în format Excel: fișierul conține datele complete & OK \\
+\hline
+10 & \textbf{Asistent AI} & \\
+\hline
+10.1 & Interogarea asistentului despre cheltuielile lunii: răspuns coerent și relevant & OK \\
+\hline
+10.2 & Solicitarea de recomandări de economisire: sugestii personalizate generate & OK \\
+\hline
+11 & \textbf{Detecție anomalii} & \\
+\hline
+11.1 & Semnalarea unei cheltuieli atipice (scor Z ridicat) pe dashboard & OK \\
+\hline
+12 & \textbf{Editare și ștergere tranzacție} & \\
+\hline
+12.1 & Editarea unei tranzacții existente: modificările sunt salvate și reflectate & OK \\
+\hline
+12.2 & Ștergerea unei tranzacții: aceasta dispare din listă, totalurile se actualizează & OK \\
+\hline
+13 & \textbf{Categorii} & \\
+\hline
+13.1 & Crearea și editarea unei categorii personalizate & OK \\
+\hline
+13.2 & Ștergerea unei categorii fără tranzacții asociate & OK \\
+\hline
+14 & \textbf{Filtrare tranzacții} & \\
+\hline
+14.1 & Filtrarea după categorie și interval de date: lista afișează doar rezultatele relevante & OK \\
+\hline
+15 & \textbf{Setări -- schimbare parolă} & \\
+\hline
+15.1 & Schimbarea parolei cu parola curentă corectă: parola este actualizată & OK \\
+\hline
+15.2 & Schimbarea parolei cu parola curentă greșită: operațiunea este respinsă & OK \\
+\hline
+16 & \textbf{Dashboard} & \\
+\hline
+16.1 & Afișarea indicatorilor KPI și a graficelor la încărcarea paginii & OK \\
+\hline
+16.2 & Schimbarea perioadei din selector: datele și graficele se actualizează & OK \\
+\hline
+17 & \textbf{Deconectare} & \\
+\hline
+17.1 & Deconectarea utilizatorului: sesiunea este închisă, redirecționare către login & OK \\
+\hline
+\end{longtable}
+\end{center}
+
+% =============================================================================
+% CAPITOLUL 7 — CONCLUZII
+% =============================================================================
+\chapter{CONCLUZII}
+
+\section{Privire de ansamblu asupra aplicației}
+
+Lucrarea de față a urmărit proiectarea și implementarea aplicației FARO, o platformă web completă pentru gestiunea finanțelor personale, accesibilă din orice browser modern, fără instalare locală. Pornind de la observația că majoritatea utilizatorilor abandonează aplicațiile clasice de buget tocmai din cauza efortului manual repetitiv de introducere a fiecărei cheltuieli, FARO și-a propus să reducă această barieră prin automatizare inteligentă. Aplicația acoperă întregul ciclu de gestiune financiară personală: înregistrarea veniturilor și cheltuielilor, clasificarea pe categorii, planificarea bugetelor lunare totale sau pe categorii, vizualizarea tendințelor prin grafice, generarea de rapoarte exportabile și avertizarea automată la depășirea limitelor stabilite. Astfel, FARO răspunde unei nevoi concrete a utilizatorului obișnuit: înțelegerea propriului comportament financiar și luarea unor decizii informate, fără ca acest lucru să presupună o muncă de contabilitate manuală.
+
+Elementul de noutate al aplicației constă în integrarea inteligenței artificiale generative direct în fluxul de lucru, într-un mod care reduce efectiv efortul utilizatorului, nu doar adaugă funcționalități declarative. Modelul multimodal Google Gemini~\cite{ref:gemini} este folosit pentru recunoașterea optică a caracterelor (OCR) pe bonurile fiscale --- extragerea structurată a magazinului, datei, totalului și a liniilor de produse dintr-o simplă fotografie ---, pentru sugerarea automată a categoriei pe baza descrierii unei tranzacții, precum și pentru un asistent conversațional care răspunde la întrebări libere despre finanțele utilizatorului. La acestea se adaugă un detector de tranzacții anormale bazat pe scor Z~\cite{ref:zscore}, care semnalează cheltuielile neobișnuite față de media istorică a fiecărei categorii. Combinarea acestor trei mecanisme --- OCR, asistent inteligent și detecție de anomalii --- într-o singură aplicație web modernă, adaptată pieței românești (monedă, limbă și categorii locale), reprezintă diferențiatorul principal față de soluțiile concurente.
+
+Din punct de vedere tehnic, FARO a fost construită ca un monorepo, folosind un stack modern și omogen. Partea de front-end este o aplicație single-page realizată cu React~\cite{ref:react} și TypeScript~\cite{ref:typescript}, compilată cu Vite~\cite{ref:vite}, cu gestiunea stării de server prin TanStack Query~\cite{ref:tanstack} și a stării client-side prin Zustand~\cite{ref:zustand}. Partea de back-end este un API REST~\cite{ref:rest} construit cu Node.js~\cite{ref:nodejs} și Express~\cite{ref:express}, organizat pe module funcționale, care comunică cu o bază de date PostgreSQL~\cite{ref:postgres} prin ORM-ul Prisma~\cite{ref:prisma}. Securitatea este asigurată printr-un model dual-token JWT~\cite{ref:jwt}, hashing bcrypt~\cite{ref:bcrypt} al parolelor și autentificare OAuth 2.0~\cite{ref:oauth2} cu Google și Facebook, respectând recomandările OWASP~\cite{ref:owasp}. Aplicația nu a rămas la stadiul de prototip: ea este complet funcțională și desfășurată în producție pe platforma Railway~\cite{ref:railway}, unde rulează cele trei servicii (baza de date PostgreSQL, backend-ul Express și frontend-ul Vite), accesibile public printr-un domeniu securizat HTTPS. În concluzie, obiectivele propuse la începutul proiectului au fost atinse integral, rezultatul fiind o aplicație utilizabilă în condiții reale.
+
+\section{Direcții de dezvoltare}
+
+Deși aplicația FARO este completă și funcțională în forma actuală, există mai multe direcții realiste de dezvoltare care ar putea extinde valoarea oferită utilizatorului și ar putea consolida aplicația ca produs.
+
+\begin{itemize}[leftmargin=2cm,itemsep=4pt]
+  \item \textbf{Integrare bancară directă (PSD2).} O primă direcție naturală este conectarea aplicației la conturile bancare reale ale utilizatorului, prin agregatori conformi cu directiva europeană PSD2, precum Tink sau GoCardless. Aceasta ar permite importul automat al tranzacțiilor direct din extrasele bancare, eliminând și ultima formă de introducere manuală rămasă. Tranzacțiile importate ar putea fi apoi clasificate automat folosind același model Gemini~\cite{ref:gemini} deja integrat pentru sugerarea categoriei, ceea ce ar transforma FARO dintr-un instrument de înregistrare într-unul de monitorizare cvasi-automată a finanțelor.
+
+  \item \textbf{Conturi partajate pentru familie sau cuplu.} În prezent, aplicația deservește un singur utilizator izolat. O extensie valoroasă ar fi suportul pentru conturi partajate, în care mai mulți membri ai unei familii sau ai unui cuplu contribuie la același spațiu financiar. Acest lucru ar presupune evoluția modelului de date către o arhitectură multi-tenant, cu un concept de ,,gospodărie'' care grupează utilizatori, precum și mecanisme de control al accesului (cine poate vizualiza, edita sau aproba tranzacții), păstrând în același timp garanțiile de izolare a datelor între gospodării diferite.
+
+  \item \textbf{Aplicație mobilă nativă sau PWA.} Întrucât multe tranzacții, în special scanarea bonurilor, sunt efectuate ,,din mers'', imediat după o achiziție, o aplicație mobilă dedicată ar îmbunătăți considerabil experiența. Aceasta ar putea fi realizată fie ca aplicație nativă cross-platform în React Native --- reutilizând o bună parte din logica și componentele React~\cite{ref:react} existente ---, fie, mai economic, ca Progressive Web App (PWA), care ar oferi instalare pe ecranul principal, acces facil la camera dispozitivului și funcționalitate parțială offline, fără a necesita publicarea în magazinele de aplicații.
+
+  \item \textbf{Fallback OCR local pentru reziliență.} Funcționalitatea de scanare a bonurilor depinde în prezent integral de disponibilitatea serviciului Gemini~\cite{ref:gemini}. Pentru a crește reziliența aplicației, se poate adăuga un mecanism de rezervă bazat pe un motor OCR local, precum Tesseract, care să fie activat automat atunci când serviciul AI nu este disponibil (din cauza unei pene de rețea, a epuizării cotei gratuite sau a unei erori temporare). Chiar dacă extragerea locală ar fi mai puțin precisă, ea ar asigura continuitatea funcționalității și ar elimina dependența de un singur furnizor extern.
+
+  \item \textbf{Bugete inteligente și predicții de cheltuieli.} Pe baza istoricului de tranzacții deja stocat, aplicația ar putea trece de la bugete statice, definite manual, la bugete inteligente, sugerate automat din tiparele de cheltuieli ale utilizatorului. Extinzând logica statistică folosită deja de detectorul de anomalii~\cite{ref:zscore}, sistemul ar putea estima cheltuielile probabile pentru luna în curs, ar putea avertiza din timp asupra unei depășiri iminente și ar putea recomanda ajustări ale bugetelor pe categorii, oferind astfel o componentă predictivă, nu doar una reactivă.
+
+  \item \textbf{Suport multi-monedă și export contabil.} În forma actuală, fiecare utilizator își alege o monedă preferată, însă o evoluție utilă ar fi gestiunea simultană a mai multor monede, cu conversie automată pe baza unui curs de schimb actualizat periodic --- funcționalitate relevantă pentru persoanele care călătoresc sau au venituri în valută. În plus, generarea de rapoarte ar putea fi extinsă cu formate de export contabil standardizate (de exemplu CSV compatibil cu programele de contabilitate sau formatul QIF/OFX), care ar permite integrarea datelor din FARO în alte instrumente financiare folosite de utilizator.
+\end{itemize}
 
 % =============================================================================
 % BIBLIOGRAFIE
