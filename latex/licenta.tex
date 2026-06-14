@@ -283,22 +283,20 @@ Aplicația prezintă șase module funcționale principale, fiecare corespunzând
 
 \section{Structura pe capitole}
 
-Lucrarea este structurată în șapte capitole, conform următoarei organizări:
+Lucrarea este structurată în șase capitole, conform următoarei organizări:
 
 \begin{itemize}[leftmargin=2cm,itemsep=4pt]
   \item \textbf{CAPITOLUL 1. INTRODUCERE.} Acest capitol cuprinde o introducere în ceea ce înseamnă aplicațiile web pentru finanțe personale, motivația din spatele proiectului și câteva informații generale despre aplicația FARO.
 
   \item \textbf{CAPITOLUL 2. FUNDAMENTAREA TEORETICĂ.} Acest capitol cuprinde toate tehnologiile, limbajele de programare și serviciile externe necesare pentru crearea aplicației, oferind pentru fiecare o scurtă descriere și justificarea alegerii.
 
-  \item \textbf{CAPITOLUL 3. DESCRIEREA GENERALĂ A PROIECTULUI.} În acest capitol am prezentat o descriere sumară a aplicației, schema bloc, funcționalitățile pe care aceasta le oferă și planificarea lucrărilor prin ciclul de viață V și diagrama Gantt.
+  \item \textbf{CAPITOLUL 3. DESCRIEREA GENERALĂ A PROIECTULUI.} În acest capitol sunt prezentate o descriere sumară a aplicației, schema bloc, arhitectura pe module, structura bazei de date, funcționalitățile oferite și planificarea lucrărilor prin ciclul de viață V și diagrama Gantt.
 
-  \item \textbf{CAPITOLUL 4. PROIECTAREA ÎN DETALIU.} În acest capitol sunt prezentate diferite considerații privind implementarea, arhitectura programului (cele șase module funcționale), structura fișierelor și descrierea bazei de date. Totodată, sunt prezentate în mod detaliat funcționalitățile aplicației și modul lor de realizare, însoțite de fragmente de cod sursă relevante.
+  \item \textbf{CAPITOLUL 4. UTILIZAREA APLICAȚIEI.} În acest capitol sunt prezentate interfețele aplicației și modul în care acestea trebuie utilizate astfel încât utilizatorul să poată accesa cu ușurință toate funcționalitățile.
 
-  \item \textbf{CAPITOLUL 5. UTILIZAREA APLICAȚIEI.} În acest capitol sunt prezentate interfețele aplicației și modul în care acestea trebuie utilizate astfel încât utilizatorul să poată accesa cu ușurință toate funcționalitățile.
+  \item \textbf{CAPITOLUL 5. TESTAREA APLICAȚIEI.} Acest capitol face referire la următoarele aspecte: obiectivele testării, funcțiile care au fost testate, mediul de testare incluzând utilizatorii vizați și cerințele hardware, metodologia de testare prezentând impactul asupra funcționării, precum și raportul final de testare.
 
-  \item \textbf{CAPITOLUL 6. TESTAREA APLICAȚIEI.} Acest capitol face referire la următoarele aspecte: obiectivele testării, funcțiile care au fost testate, mediul de testare incluzând utilizatorii vizați și cerințele hardware, metodologia de testare prezentând impactul asupra funcționării, precum și raportul final de testare.
-
-  \item \textbf{CAPITOLUL 7. CONCLUZII.} Acest capitol este cel de încheiere, în care sunt prezentate ideile inovatoare ale aplicației, la ce servicii răspunde aceasta și care ar putea fi soluțiile viitoare de îmbunătățire și dezvoltare.
+  \item \textbf{CAPITOLUL 6. CONCLUZII.} Acest capitol este cel de încheiere, în care sunt prezentate ideile inovatoare ale aplicației, la ce nevoi răspunde aceasta și care ar putea fi soluțiile viitoare de îmbunătățire și dezvoltare.
 \end{itemize}
 
 % =============================================================================
@@ -643,11 +641,167 @@ Cele patru faze majore identificabile în calendar sunt:
 Această planificare a permis o dezvoltare incrementală: fiecare modul a fost complet funcțional la sfârșitul perioadei alocate, astfel încât la final aplicația a fost gata pentru deploy fără o fază lungă de integrare. Faza de polish, deși aparent mai scurtă, a inclus o serie de iterații vizuale și de optimizare a experienței utilizatorului care nu erau previzibile la începutul proiectului.
 
 % =============================================================================
-% NOTĂ: Capitolele 4-7 (PROIECTAREA ÎN DETALIU, UTILIZAREA APLICAȚIEI,
-% TESTAREA APLICAȚIEI, CONCLUZII) vor fi adăugate ulterior, după primirea
-% feedback-ului profesoarei asupra capitolelor 1-3. Toate placeholder-ele
-% pentru figurile 4, 5.1-5.6, 6, 7, 8, 8.1-8.6, 9, 10, 12, 13, 14-17, 18
-% rămân pregătite pentru momentul respectiv.
+% CAPITOLUL 4 — UTILIZAREA APLICAȚIEI
+% Capturile reale din aplicație sunt în figuri/screen-*.png (rezoluție retina,
+% cont demo cu date populate). Numerotare figuri: 5..13 (continuă după Gantt=4).
+% =============================================================================
+\chapter{UTILIZAREA APLICAȚIEI}
+\label{cap:utilizare}
+
+Acest capitol prezintă interfețele aplicației FARO și modul în care acestea trebuie utilizate, astfel încât utilizatorul să poată accesa cu ușurință toate funcționalitățile. Capturile de ecran provin din versiunea desfășurată a aplicației, folosind un cont demonstrativ cu date reale de test.
+
+Pentru utilizarea aplicației este nevoie doar de un browser web modern (Google Chrome, Mozilla Firefox, Safari sau Microsoft Edge) și de o conexiune la internet; nu este necesară nicio instalare locală. Întreaga interfață este organizată în jurul unei bare de navigare laterale permanente, prin care utilizatorul accesează cele șase module principale: Tabloul de bord, Tranzacții, Categorii, Bugete, Rapoarte și Setări.
+
+% Spațiu pentru o schemă opțională a fluxului de navigare (o poți desena tu
+% și înlocui placeholder-ul de mai jos cu \includegraphics).
+\renewcommand{\manualfignum}{5}
+\placeholderfig{5}{Harta de navigare a aplicației (schemă opțională)}
+
+\section{Autentificarea și crearea contului}
+
+Primul contact al utilizatorului cu aplicația are loc pe pagina de autentificare (Figura~\ref{fig:scr-login}). Aceasta este împărțită în două zone: în partea stângă un panou de prezentare cu un exemplu vizual al soldului, iar în partea dreaptă formularul propriu-zis de autentificare.
+
+\renewcommand{\manualfignum}{6}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-login.png}
+  \caption{Pagina de autentificare}
+  \label{fig:scr-login}
+\end{figure}
+
+Utilizatorul se poate autentifica în trei moduri:
+\begin{itemize}[leftmargin=2cm,itemsep=2pt]
+  \item prin introducerea adresei de email și a parolei contului propriu;
+  \item prin contul Google, apăsând butonul \emph{Google} (autentificare OAuth 2.0);
+  \item prin contul Facebook, apăsând butonul \emph{Facebook} (autentificare OAuth 2.0).
+\end{itemize}
+
+Dacă utilizatorul nu are încă un cont, accesează link-ul \emph{Creează unul gratuit} care deschide pagina de înregistrare, unde completează numele, prenumele, adresa de email, parola și moneda preferată. În cazul în care utilizatorul își uită parola, link-ul \emph{Am uitat parola?} declanșează trimiterea unui email cu un link securizat de resetare, valabil o oră.
+
+\section{Tabloul de bord (Dashboard)}
+
+După autentificare, utilizatorul ajunge pe Tabloul de bord (Figura~\ref{fig:scr-dashboard}), pagina care oferă o privire de ansamblu asupra stării financiare curente.
+
+\renewcommand{\manualfignum}{7}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-dashboard.png}
+  \caption{Tabloul de bord cu KPI-uri, grafice și bugete}
+  \label{fig:scr-dashboard}
+\end{figure}
+
+Elementele principale ale Tabloului de bord sunt:
+\begin{itemize}[leftmargin=2cm,itemsep=2pt]
+  \item trei carduri cu indicatori cheie (KPI) --- soldul curent, veniturile și cheltuielile pentru perioada selectată --- fiecare însoțit de un mini-grafic de tendință;
+  \item selectorul de perioadă din colțul dreapta-sus (\emph{7z / 30z / 90z / An}), care recalculează toți indicatorii și graficele;
+  \item graficul de evoluție a veniturilor și cheltuielilor pe ultimele douăsprezece luni;
+  \item graficul de tip inel (donut) cu distribuția cheltuielilor pe categorii;
+  \item lista ultimelor tranzacții și progresul bugetelor active pentru luna curentă.
+\end{itemize}
+
+Din bara de sus a aplicației, utilizatorul are acces permanent la căutarea globală (deschisă și cu combinația de taste Ctrl+K), la asistentul AI, la clopoțelul de notificări și la butonul de adăugare rapidă a unei tranzacții.
+
+\section{Gestiunea tranzacțiilor}
+
+Modulul Tranzacții (Figura~\ref{fig:scr-transactions}) este modulul central al aplicației și permite vizualizarea, filtrarea, adăugarea, editarea și ștergerea tranzacțiilor.
+
+\renewcommand{\manualfignum}{8}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-transactions.png}
+  \caption{Lista de tranzacții cu filtre și indicatori de perioadă}
+  \label{fig:scr-transactions}
+\end{figure}
+
+În partea de sus a paginii sunt afișate patru carduri rezumat (total perioadă, venituri, cheltuieli și numărul de tranzacții recurente). Sub acestea, utilizatorul poate filtra lista pe segmente (\emph{Toate / Venituri / Cheltuieli / Recurente}), poate căuta după descriere sau sumă, poate restrânge intervalul de date și poate aplica filtre suplimentare pe categorii și interval de sumă.
+
+Pentru a adăuga o tranzacție nouă, utilizatorul apasă butonul \emph{Tranzacție nouă}, care deschide formularul din Figura~\ref{fig:scr-add}.
+
+\renewcommand{\manualfignum}{9}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.86\textwidth]{figuri/screen-add-modal.png}
+  \caption{Formularul de adăugare a unei tranzacții, cu opțiunea de scanare a bonului}
+  \label{fig:scr-add}
+\end{figure}
+
+Formularul oferă două moduri de completare. În mod obișnuit, utilizatorul completează manual descrierea, suma, data, tipul (cheltuială sau venit) și categoria. Alternativ, prin apăsarea butonului \emph{Scanează bon}, utilizatorul încarcă fotografia unui bon fiscal, iar aplicația extrage automat magazinul, suma totală și data folosind modelul de inteligență artificială Google Gemini, completând câmpurile formularului. Tot din acest formular se pot defini tranzacțiile recurente, prin activarea opțiunii corespunzătoare și alegerea frecvenței și a numărului de repetări.
+
+\section{Bugetele}
+
+Modulul Bugete (Figura~\ref{fig:scr-budgets}) permite planificarea cheltuielilor lunare, atât sub forma unui buget total pentru întreaga lună, cât și sub forma unor bugete individuale pe categorii.
+
+\renewcommand{\manualfignum}{10}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-budgets.png}
+  \caption{Modulul de bugete cu cardul total și bugetele pe categorii}
+  \label{fig:scr-budgets}
+\end{figure}
+
+Cardul principal afișează bugetul total al lunii curente, procentul utilizat, suma rămasă și numărul de zile rămase din lună. Sub acesta, fiecare buget activ este reprezentat printr-un card cu o bară de progres colorată în funcție de gradul de utilizare (verde în limite sănătoase, portocaliu aproape de limită, roșu la depășire). La depășirea unui buget, utilizatorul este atenționat atât vizual, cât și printr-o notificare în aplicație. Navigarea între luni se face din selectorul aflat în colțul dreapta-sus.
+
+\section{Categoriile}
+
+Modulul Categorii (Figura~\ref{fig:scr-categories}) gestionează categoriile de venituri și de cheltuieli, grupate separat pe cele două tipuri.
+
+\renewcommand{\manualfignum}{11}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-categories.png}
+  \caption{Modulul de categorii (venituri și cheltuieli)}
+  \label{fig:scr-categories}
+\end{figure}
+
+Aplicația pune la dispoziție un set de categorii predefinite (Mâncare, Transport, Facturi, Divertisment, Sănătate, Haine, Salariu, Bonus etc.), marcate cu eticheta \emph{Predefinită}. Pe lângă acestea, utilizatorul își poate crea categorii proprii, apăsând cardul \emph{Adaugă categorie} și alegând un nume, o pictogramă și o culoare. Categoriile predefinite nu pot fi șterse sau modificate; cele create de utilizator pot fi editate sau șterse, cu condiția să nu fie folosite de tranzacții sau bugete existente.
+
+\section{Rapoartele}
+
+Modulul Rapoarte (Figura~\ref{fig:scr-reports}) permite generarea unor rapoarte detaliate și exportarea lor.
+
+\renewcommand{\manualfignum}{12}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-reports.png}
+  \caption{Generatorul de rapoarte cu previzualizare live}
+  \label{fig:scr-reports}
+\end{figure}
+
+Generatorul, aflat în panoul din dreapta, funcționează în trei pași: alegerea tipului de raport (venituri, cheltuieli sau complet), alegerea perioadei (luna curentă, ultimele 30 de zile, trimestru, an sau o perioadă personalizată) și selectarea categoriilor incluse. În partea stângă, raportul este previzualizat în timp real, cu indicatori cheie, un tabel detaliat pe categorii și o diagramă de distribuție. Raportul final poate fi exportat în format PDF sau Excel.
+
+\section{Asistentul AI}
+
+Asistentul AI (Figura~\ref{fig:scr-ai}) este accesibil în orice moment, ca un panou lateral, din butonul \emph{Asistent AI} aflat în bara de sus.
+
+\renewcommand{\manualfignum}{13}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-ai.png}
+  \caption{Asistentul AI cu insight-uri și recomandări personalizate}
+  \label{fig:scr-ai}
+\end{figure}
+
+Asistentul, alimentat de modelul Google Gemini, generează un rezumat al activității financiare (săptămânal, lunar sau anual) și un set de recomandări personalizate, calculate pe baza tranzacțiilor reale ale utilizatorului. În plus, utilizatorul poate adresa întrebări libere în limbaj natural (de exemplu, ,,Câți bani am cheltuit pe abonamente luna asta?''), iar asistentul răspunde folosind contextul propriilor date financiare.
+
+\section{Setările}
+
+Modulul Setări (Figura~\ref{fig:scr-settings}) permite personalizarea aplicației și gestionarea contului.
+
+\renewcommand{\manualfignum}{14}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-settings.png}
+  \caption{Pagina de setări --- secțiunea Profil}
+  \label{fig:scr-settings}
+\end{figure}
+
+Setările sunt organizate pe file: \emph{Profil} (nume, prenume, email, monedă preferată, fus orar și fotografie de profil), \emph{Securitate} (schimbarea parolei și ștergerea contului), \emph{Preferințe} (mod întunecat, sunete, format de dată european), \emph{Notificări} (activarea sau dezactivarea alertelor de buget) și \emph{Date} (gestionarea datelor contului). Modificările sunt salvate prin apăsarea butonului \emph{Salvează modificările}.
+
+% =============================================================================
+% NOTĂ: Capitolele 5 (TESTAREA APLICAȚIEI) și 6 (CONCLUZII) vor fi adăugate
+% ulterior. Placeholder-ul \placeholderfig{5} de mai sus este pentru o schemă
+% opțională de navigare — înlocuiește-l cu o imagine sau șterge-l dacă nu o
+% folosești.
 % =============================================================================
 
 % =============================================================================
