@@ -1192,13 +1192,13 @@ Setările sunt organizate pe file: \emph{Profil} (nume, prenume, email, monedă 
 % =============================================================================
 \chapter{TESTAREA APLICAȚIEI}
 
-Etapa de testare reprezintă o componentă esențială a procesului de dezvoltare a aplicației FARO, având rolul de a confirma că funcționalitățile implementate se comportă conform specificațiilor și că experiența oferită utilizatorului final este coerentă și lipsită de erori blocante. Planul de testare adoptat în cadrul acestui proiect combină două abordări complementare: pe de o parte, o testare manuală de utilizabilitate și funcționalitate, realizată prin parcurgerea efectivă a fluxurilor din interfață de către utilizatori reprezentativi, iar pe de altă parte, o testare automată a logicii de business din backend, materializată într-o suită de teste unitare și de integrare executate cu ajutorul framework-ului \emph{Vitest}. Combinarea celor două metode asigură atât validarea corectitudinii algoritmilor critici (calculul depășirilor de buget, detecția anomaliilor, generarea tranzacțiilor recurente, validarea datelor), cât și verificarea modului în care aceste rezultate sunt prezentate utilizatorului în interfața grafică. În continuare sunt prezentate obiectivele testării, funcțiile supuse verificării, mediul de testare, metodologia aplicată și raportul detaliat al cazurilor de test.
+Etapa de testare reprezintă o componentă esențială a procesului de dezvoltare software, având rolul de a confirma că funcționalitățile implementate se comportă conform specificațiilor și că experiența oferită utilizatorului final este coerentă și lipsită de erori blocante \cite{ref:testing}. Planul de testare adoptat în cadrul acestui proiect combină două abordări complementare: pe de o parte, o testare manuală de utilizabilitate și funcționalitate, realizată prin parcurgerea efectivă a fluxurilor din interfață de către utilizatori reprezentativi, iar pe de altă parte, o testare automată a logicii de business din backend, materializată într-o suită de teste unitare și de integrare executate cu ajutorul framework-ului \emph{Vitest}~\cite{ref:vitest}. Combinarea celor două metode asigură atât validarea corectitudinii algoritmilor critici (calculul depășirilor de buget, detecția anomaliilor, generarea tranzacțiilor recurente, validarea datelor), cât și verificarea modului în care aceste rezultate sunt prezentate utilizatorului în interfața grafică. În continuare sunt prezentate obiectivele testării, funcțiile supuse verificării, mediul de testare, metodologia aplicată și raportul detaliat al cazurilor de test.
 
 \section{Obiectivele testării}
 
 Obiectivul principal al testării aplicației FARO este acela de a verifica dacă aplicația răspunde corect cerințelor funcționale stabilite în etapa de analiză și dacă interacțiunea cu interfața este intuitivă pentru utilizatorul final. Testarea de utilizabilitate urmărește validarea fluxurilor principale ale aplicației, de la autentificare și înregistrarea unei tranzacții, până la generarea unui raport sau interogarea asistentului inteligent. Prin parcurgerea acestor fluxuri se urmărește identificarea eventualelor erori de navigare, a inconsecvențelor de prezentare a informației, precum și a punctelor în care utilizatorul ar putea fi derutat de organizarea interfeței. Un obiectiv complementar îl constituie măsurarea timpului necesar finalizării sarcinilor uzuale, indicator relevant pentru aprecierea eficienței interfeței: o aplicație de gestiune financiară trebuie să permită înregistrarea rapidă a unei cheltuieli și consultarea facilă a stării bugetului, fără pași redundanți.
 
-Pe lângă testarea manuală de utilizabilitate, corectitudinea logicii de business este garantată printr-o suită de \textbf{82 de teste automate} executate cu framework-ul Vitest la nivelul backend-ului. Aceste teste validează componentele critice ale aplicației: calculul corect al cheltuielilor raportate la bugetele definite și generarea avertizărilor de depășire (\texttt{checkBudget} și \texttt{checkRecurringBudget}), generarea instanțelor pentru tranzacțiile recurente la frecvențe diferite (zilnică, săptămânală, lunară, anuală), validarea datelor introduse de utilizator (respingerea datelor din viitor, comparația la nivel de zi independentă de fusul orar) și verificarea integrității schemei de date pentru câmpurile recurenței. Spre deosebire de testarea manuală, care surprinde experiența reală de utilizare, testele automate oferă o plasă de siguranță reproductibilă, ce permite detectarea regresiilor la fiecare modificare a codului sursă \cite{ref:nodejs}.
+Pe lângă testarea manuală de utilizabilitate, corectitudinea logicii de business este garantată printr-o suită de \textbf{82 de teste automate} executate cu framework-ul Vitest~\cite{ref:vitest} la nivelul backend-ului. Aceste teste validează componentele critice ale aplicației: calculul corect al cheltuielilor raportate la bugetele definite și generarea avertizărilor de depășire (\texttt{checkBudget} și \texttt{checkRecurringBudget}), generarea instanțelor pentru tranzacțiile recurente la frecvențe diferite (zilnică, săptămânală, lunară, anuală), validarea datelor introduse de utilizator (respingerea datelor din viitor, comparația la nivel de zi independentă de fusul orar) și verificarea integrității schemei de date pentru câmpurile recurenței. Spre deosebire de testarea manuală, care surprinde experiența reală de utilizare, testele automate oferă o plasă de siguranță reproductibilă, ce permite detectarea regresiilor la fiecare modificare a codului sursă \cite{ref:testing}.
 
 \section{Funcțiile testate}
 
@@ -1254,7 +1254,7 @@ Metodologia de testare adoptată se bazează pe parcurgerea sistematică a cazur
 
 \subsection{Impactul asupra funcționării}
 
-Erorile identificate în urma testării sunt clasificate în funcție de gravitatea efectului produs asupra funcționării aplicației și asupra posibilității utilizatorului de a-și finaliza sarcina. Au fost definite trei niveluri de impact:
+Erorile identificate în urma testării sunt clasificate în funcție de gravitatea efectului produs asupra funcționării aplicației și asupra posibilității utilizatorului de a-și finaliza sarcina \cite{ref:testing}. Au fost definite trei niveluri de impact:
 
 \begin{itemize}[leftmargin=2cm,itemsep=2pt]
     \item \textbf{Ridicat} -- eroare critică, ce blochează complet finalizarea sarcinii (de exemplu, imposibilitatea autentificării sau a salvării unei tranzacții). Astfel de erori trebuie remediate prioritar, întrucât compromit utilizabilitatea aplicației;
@@ -1461,6 +1461,9 @@ Prisma Data Inc., \emph{Prisma -- Next-generation Node.js and TypeScript ORM}, 2
 \bibitem{ref:postgres}
 The PostgreSQL Global Development Group, \emph{PostgreSQL 18 Documentation}, 2026. \url{https://www.postgresql.org/docs/18/}
 
+\bibitem{ref:dbconcepts}
+A. Silberschatz, H. F. Korth, S. Sudarshan, \emph{Database System Concepts}, ediția a 7-a, McGraw-Hill, 2019.
+
 \bibitem{ref:rest}
 Roy T. Fielding, \emph{Architectural Styles and the Design of Network-based Software Architectures}, PhD Thesis, University of California, Irvine, 2000.
 
@@ -1502,6 +1505,12 @@ Pmndrs, \emph{Zustand -- A small, fast and scalable bearbones state-management s
 
 \bibitem{ref:zscore}
 Howell, D.~C., \emph{Statistical Methods for Psychology}, 8th ed., Cengage Learning, 2013, capitolul 4 (Sampling Distributions and Z-scores).
+
+\bibitem{ref:testing}
+G. J. Myers, C. Sandler, T. Badgett, \emph{The Art of Software Testing}, ediția a 3-a, John Wiley \& Sons, 2011.
+
+\bibitem{ref:vitest}
+Vitest Team, \emph{Vitest -- A Vite-native testing framework}, 2026. \url{https://vitest.dev/}
 
 \bibitem{ref:reactrouter}
 Remix Software, \emph{React Router Documentation}, v6, 2026. \url{https://reactrouter.com/en/main}
