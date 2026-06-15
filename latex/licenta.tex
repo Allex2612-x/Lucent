@@ -181,7 +181,7 @@
 % institutie centrata pe 3 linii, "LUCRARE DE DIPLOMĂ" mare, titlu proiect
 % italic, Absolvent dreapta, Coordonator stanga, oras+anul+sesiunea jos.
 %
-% NOTA: cele 2 sigle sunt in figuri/logo-upt.png si figuri/logo-ac.png.
+% NOTA: cele 2 sigle sunt in figuri/logo_upt.jpg si figuri/logo-ac.png.
 % Daca lipsesc, blocul \IfFileExists genereaza placeholder vizibil.
 \begin{titlepage}
   \pagestyle{empty}
@@ -192,8 +192,8 @@
   % separate care le-ar impinge la marginile paginii.
   \vspace*{0.3cm}
   {\centering
-    \IfFileExists{figuri/logo-upt.png}{%
-      \raisebox{-0.5\height}{\includegraphics[height=1.6cm]{figuri/logo-upt.png}}%
+    \IfFileExists{figuri/logo_upt.jpg}{%
+      \raisebox{-0.5\height}{\includegraphics[height=1.5cm]{figuri/logo_upt.jpg}}%
     }{%
       \raisebox{-0.5\height}{\fbox{\parbox{3cm}{\centering\vspace{0.4cm}\textit{\color{gray}[ logo UPT ]}\vspace{0.4cm}}}}%
     }%
