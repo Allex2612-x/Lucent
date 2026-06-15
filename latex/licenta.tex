@@ -157,7 +157,10 @@
   \begin{figure}[H]
     \centering
     \IfFileExists{figuri/fig-#2.png}{%
-      \includegraphics[width=#1\textwidth]{figuri/fig-#2.png}%
+      % width limitează lățimea, height limitează înălțimea, keepaspectratio
+      % păstrează proporțiile — orice figură (lată sau foarte înaltă, ca
+      % diagramele de secvență) încape pe pagină fără să dea pe-afară.
+      \includegraphics[width=#1\textwidth,height=0.82\textheight,keepaspectratio]{figuri/fig-#2.png}%
     }{%
       \fbox{\parbox{0.85\textwidth}{%
         \centering\vspace{1.4cm}%
