@@ -24,8 +24,19 @@
 \usepackage{setspace}            % \onehalfspacing (1.5 line spacing)
 \usepackage{indentfirst}         % indent si primul paragraf dupa heading
 \usepackage{graphicx}            % \includegraphics
-\usepackage{float}               % poziționare figuri cu [H]
+\usepackage{float}               % poziționare figuri
 \usepackage{caption}             % captiuni custom
+
+% Parametri de plasare a figurilor (floats): permit mai multe figuri pe
+% pagină și o fracțiune mai mare de pagină ocupată de ele, ca să nu mai
+% rămână spații goale mari când o figură nu încape exact pe loc.
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.88}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
 \usepackage{subcaption}
 \usepackage{titlesec}            % stil capitole / sectiuni
 \usepackage{titletoc}            % stil TOC
@@ -137,7 +148,7 @@
 % Primul argument = slug pentru \label (fig:f<slug>); al doilea = legenda.
 % Numărul figurii este atribuit automat de \caption.
 \newcommand{\placeholderfig}[2]{%
-  \begin{figure}[H]
+  \begin{figure}[htbp]
     \centering
     \fbox{\parbox{0.85\textwidth}{%
       \centering\vspace{1.4cm}%
@@ -154,7 +165,7 @@
 % simplu copiind fișierele fig-N.png în folderul figuri/, FĂRĂ a edita LaTeX.
 % N corespunde numerotării tale (1, 1.1, 4, 5.1, 8.3, 18 etc.).
 \newcommand{\autofig}[3][0.9]{%
-  \begin{figure}[H]
+  \begin{figure}[htbp]
     \centering
     \IfFileExists{figuri/fig-#2.png}{%
       % width limitează lățimea, height limitează înălțimea, keepaspectratio
@@ -1063,7 +1074,7 @@ Pentru utilizarea aplicației este nevoie doar de un browser web modern (Google 
 
 Primul contact al utilizatorului cu aplicația are loc pe pagina de autentificare (Figura~\ref{fig:scr-login}). Aceasta este împărțită în două zone: în partea stângă un panou de prezentare cu un exemplu vizual al soldului, iar în partea dreaptă formularul propriu-zis de autentificare.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-login.png}
   \caption{Pagina de autentificare}
@@ -1083,7 +1094,7 @@ Dacă utilizatorul nu are încă un cont, accesează link-ul \emph{Creează unul
 
 După autentificare, utilizatorul ajunge pe Tabloul de bord (Figura~\ref{fig:scr-dashboard}), pagina care oferă o privire de ansamblu asupra stării financiare curente.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-dashboard.png}
   \caption{Tabloul de bord cu KPI-uri, grafice și bugete}
@@ -1105,7 +1116,7 @@ Din bara de sus a aplicației, utilizatorul are acces permanent la căutarea glo
 
 Modulul Tranzacții (Figura~\ref{fig:scr-transactions}) este modulul central al aplicației și permite vizualizarea, filtrarea, adăugarea, editarea și ștergerea tranzacțiilor.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-transactions.png}
   \caption{Lista de tranzacții cu filtre și indicatori de perioadă}
@@ -1116,7 +1127,7 @@ Modulul Tranzacții (Figura~\ref{fig:scr-transactions}) este modulul central al 
 
 Pentru a adăuga o tranzacție nouă, utilizatorul apasă butonul \emph{Tranzacție nouă}, care deschide formularul din Figura~\ref{fig:scr-add}.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=0.86\textwidth]{figuri/screen-add-modal.png}
   \caption{Formularul de adăugare a unei tranzacții, cu opțiunea de scanare a bonului}
@@ -1129,7 +1140,7 @@ Formularul oferă două moduri de completare. În mod obișnuit, utilizatorul co
 
 Modulul Bugete (Figura~\ref{fig:scr-budgets}) permite planificarea cheltuielilor lunare, atât sub forma unui buget total pentru întreaga lună, cât și sub forma unor bugete individuale pe categorii.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-budgets.png}
   \caption{Modulul de bugete cu cardul total și bugetele pe categorii}
@@ -1142,7 +1153,7 @@ Cardul principal afișează bugetul total al lunii curente, procentul utilizat, 
 
 Modulul Categorii (Figura~\ref{fig:scr-categories}) gestionează categoriile de venituri și de cheltuieli, grupate separat pe cele două tipuri.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-categories.png}
   \caption{Modulul de categorii (venituri și cheltuieli)}
@@ -1155,7 +1166,7 @@ Aplicația pune la dispoziție un set de categorii predefinite (Mâncare, Transp
 
 Modulul Rapoarte (Figura~\ref{fig:scr-reports}) permite generarea unor rapoarte detaliate și exportarea lor.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-reports.png}
   \caption{Generatorul de rapoarte cu previzualizare live}
@@ -1168,7 +1179,7 @@ Generatorul, aflat în panoul din dreapta, funcționează în trei pași: aleger
 
 Asistentul AI (Figura~\ref{fig:scr-ai}) este accesibil în orice moment, ca un panou lateral, din butonul \emph{Asistent AI} aflat în bara de sus.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-ai.png}
   \caption{Asistentul AI cu insight-uri și recomandări personalizate}
@@ -1181,7 +1192,7 @@ Asistentul, alimentat de modelul Google Gemini, generează un rezumat al activit
 
 Modulul Setări (Figura~\ref{fig:scr-settings}) permite personalizarea aplicației și gestionarea contului.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-settings.png}
   \caption{Pagina de setări --- secțiunea Profil}
