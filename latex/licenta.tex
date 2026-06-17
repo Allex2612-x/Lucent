@@ -37,6 +37,14 @@
 \setcounter{topnumber}{3}
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{5}
+% Pe paginile ocupate exclusiv de figuri, alinierea implicită le CENTREAZĂ și
+% lasă benzi goale deasupra/dedesubt (mai ales la diagramele înalte) și goluri
+% întinse între două figuri. Forțăm alinierea SUS, cu distanță fixă între ele,
+% astfel încât tot spațiul liber să se adune jos, nu sub formă de benzi goale.
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{14pt}
+\makeatother
 \usepackage{subcaption}
 \usepackage{titlesec}            % stil capitole / sectiuni
 \usepackage{titletoc}            % stil TOC
@@ -183,6 +191,46 @@
   \end{figure}
 }
 
+% Variantă pentru figurile mici (tabele de bază de date etc.) care trebuie să
+% stea FIX lângă paragraful lor, nu să „plutească'' singure pe o pagină goală.
+% Folosește [H] (poziționare fixă) și o lățime implicit mai mică, ca să încapă
+% două-trei pe pagină alături de text. Identic ca interfață cu \autofig.
+\newcommand{\autofigH}[3][0.7]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{figuri/fig-#2.png}{%
+      \includegraphics[width=#1\textwidth,height=0.6\textheight,keepaspectratio]{figuri/fig-#2.png}%
+    }{%
+      \fbox{\parbox{0.85\textwidth}{%
+        \centering\vspace{1.4cm}%
+        \textit{\color{gray}[ Inserează aici: figuri/fig-#2.png --- #3 ]}%
+        \vspace{1.4cm}}}%
+    }%
+    \caption{#3}
+    \label{fig:f#2}
+  \end{figure}
+}
+
+% Variantă pentru diagramele FOARTE ÎNALTE (diagrame de secvență pe verticală).
+% Forțează poziția [H] imediat după paragraful introductiv (aliniate sus, nu
+% centrate cu benzi goale deasupra/dedesubt) și permite o înălțime mare ca să
+% rămână lizibile. Identic ca interfață cu \autofig.
+\newcommand{\autofigT}[3][0.95]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{figuri/fig-#2.png}{%
+      \includegraphics[width=#1\textwidth,height=0.84\textheight,keepaspectratio]{figuri/fig-#2.png}%
+    }{%
+      \fbox{\parbox{0.85\textwidth}{%
+        \centering\vspace{1.4cm}%
+        \textit{\color{gray}[ Inserează aici: figuri/fig-#2.png --- #3 ]}%
+        \vspace{1.4cm}}}%
+    }%
+    \caption{#3}
+    \label{fig:f#2}
+  \end{figure}
+}
+
 % =============================================================================
 \begin{document}
 
@@ -306,7 +354,7 @@ Aplicațiile web și mobile dedicate finanțelor personale au apărut ca răspun
 
 Tehnologia web modernă oferă astăzi un ecosistem matur pentru construirea unor astfel de aplicații. Bibliotecile front-end precum React~\cite{ref:react} permit construirea de interfețe interactive complexe folosind o arhitectură bazată pe componente reutilizabile. Pe partea de back-end, Node.js~\cite{ref:nodejs} împreună cu Express~\cite{ref:express} oferă un model de dezvoltare ușor de înțeles și rapid, iar bazele de date relaționale precum PostgreSQL~\cite{ref:postgres} asigură integritatea datelor printr-un sistem de constrângeri și relații strict definite. Aceste tehnologii, combinate cu servicii moderne de inteligență artificială precum Google Gemini~\cite{ref:gemini}, permit dezvoltarea unei aplicații complete în câteva luni de muncă individuală.
 
-Răspândirea aplicațiilor web ca alternativă la cele desktop sau mobile native este motivată de portabilitate: utilizatorul nu trebuie să instaleze nimic, accesează aplicația prin browser de pe orice dispozitiv, iar autorul nu trebuie să mențină pachete separate pentru iOS, Android, Windows și macOS. Pentru o aplicație de gestiune a finanțelor personale, unde utilizatorul ar putea introduce o tranzacție pe telefon imediat după ce a făcut o achiziție și apoi o ar putea vizualiza pe laptop seara, modelul web responsive este natural.
+Răspândirea aplicațiilor web ca alternativă la cele desktop sau mobile native este motivată de portabilitate: utilizatorul nu trebuie să instaleze nimic, accesează aplicația prin browser de pe orice dispozitiv, iar autorul nu trebuie să mențină pachete separate pentru iOS, Android, Windows și macOS. Pentru o aplicație de gestiune a finanțelor personale, unde utilizatorul ar putea introduce o tranzacție pe telefon imediat după ce a făcut o achiziție și apoi ar putea să o vizualizeze pe laptop seara, modelul web responsive este natural.
 
 \section{Tema proiectului}
 
@@ -366,12 +414,12 @@ Avantajele majore ale React-ului includ:
 
 \begin{itemize}[leftmargin=2cm,itemsep=2pt]
   \item \textbf{Componente reutilizabile} -- codul interfeței este organizat în unități atomice (componente) care încapsulează logica, starea și prezentarea proprie. O componentă poate fi reutilizată în orice context fără modificări;
-  \item \textbf{Virtual DOM} -- React menține o reprezentare virtuală a structurii DOM și aplică modificările doar acolo unde este necesar, reducând semnificativ costul redimensionărilor;
+  \item \textbf{Virtual DOM} -- React menține o reprezentare virtuală a structurii DOM și aplică modificările doar acolo unde este necesar, reducând semnificativ costul redimensionărilor~\cite{ref:react};
   \item \textbf{Ecosistem matur} -- există mii de biblioteci compatibile pentru routing, gestionarea stării, formulare, animații, internaționalizare etc.;
   \item \textbf{JSX} -- o sintaxă declarativă care permite scrierea structurii interfeței direct în cod JavaScript/TypeScript, facilitând citirea și menținerea aplicațiilor complexe.
 \end{itemize}
 
-În cadrul aplicației FARO am utilizat versiunea React 18.3~\cite{ref:react}, care introduce conceptul de concurrent rendering -- un mecanism prin care browser-ul poate întrerupe randările lente pentru a răspunde mai rapid input-urilor utilizatorului. Alături de React am folosit React Router 6.24~\cite{ref:reactrouter} pentru rutare declarativă între pagini, TanStack Query 5.51~\cite{ref:tanstack} pentru gestionarea stării provenite de la server (cache, refetch automat, invalidate selectiv), Zustand 4.5~\cite{ref:zustand} pentru starea client-side (utilizatorul autentificat, token-ul de acces) și Lucent React pentru iconițele cu stil linie.
+În cadrul aplicației FARO am utilizat versiunea React 18.3~\cite{ref:react}, care introduce conceptul de concurrent rendering -- un mecanism prin care browser-ul poate întrerupe randările lente pentru a răspunde mai rapid input-urilor utilizatorului. Alături de React am folosit React Router 6.24~\cite{ref:reactrouter} pentru rutare declarativă între pagini, TanStack Query 5.51~\cite{ref:tanstack} pentru gestionarea stării provenite de la server (cache, refetch automat, invalidate selectiv), Zustand 4.5~\cite{ref:zustand} pentru starea client-side (utilizatorul autentificat, token-ul de acces) și Lucide React pentru iconițele cu stil linie.
 
 \section{TypeScript}
 
@@ -385,9 +433,9 @@ Tiparea statică oferă avantaje semnificative pentru proiectele de dimensiuni m
 
 Vite este un instrument modern de dezvoltare front-end, creat de Evan You (autorul Vue.js), care a câștigat o popularitate semnificativă datorită vitezei sale. Vite oferă două componente esențiale: un server de dezvoltare cu Hot Module Replacement (HMR) și un bundler de producție bazat pe Rollup. \cite{ref:vite}
 
-Spre deosebire de bundler-ele clasice precum Webpack, care procesează întreaga aplicație înainte de a oferi un server local, Vite folosește modulele native ES (ES Modules)~\cite{ref:mdn-esm} pe care browserele moderne le suportă direct. Acest lucru permite pornirea serverului de dezvoltare aproape instant, indiferent de mărimea proiectului, și actualizarea sub o secundă a modificărilor în browser.
+Spre deosebire de bundler-ele clasice precum Webpack, care procesează întreaga aplicație înainte de a oferi un server local, Vite folosește modulele native ES (ES Modules)~\cite{ref:mdn-esm} pe care browserele moderne le suportă direct~\cite{ref:vite}. Acest lucru permite pornirea serverului de dezvoltare aproape instant, indiferent de mărimea proiectului, și actualizarea sub o secundă a modificărilor în browser.
 
-Pentru build-ul de producție, Vite folosește Rollup, un bundler optimizat pentru output minimal. În cazul aplicației FARO, build-ul rezultat este de aproximativ 511 KB de JavaScript (148 KB după compresie gzip) și 32 KB de CSS -- dimensiuni rezonabile pentru o aplicație web cu funcționalități multiple.
+Pentru build-ul de producție, Vite folosește Rollup, un bundler optimizat pentru output minimal~\cite{ref:vite}. În cazul aplicației FARO, build-ul rezultat este de aproximativ 511 KB de JavaScript (148 KB după compresie gzip) și 32 KB de CSS -- dimensiuni rezonabile pentru o aplicație web cu funcționalități multiple.
 
 \section{Node.js și Express}
 
@@ -411,13 +459,13 @@ Prisma este un ORM (Object-Relational Mapper) modern pentru Node.js și TypeScri
 
 Beneficiile principale ale Prisma includ tiparea end-to-end (fiecare query oferă autocomplete pentru câmpurile disponibile, iar rezultatul este tipat exact pe baza relațiilor incluse), query-uri parametrizate automat (Prisma traduce orice apel JavaScript în SQL cu parametri pe canal separat, ceea ce elimină complet riscul de SQL injection -- una dintre vulnerabilitățile din categoria A03 OWASP Top 10~\cite{ref:owasp}), migrări versionate (comanda \texttt{prisma migrate} generează fișiere SQL versionate pentru fiecare modificare a schemei) și Prisma Studio (o interfață grafică de tip web pentru explorarea și editarea datelor în mod direct, utilă pentru debugging).
 
-În aplicația FARO am utilizat Prisma 6.4 cu PostgreSQL ca furnizor de bază de date. Schema completă este definită în fișierul \texttt{backend/prisma/schema.prisma} și include șase modele: User, Category, Transaction, Budget, BudgetCategory și Notification. Clientul Prisma generat este folosit în toate serviciile backend pentru orice operațiune cu baza de date.
+În aplicația FARO am utilizat Prisma 6.4 cu PostgreSQL ca furnizor de bază de date. Schema completă este definită în fișierul \texttt{backend/prisma/schema.prisma} și include șapte modele: User, PasswordResetToken, Category, Transaction, Budget, BudgetCategory și Notification. Clientul Prisma generat este folosit în toate serviciile backend pentru orice operațiune cu baza de date.
 
 \section{PostgreSQL}
 
 PostgreSQL este un sistem de gestionare a bazelor de date relaționale (RDBMS) open-source, considerat unul dintre cele mai avansate sisteme de acest tip. Lansat inițial în 1996, PostgreSQL este recunoscut pentru conformitatea sa cu standardele SQL, suportul extensiv pentru tipurile de date complexe (JSON, JSONB, geospațiale, array-uri) și mecanismele riguroase de integritate a datelor. \cite{ref:postgres}
 
-Caracteristicile esențiale ale PostgreSQL pentru aplicațiile financiare includ:
+Caracteristicile esențiale ale PostgreSQL pentru aplicațiile financiare includ~\cite{ref:dbconcepts}:
 
 \begin{itemize}[leftmargin=2cm,itemsep=2pt]
   \item \textbf{Tranzacții ACID} -- orice secvență de operațiuni grupată într-o tranzacție respectă proprietățile de Atomicitate, Consistență, Izolare și Durabilitate, ceea ce garantează că datele nu rămân niciodată într-o stare intermediară inconsistentă în caz de eroare;
@@ -427,7 +475,7 @@ Caracteristicile esențiale ale PostgreSQL pentru aplicațiile financiare includ
   \item \textbf{Concurență optimistă} -- multiple cereri pot citi și modifica simultan baza de date fără blocaje explicite, prin mecanismul MVCC (Multi-Version Concurrency Control).
 \end{itemize}
 
-Pentru aplicația FARO, PostgreSQL versiunea 18 este utilizat ca singura bază de date a sistemului. Schema include șase tabele relaționate, plus o coloană JSONB (\texttt{Transaction.receiptData}) folosită pentru stocarea bonurilor digitale extrase prin OCR. Această abordare hibridă permite păstrarea integrității referențiale pentru entitățile esențiale și flexibilitatea unui document JSON pentru date semi-structurate (liniile unui bon, care variază de la 1 la zeci de produse).
+Pentru aplicația FARO, PostgreSQL versiunea 18 este utilizată ca singura bază de date a sistemului. Schema include șapte tabele relaționate, plus o coloană JSONB (\texttt{Transaction.receiptData}) folosită pentru stocarea bonurilor digitale extrase prin OCR. Această abordare hibridă permite păstrarea integrității referențiale pentru entitățile esențiale și flexibilitatea unui document JSON pentru date semi-structurate (liniile unui bon, care variază de la 1 la zeci de produse).
 
 Alegerea unei baze de date relaționale, în loc de una NoSQL, a fost justificată de natura datelor financiare: relațiile dintre entități sunt strict definite (un utilizator are mai multe tranzacții, fiecare tranzacție aparține unei categorii, fiecare buget poate include mai multe categorii), iar query-urile agregate (suma cheltuielilor pe categorie, evoluția lunară a veniturilor) se exprimă natural în SQL prin GROUP BY și agregate native.
 
@@ -463,20 +511,20 @@ Pentru aplicația FARO am utilizat modelul \texttt{gemini-2.5-flash-lite}, ales 
   \item \textbf{Multimodal} -- capacitatea de a procesa imagini este esențială pentru funcționalitatea de scanare a bonurilor fiscale (detaliată în Capitolul~4);
   \item \textbf{Cost și disponibilitate} -- modelul oferă o cotă gratuită generoasă de 1000 de cereri pe zi pe contul gratuit Google AI Studio, suficientă pentru utilizarea individuală și pentru demonstrație;
   \item \textbf{Latență mică} -- răspunde în 1-3 secunde pentru cereri text, 3-5 secunde pentru cereri cu imagine;
-  \item \textbf{Output JSON structurat} -- modelul suportă modul \texttt{responseMimeType: "application/json"}, care garantează că răspunsul este JSON valid, fără a fi necesară parsare regex.
+  \item \textbf{Output JSON structurat} -- modelul suportă modul \texttt{responseMimeType:} \texttt{"application/\allowbreak json"}, care garantează că răspunsul este JSON valid, fără a fi necesară parsare regex.
 \end{itemize}
 
 În aplicația FARO, Gemini este utilizat în patru locuri distincte: OCR bonuri fiscale (extragerea structurată a magazinului, datei, liniilor de produse și totalului dintr-o poză), sugestia automată de categorie (pe baza descrierii unei tranzacții, modelul propune cea mai potrivită categorie din cele existente), insights săptămânale (generarea unor sfaturi financiare personalizate pe baza statisticilor de utilizare) și asistent AI conversațional (un drawer accesibil în orice moment care răspunde la întrebări libere despre finanțele utilizatorului).
 
 SDK-ul oficial Google (\texttt{@google/generative-ai}) este folosit pentru integrare, iar cheia API este stocată exclusiv pe partea de server, niciodată expusă clientului.
 
-\section{Resend -- email transactional}
+\section{Resend -- email-uri tranzacționale}
 
 Resend este un serviciu modern de trimitere a email-urilor transacționale, lansat în 2023. Spre deosebire de soluțiile clasice (SendGrid, Mailgun), Resend oferă un API minimalist și un SDK TypeScript-first, ceea ce simplifică semnificativ integrarea în aplicațiile moderne. \cite{ref:resend}
 
-În aplicația FARO, Resend este utilizat exclusiv pentru email-urile de resetare a parolei. Modul de funcționare: utilizatorul solicită resetarea introducând adresa de email, serverul generează un token aleator de 24 de bytes (codificat hex, 48 de caractere) și calculează hash-ul SHA-256, hash-ul este stocat într-un map in-memory cu durata de viață de 1 oră, tokenul original este inclus într-un link care pointează la pagina de resetare, iar serverul construiește un email HTML branded și îl trimite prin API-ul Resend.
+În aplicația FARO, Resend este utilizat exclusiv pentru email-urile de resetare a parolei. Modul de funcționare: utilizatorul solicită resetarea introducând adresa de email, serverul generează un token aleator de 24 de bytes (codificat hex, 48 de caractere) și calculează hash-ul SHA-256, hash-ul este stocat în baza de date (tabela \texttt{PasswordResetToken}) cu o durată de viață de 1 oră, tokenul original este inclus într-un link care pointează la pagina de resetare, iar serverul construiește un email HTML branded și îl trimite prin API-ul Resend.
 
-Utilizatorul primește email-ul, accesează link-ul, introduce noua parolă. Serverul re-calculează hash-ul, îl caută în map, validează expirarea, hash-uiește noua parolă cu bcrypt și o salvează. Stocarea hash-ului în loc de tokenul original este o măsură suplimentară de securitate: chiar dacă cineva ar avea acces la map-ul intern, nu ar putea genera link-uri valide, pentru că nu poate inversa hash-ul SHA-256.
+Utilizatorul primește email-ul, accesează link-ul, introduce noua parolă. Serverul re-calculează hash-ul, îl caută în baza de date, validează expirarea, hash-uiește noua parolă cu bcrypt și o salvează. Stocarea hash-ului în loc de tokenul original este o măsură suplimentară de securitate: chiar dacă cineva ar avea acces la baza de date, nu ar putea genera link-uri valide, pentru că nu poate inversa hash-ul SHA-256.
 
 \section{Railway -- platformă de deploy}
 
@@ -519,7 +567,7 @@ Pentru o vedere de ansamblu mai detaliată asupra modului în care componentele 
 
 Comunicarea client-server se realizează exclusiv prin HTTPS, cu autentificare bazată pe token-uri JWT~\cite{ref:jwt} transmise în header-ul Authorization. Refresh token-ul este stocat într-un cookie \texttt{httpOnly} \texttt{Secure} \texttt{SameSite=None}, ceea ce îl protejează atât împotriva atacurilor XSS (JavaScript-ul din browser nu îl poate citi) cât și împotriva atacurilor CSRF (cookie-ul nu este trimis automat la cereri inițiate de alte site-uri), conform OWASP Top 10~\cite{ref:owasp}.
 
-Pe parte de implementare, fiecare modul al backend-ului urmează aceeași structură: un fișier de rute (\texttt{*.routes.ts}) definește endpoint-urile HTTP, un controller (\texttt{*.controller.ts}) extrage parametrii și răspunde, iar un serviciu (\texttt{*.service.ts}) implementează logica de business și interogările Prisma~\cite{ref:prisma}. Validarea cererilor primite este realizată prin biblioteca Zod~\cite{ref:zod}, care permite definirea declarativă a schemelor și generarea automată a tipurilor TypeScript~\cite{ref:typescript}.
+Pe partea de implementare, fiecare modul al backend-ului urmează aceeași structură: un fișier de rute (\texttt{*.routes.ts}) definește endpoint-urile HTTP, un controller (\texttt{*.controller.ts}) extrage parametrii și răspunde, iar un serviciu (\texttt{*.service.ts}) implementează logica de business și interogările Prisma~\cite{ref:prisma}. Validarea cererilor primite este realizată prin biblioteca Zod~\cite{ref:zod}, care permite definirea declarativă a schemelor și generarea automată a tipurilor TypeScript~\cite{ref:typescript}.
 
 Frontend-ul folosește React Router~\cite{ref:reactrouter} pentru navigarea între pagini, TanStack Query~\cite{ref:tanstack} pentru gestionarea cache-ului de server și Zustand~\cite{ref:zustand} pentru starea client-side (utilizatorul autentificat, token-ul de acces). Fiecare pagină este organizată ca un feature module în directorul \texttt{src/features/}, conținând componenta principală împreună cu sub-componentele specifice paginii.
 
@@ -576,7 +624,7 @@ Gestionează categoriile de venituri și cheltuieli:
 
 \begin{itemize}[leftmargin=2cm,itemsep=2pt]
   \item listă cu toate categoriile, atât cele predefinite (Mâncare, Transport, Facturi etc.) cât și cele personalizate de utilizator;
-  \item adăugare categorie cu icoană (din setul Lucent sau emoji) și culoare;
+  \item adăugare categorie cu icoană (din setul Lucide sau emoji) și culoare;
   \item editarea și ștergerea sunt permise doar pentru categoriile create de utilizator; cele predefinite sunt blocate;
   \item sugerare automată a categoriei pentru o tranzacție pe baza descrierii (folosind Gemini).
 \end{itemize}
@@ -605,7 +653,7 @@ Permite personalizarea aplicației:
 
 În plus față de funcționalitățile specifice modulelor, aplicația include și componente transversale: bara de navigare laterală cu acces la toate modulele și butonul de deconectare; bara de sus cu breadcrumb, căutare globală (deschisă cu Ctrl+K), buton pentru asistentul AI, clopoțel de notificări cu badge pentru mesajele necitite și buton pentru adăugare rapidă; asistent AI conversațional accesibil în orice moment ca drawer lateral, care răspunde la întrebări libere despre finanțele utilizatorului folosind Gemini; paleta de căutare care permite navigarea rapidă către orice pagină sau tranzacție; suport pentru mod întunecat aplicat global prin CSS custom properties.
 
-Aplicația suportă patru metode de autentificare: cont local cu email și parolă (cu hashing bcrypt cost factor 10~\cite{ref:bcrypt}), sign in cu Google prin OAuth 2.0~\cite{ref:oauth2}, sign in cu Facebook prin OAuth 2.0~\cite{ref:oauth2} și resetare parolă prin email cu link securizat~\cite{ref:resend}.
+Aplicația suportă patru metode de autentificare: cont local cu email și parolă (cu hashing bcrypt cost factor 10~\cite{ref:bcrypt}), autentificare cu Google prin OAuth 2.0~\cite{ref:oauth2}, autentificare cu Facebook prin OAuth 2.0~\cite{ref:oauth2} și resetare parolă prin email cu link securizat~\cite{ref:resend}.
 
 \section{Planificarea lucrărilor}
 
@@ -772,7 +820,7 @@ Autentificarea utilizatorilor se bazează pe un mecanism cu pereche dublă de to
 
 Parolele nu sunt stocate niciodată în clar. Înainte de salvarea în baza de date, fiecare parolă este criptată cu funcția de hashing \texttt{bcrypt} \cite{ref:bcrypt}, folosind un factor de cost (numărul de runde) egal cu 10, valoare care asigură un compromis rezonabil între rezistența la atacuri prin forță brută și timpul de răspuns. La logare, parola introdusă este comparată cu hash-ul stocat prin \texttt{bcrypt.compare}, fără a fi nevoie de decriptare. Refresh token-ul conține și un câmp \texttt{tokenVersion}, care permite invalidarea tuturor sesiunilor active ale unui utilizator (de exemplu, după o resetare de parolă), prin simpla incrementare a versiunii în baza de date.
 
-\begin{lstlisting}[language=JavaScript,caption={Inregistrarea utilizatorului si emiterea perechii de token-uri JWT}]
+\begin{lstlisting}[language=JavaScript,caption={Înregistrarea utilizatorului și emiterea perechii de token-uri JWT}]
 static async register(data) {
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
@@ -807,7 +855,7 @@ Pe lângă autentificarea clasică pe bază de email și parolă, FARO oferă po
 
 După ce utilizatorul aprobă accesul la furnizorul extern, serverul primește profilul verificat (email, nume, prenume) și apelează funcția \texttt{loginOrSignupFromOAuth}. Aceasta este idempotentă: dacă există deja un cont cu acel email, contul este reutilizat; altfel se creează un cont nou cu o parolă aleatoare imposibil de ghicit. Indiferent de cale, funcția emite aceeași pereche de token-uri JWT ca autentificarea clasică, astfel încât restul aplicației nu trebuie să distingă originea sesiunii.
 
-\begin{lstlisting}[language=JavaScript,caption={Cautarea sau crearea contului dintr-un profil OAuth verificat}]
+\begin{lstlisting}[language=JavaScript,caption={Căutarea sau crearea contului dintr-un profil OAuth verificat}]
 export async function loginOrSignupFromOAuth(profile) {
   let user = await prisma.user.findUnique({
     where: { email: profile.email },
@@ -836,7 +884,7 @@ export async function loginOrSignupFromOAuth(profile) {
 
 Link-ul de resetare este trimis utilizatorului prin email, folosind serviciul tranzacțional Resend \cite{ref:resend}. Mesajul este construit dintr-un șablon HTML branduit, însoțit de o variantă text simplă pentru clienții de email care nu interpretează HTML. La consumarea token-ului, după validarea expirării și a folosirii anterioare, noua parolă este hash-uită cu \texttt{bcrypt}, iar câmpul \texttt{tokenVersion} al utilizatorului este incrementat într-o tranzacție atomică, ceea ce revocă automat toate sesiunile active — o măsură esențială atunci când resetarea este cauzată de compromiterea parolei.
 
-\begin{lstlisting}[language=JavaScript,caption={Generarea tokenului de resetare si trimiterea email-ului prin Resend}]
+\begin{lstlisting}[language=JavaScript,caption={Generarea tokenului de resetare și trimiterea email-ului prin Resend}]
 export async function requestPasswordReset(email) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
@@ -927,7 +975,7 @@ export function suggestCategory(description, type, userCategories) {
 
 Complementar, aplicația include un asistent financiar conversațional, de această dată construit peste modelul Gemini \cite{ref:gemini}. Asistentul generează rezumate săptămânale, sfaturi scurte personalizate și răspunde la întrebări libere despre finanțele utilizatorului. Pentru fiecare cerere, backend-ul agregă datele relevante (tranzacții pe categorii și pe luni din ultimele 30–60 de zile) și le furnizează modelului ca \emph{context}, alături de un \texttt{systemInstruction} care impune regulile de stil (răspuns concis, în română, fără cifre inventate). Răspunsurile sunt memorate temporar într-un cache cu durata de 24 de ore pentru a limita consumul de cote API. Modul de funcționare al asistentului este prezentat în Figura~\ref{fig:f17}.
 
-\begin{lstlisting}[language=JavaScript,caption={Raspunsul asistentului AI la o intrebare libera, cu datele utilizatorului drept context}]
+\begin{lstlisting}[language=JavaScript,caption={Răspunsul asistentului AI la o întrebare liberă, cu datele utilizatorului drept context}]
 export async function askQuestion(userId, question) {
   if (!question || question.trim().length < 3)
     throw new Error('Intrebarea trebuie sa aiba cel putin 3 caractere.');
@@ -957,7 +1005,7 @@ Pentru a semnala cheltuielile neobișnuite, FARO implementează un detector de a
 
 Ulterior, pentru fiecare tranzacție recentă (din ultimele 14 zile) se calculează scorul Z ca raport între diferența față de medie și abaterea standard. Tranzacțiile al căror scor depășește pragul de 2,0 abateri standard peste medie sunt marcate ca anomalii și raportate utilizatorului, ordonate descrescător după scor și limitate la primele 10 rezultate. Acest mecanism permite, de exemplu, evidențierea unei facturi neobișnuit de mari la o categorie în care cheltuielile sunt de regulă constante.
 
-\begin{lstlisting}[language=JavaScript,caption={Calculul scorului Z pe categorie pentru marcarea tranzactiilor anormale}]
+\begin{lstlisting}[language=JavaScript,caption={Calculul scorului Z pe categorie pentru marcarea tranzacțiilor anormale}]
 for (const [catId, list] of grouped) {
   if (list.length < minSamples) continue; // prea putine date = medie zgomotoasa
   const amounts = list.map((t) => Number(t.amount));
@@ -986,7 +1034,7 @@ Sistemul de bugete permite utilizatorului să stabilească limite lunare, fie pe
 
 Dincolo de avertismentul afișat înainte de confirmare, sistemul generează notificări persistente prin metoda \texttt{checkAndCreateBudgetNotifications}. După salvarea unei tranzacții, aceasta calculează procentul de utilizare a bugetului pe categoria respectivă și creează o notificare de tip \texttt{budget\_exceeded} la depășirea pragului de 100\%, respectiv \texttt{budget\_near\_limit} între 80\% și 100\%. Funcția respectă preferința utilizatorului de a primi sau nu astfel de notificări și este parțial idempotentă: notificarea de apropiere de limită nu se duplică dacă există deja una necitită. Modul de funcționare al notificărilor este prezentat în Figura~\ref{fig:f16}.
 
-\begin{lstlisting}[language=JavaScript,caption={Crearea notificarilor de buget in functie de procentul de utilizare}]
+\begin{lstlisting}[language=JavaScript,caption={Crearea notificărilor de buget în funcție de procentul de utilizare}]
 const totalSpent = transactions.reduce((s, t) => s + Number(t.amount), 0);
 const percentage = limitAmount > 0 ? (totalSpent / limitAmount) * 100 : 0;
 // Buget depasit (>= 100%): notificare la fiecare tranzactie peste limita
@@ -1026,37 +1074,37 @@ Integritatea referențială este garantată prin chei externe definite la nivelu
 
 Tabela \texttt{User} reține conturile utilizatorilor și constituie entitatea centrală de la care pornesc toate celelalte relații. Cheia primară \texttt{id} este un UUID generat automat. Coloana \texttt{email} (\texttt{String}) este marcată ca unică, garantând la nivel de bază de date că nu pot exista două conturi cu aceeași adresă, iar \texttt{password} (\texttt{String}) păstrează parola sub formă de hash bcrypt \cite{ref:bcrypt}. Numele utilizatorului este împărțit în \texttt{firstName} și \texttt{lastName} (\texttt{String}), iar \texttt{currency} (\texttt{String}, implicit \texttt{,,RON''}) fixează moneda preferată. Câmpul opțional \texttt{avatarUrl} (\texttt{String?}) reține adresa imaginii de profil. Indicatorul \texttt{budgetNotifications} (\texttt{Boolean}, implicit \texttt{true}) controlează dacă pentru utilizator se generează notificările de depășire sau de apropiere de limita bugetului. Coloana \texttt{tokenVersion} (\texttt{Int}, implicit \texttt{0}) este incrementată ori de câte ori toate jetoanele de reîmprospătare emise pentru utilizator trebuie invalidate (de exemplu, după o resetare de parolă): jetonul de reîmprospătare poartă această valoare și este respins atunci când nu mai coincide. Coloanele temporale \texttt{createdAt} și \texttt{updatedAt} (\texttt{DateTime}) marchează momentul creării, respectiv al ultimei actualizări. Relațiile unu-la-mai-mulți leagă utilizatorul de categoriile, tranzacțiile, bugetele, notificările și jetoanele sale de resetare a parolei.
 
-\autofig{8.1}{Structura tabelei --- User}
+\autofigH{8.1}{Structura tabelei --- User}
 
 \subsection{Tabela Category}
 
 Tabela \texttt{Category} definește categoriile prin care sunt clasificate veniturile și cheltuielile. Pe lângă cheia primară \texttt{id} (UUID), aceasta conține numele categoriei \texttt{name} (\texttt{String}), precum și câmpurile opționale \texttt{icon} (\texttt{String?}) și \texttt{color} (\texttt{String?}), folosite pentru reprezentarea vizuală în interfață. Coloana \texttt{type} (\texttt{String}) distinge între categoriile de venit și cele de cheltuială (\texttt{,,income''} sau \texttt{,,expense''}). Particularitatea modelului constă în coloana \texttt{userId} (\texttt{String?}), care este opțională: o valoare \texttt{null} indică o categorie globală implicită, disponibilă tuturor utilizatorilor, în timp ce o valoare prezentă leagă categoria de un utilizator anume. Indicatorul \texttt{isDefault} (\texttt{Boolean}, implicit \texttt{false}) marchează categoriile predefinite ale sistemului, iar \texttt{createdAt} (\texttt{DateTime}) reține momentul creării. O categorie poate fi referită de mai multe tranzacții și de mai multe intrări de buget pe categorii.
 
-\autofig{8.2}{Structura tabelei --- Category}
+\autofigH{8.2}{Structura tabelei --- Category}
 
 \subsection{Tabela Transaction}
 
 Tabela \texttt{Transaction} este cea mai bogată din punct de vedere structural și înregistrează fiecare operațiune financiară a utilizatorului. Cheia primară \texttt{id} este un UUID, \texttt{amount} (\texttt{Float}) reprezintă suma, iar \texttt{type} (\texttt{String}) precizează dacă este vorba de un venit sau de o cheltuială. Câmpul \texttt{description} (\texttt{String?}) este opțional, în timp ce \texttt{date} (\texttt{DateTime}) fixează data tranzacției. Cheile externe \texttt{categoryId} (\texttt{String}) și \texttt{userId} (\texttt{String}) leagă tranzacția de categoria și de utilizatorul corespunzător. Câmpul \texttt{receiptUrl} (\texttt{String?}) păstrează adresa fotografiei bonului, iar \texttt{receiptData} (\texttt{Json?}) stochează, în format JSONB, reprezentarea structurată a bonului scanat. Indicatorul \texttt{isRecurring} (\texttt{Boolean}, implicit \texttt{false}) marchează tranzacțiile recurente, care sunt completate de un grup de câmpuri dedicate: \texttt{recurringGroupId} (\texttt{String?}) este un identificator comun tuturor instanțelor dintr-o serie recurentă, \texttt{frequency} (\texttt{String?}) indică frecvența (\texttt{,,daily''}, \texttt{,,weekly''}, \texttt{,,monthly''} sau \texttt{,,yearly''}), \texttt{originalStartDate} (\texttt{DateTime?}) reține data de început a seriei, iar \texttt{sequenceNumber} (\texttt{Int?}) numerotează poziția instanței în cadrul seriei. Coloana \texttt{createdAt} (\texttt{DateTime}) marchează momentul înregistrării. Pentru performanță, tabela definește doi indecși compuși: \texttt{[userId, recurringGroupId]} și \texttt{[userId, date]}, care accelerează interogarea seriilor recurente și, respectiv, filtrarea tranzacțiilor unui utilizator pe intervale de timp.
 
-\autofig{8.3}{Structura tabelei --- Transaction}
+\autofigH{8.3}{Structura tabelei --- Transaction}
 
 \subsection{Tabela Budget}
 
 Tabela \texttt{Budget} modelează bugetele lunare definite de utilizator. Pe lângă cheia primară \texttt{id} (UUID), aceasta conține perioada de aplicare prin coloanele \texttt{month} (\texttt{Int}) și \texttt{year} (\texttt{Int}), precum și suma maximă alocată \texttt{totalLimit} (\texttt{Float}). Indicatorul \texttt{isTotal} (\texttt{Boolean}, implicit \texttt{false}) distinge între un buget total lunar (valoarea \texttt{true}) și un buget defalcat pe categorii (valoarea \texttt{false}). Cheia externă \texttt{userId} (\texttt{String}) leagă bugetul de proprietar, iar \texttt{createdAt} (\texttt{DateTime}) reține momentul creării. O constrângere de unicitate compusă pe \texttt{[userId, month, year, isTotal]} împiedică un utilizator să dețină două bugete de același tip pentru aceeași lună. Un buget poate cuprinde mai multe intrări pe categorii, modelate de tabela \texttt{BudgetCategory}.
 
-\autofig{8.4}{Structura tabelei --- Budget}
+\autofigH{8.4}{Structura tabelei --- Budget}
 
 \subsection{Tabela BudgetCategory}
 
 Tabela \texttt{BudgetCategory} este tabela de legătură care descompune un buget lunar în limite individuale pe categorii, realizând relația mulți-la-mulți dintre bugete și categorii. Cheia primară \texttt{id} este un UUID, iar cheile externe \texttt{budgetId} (\texttt{String}) și \texttt{categoryId} (\texttt{String}) leagă intrarea de bugetul, respectiv de categoria corespunzătoare. Coloana \texttt{limitAmount} (\texttt{Float}) fixează plafonul alocat categoriei în cadrul bugetului, iar \texttt{createdAt} (\texttt{DateTime}) reține momentul creării. Relația cu tabela \texttt{Budget} este declarată cu \texttt{onDelete: Cascade}, astfel încât ștergerea unui buget atrage automat ștergerea tuturor limitelor sale pe categorii. O constrângere de unicitate pe \texttt{[budgetId, categoryId]} garantează că o categorie nu poate apărea de două ori în cadrul aceluiași buget.
 
-\autofig{8.5}{Structura tabelei --- BudgetCategory}
+\autofigH{8.5}{Structura tabelei --- BudgetCategory}
 
 \subsection{Tabela Notification}
 
 Tabela \texttt{Notification} stochează notificările afișate utilizatorului în centrul de alerte al aplicației. Cheia primară \texttt{id} este un UUID, iar cheia externă \texttt{userId} (\texttt{String}) leagă notificarea de destinatar. Coloana \texttt{type} (\texttt{String}) clasifică notificarea în una dintre categoriile \texttt{,,budget\_exceeded''}, \texttt{,,budget\_near\_limit''} sau \texttt{,,bill\_reminder''}. Câmpurile \texttt{title} (\texttt{String}) și \texttt{message} (\texttt{String}) conțin titlul și textul mesajului, iar indicatorul \texttt{isRead} (\texttt{Boolean}, implicit \texttt{false}) marchează dacă notificarea a fost citită. Câmpul opțional \texttt{relatedEntityId} (\texttt{String?}) reține identificatorul entității care a generat notificarea (de exemplu, bugetul depășit), permițând navigarea directă către aceasta din interfață. Coloana \texttt{createdAt} (\texttt{DateTime}) marchează momentul generării.
 
-\autofig{8.6}{Structura tabelei --- Notification}
+\autofigH{8.6}{Structura tabelei --- Notification}
 
 % =============================================================================
 % CAPITOLUL 5 — UTILIZAREA APLICAȚIEI
@@ -1243,7 +1291,7 @@ Fiind o aplicație web, FARO nu necesită instalarea unui program dedicat pe dis
 \centering
 \caption{Configurația necesară pentru realizarea testelor}
 \label{tab:config-testare}
-\begin{tabular}{|l|l|}
+\begin{tabularx}{\textwidth}{|l|X|}
 \hline
 \textbf{Componentă} & \textbf{Cerință} \\
 \hline
@@ -1259,7 +1307,7 @@ Instalare locală & Nu este necesară \\
 \hline
 JavaScript & Activat în browser \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \section{Metodologia de testare}
@@ -1445,11 +1493,14 @@ Deși aplicația FARO este completă și funcțională în forma actuală, exist
 % =============================================================================
 % \begin{thebibliography} genereaza automat un \chapter*{\bibname}, deci
 % redenumim \bibname si lasam thebibliography sa creeze singur titlul.
-% Adaugam manual in TOC pentru ca \chapter* nu o face automat.
+% Inregistram in TOC DUPA \begin{thebibliography} (care emite \chapter* si
+% forteaza pagina noua), cu \phantomsection, ca numarul de pagina si ancora
+% hyperref sa indice corect catre bibliografie, nu catre ultima sectiune.
 \renewcommand{\bibname}{BIBLIOGRAFIE}
-\addcontentsline{toc}{chapter}{BIBLIOGRAFIE}
 
 \begin{thebibliography}{99}
+\phantomsection
+\addcontentsline{toc}{chapter}{BIBLIOGRAFIE}
 
 \bibitem{ref:finapp}
 Statista Research Department, ``Mobile banking and financial services app usage statistics'', 2024. \url{https://www.statista.com/topics/2614/mobile-banking/}
@@ -1482,7 +1533,7 @@ The PostgreSQL Global Development Group, \emph{PostgreSQL 18 Documentation}, 202
 Remix Software, \emph{React Router Documentation}, v6, 2026. \url{https://reactrouter.com/en/main}
 
 \bibitem{ref:tanstack}
-Dominik, T., \emph{TanStack Query -- Powerful asynchronous state management for TypeScript and JavaScript}, 2026. \url{https://tanstack.com/query}
+Linsley, T., \emph{TanStack Query -- Powerful asynchronous state management for TypeScript and JavaScript}, 2026. \url{https://tanstack.com/query}
 
 \bibitem{ref:zustand}
 Pmndrs, \emph{Zustand -- A small, fast and scalable bearbones state-management solution}, 2026. \url{https://github.com/pmndrs/zustand}
@@ -1491,7 +1542,7 @@ Pmndrs, \emph{Zustand -- A small, fast and scalable bearbones state-management s
 Microsoft Corporation, \emph{TypeScript Documentation}, 2026. \url{https://www.typescriptlang.org/docs/}
 
 \bibitem{ref:vite}
-Evan You, \emph{Vite -- Next Generation Frontend Tooling}, 2026. \url{https://vitejs.dev/}
+You, E., \emph{Vite -- Next Generation Frontend Tooling}, 2026. \url{https://vitejs.dev/}
 
 \bibitem{ref:mdn-esm}
 Mozilla Developer Network, \emph{JavaScript modules}, 2026. \url{https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules}
@@ -1509,7 +1560,7 @@ Hardt, D. (Ed.), \emph{The OAuth 2.0 Authorization Framework}, RFC 6749, IETF, 2
 Prisma Data Inc., \emph{Prisma -- Next-generation Node.js and TypeScript ORM}, 2026. \url{https://www.prisma.io/docs}
 
 \bibitem{ref:rest}
-Roy T. Fielding, \emph{Architectural Styles and the Design of Network-based Software Architectures}, PhD Thesis, University of California, Irvine, 2000.
+Fielding, R.~T., \emph{Architectural Styles and the Design of Network-based Software Architectures}, PhD Thesis, University of California, Irvine, 2000.
 
 \bibitem{ref:hmac}
 Krawczyk, H., Bellare, M., Canetti, R., \emph{HMAC: Keyed-Hashing for Message Authentication}, RFC 2104, IETF, 1997. \url{https://datatracker.ietf.org/doc/html/rfc2104}
@@ -1521,7 +1572,7 @@ Resend Inc., \emph{Resend Documentation -- The email API for developers}, 2026. 
 Railway Corporation, \emph{Railway Documentation}, 2026. \url{https://docs.railway.com/}
 
 \bibitem{ref:zod}
-McCloskey, C., \emph{Zod -- TypeScript-first schema validation with static type inference}, 2026. \url{https://zod.dev/}
+McDonnell, C., \emph{Zod -- TypeScript-first schema validation with static type inference}, 2026. \url{https://zod.dev/}
 
 \bibitem{ref:zscore}
 Howell, D.~C., \emph{Statistical Methods for Psychology}, 8th ed., Cengage Learning, 2013, capitolul 4 (Sampling Distributions and Z-scores).
@@ -1533,10 +1584,10 @@ Howell, D.~C., \emph{Statistical Methods for Psychology}, 8th ed., Cengage Learn
 Wilson, J.~M., \emph{Gantt charts: A centenary appreciation}, European Journal of Operational Research, vol.~149, nr.~2, 2003, pp.~430--437.
 
 \bibitem{ref:dbconcepts}
-A. Silberschatz, H. F. Korth, S. Sudarshan, \emph{Database System Concepts}, ediția a 7-a, McGraw-Hill, 2019.
+Silberschatz, A., Korth, H.~F., Sudarshan, S., \emph{Database System Concepts}, ediția a 7-a, McGraw-Hill, 2019.
 
 \bibitem{ref:testing}
-G. J. Myers, C. Sandler, T. Badgett, \emph{The Art of Software Testing}, ediția a 3-a, John Wiley \& Sons, 2011.
+Myers, G.~J., Sandler, C., Badgett, T., \emph{The Art of Software Testing}, ediția a 3-a, John Wiley \& Sons, 2011.
 
 \bibitem{ref:vitest}
 Vitest Team, \emph{Vitest -- A Vite-native testing framework}, 2026. \url{https://vitest.dev/}
