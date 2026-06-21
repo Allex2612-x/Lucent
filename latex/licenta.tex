@@ -739,37 +739,37 @@ Din perspectiva utilizatorului, funcționalitățile aplicației sunt distribuit
 
 Modulul Dashboard reprezintă pagina de start a aplicației și oferă utilizatorului o privire de ansamblu asupra situației sale financiare. Aici sunt agregate informațiile cele mai relevante: soldul curent, totalul veniturilor și al cheltuielilor din perioada selectată, evoluția grafică a acestora, precum și avertismentele generate de detectorul de anomalii și de sistemul de notificări privind bugetele. Datele afișate sunt obținute prin interogări către modulele de statistici și notificări de pe server. Arhitectura acestui modul este prezentată în Figura~\ref{fig:f5.1}.
 
-\autofig{5.1}{Arhitectura modulului --- Dashboard}
+\autofigH{5.1}{Arhitectura modulului --- Dashboard}
 
 \subsection{Modulul Tranzacții}
 
 Modulul Tranzacții permite utilizatorului să gestioneze înregistrările financiare individuale --- venituri și cheltuieli. Pe lângă operațiile clasice de creare, modificare și ștergere, modulul integrează două funcționalități asistate de inteligență artificială: scanarea bonurilor fiscale prin recunoaștere optică a caracterelor și sugerarea automată a categoriei pe baza descrierii tranzacției. Tot aici sunt gestionate tranzacțiile recurente, generate periodic de motorul dedicat de pe server. Arhitectura modulului este ilustrată în Figura~\ref{fig:f5.2}.
 
-\autofig{5.2}{Arhitectura modulului --- Tranzacții}
+\autofigH{5.2}{Arhitectura modulului --- Tranzacții}
 
 \subsection{Modulul Bugete}
 
 Modulul Bugete oferă utilizatorului posibilitatea de a-și planifica și controla cheltuielile prin definirea unor limite, simple sau recurente, asociate uneia sau mai multor categorii. Pe măsură ce sunt înregistrate tranzacții, serverul verifică încadrarea în bugetele active prin componenta de validare a bugetelor și generează notificări atunci când o limită este atinsă sau depășită. Modulul afișează gradul de utilizare al fiecărui buget și starea acestuia. Arhitectura modulului este prezentată în Figura~\ref{fig:f5.3}.
 
-\autofig{5.3}{Arhitectura modulului --- Bugete}
+\autofigH{5.3}{Arhitectura modulului --- Bugete}
 
 \subsection{Modulul Categorii}
 
 Modulul Categorii gestionează clasificarea tranzacțiilor în categorii de venituri și cheltuieli. Utilizatorul beneficiază de un set de categorii implicite la crearea contului și își poate defini categorii proprii, fiecare cu nume, tip, pictogramă și culoare. Categoriile reprezintă fundamentul după care sunt agregate datele în modulele de bugete și rapoarte și sunt folosite de componenta de sugerare automată a categoriei. Arhitectura modulului este ilustrată în Figura~\ref{fig:f5.4}.
 
-\autofig{5.4}{Arhitectura modulului --- Categorii}
+\autofigH{5.4}{Arhitectura modulului --- Categorii}
 
 \subsection{Modulul Rapoarte}
 
 Modulul Rapoarte permite analiza detaliată a activității financiare pe intervale de timp configurabile. Utilizatorul poate vizualiza distribuția cheltuielilor pe categorii, comparația dintre venituri și cheltuieli și evoluția acestora în timp, sub formă de grafice. În plus, modulul oferă posibilitatea exportării rapoartelor în formate de tip PDF și Excel, generate de serverul de aplicație. Arhitectura modulului este prezentată în Figura~\ref{fig:f5.5}.
 
-\autofig{5.5}{Arhitectura modulului --- Rapoarte}
+\autofigH{5.5}{Arhitectura modulului --- Rapoarte}
 
 \subsection{Modulul Setări}
 
 Modulul Setări centralizează configurarea contului și a preferințelor utilizatorului. De aici pot fi modificate datele de profil, parola de autentificare, preferințele privind notificările, precum și conturile externe asociate prin autentificare OAuth 2.0 \cite{ref:oauth2}. Tot în acest modul utilizatorul poate accesa opțiunile legate de securitatea contului și de gestiunea sesiunii. Arhitectura modulului este ilustrată în Figura~\ref{fig:f5.6}.
 
-\autofig{5.6}{Arhitectura modulului --- Setări}
+\autofigH{5.6}{Arhitectura modulului --- Setări}
 
 \section{Structura fișierelor}
 
