@@ -296,7 +296,7 @@
   \begin{flushleft}
     {\large Coordonator\par}
     \vspace{0.1cm}
-    {\large Ș.l.\,dr.\,ing.\ Andreea ROBU\par}
+    {\large Ș.l.\,dr.\,ing.\ Andreea IBĂNESCU ROBU\par}
   \end{flushleft}
 
   \vfill
@@ -731,7 +731,7 @@ Pe partea de server, aplicația rulează pe platforma Node.js \cite{ref:nodejs},
 
 Din punct de vedere arhitectural, aplicația FARO este structurată pe niveluri, separând clar responsabilitățile fiecărei componente. Nivelul de prezentare este reprezentat de aplicația client de tip SPA, care rulează în browserul utilizatorului și comunică exclusiv prin apeluri HTTP cu serverul. Nivelul de comunicare este o interfață de programare REST \cite{ref:rest}, expusă de serverul Express, care primește cererile, le validează și le rutează către modulul corespunzător. Nivelul de logică de afaceri grupează regulile aplicației (validarea bugetelor, detecția anomaliilor, generarea de rapoarte, integrarea cu serviciile de inteligență artificială) și este organizat pe module funcționale independente. În fine, nivelul de date asigură persistența prin baza de date relațională PostgreSQL, accesată exclusiv prin ORM-ul Prisma. Vederea de ansamblu a acestei arhitecturi este prezentată în Figura~\ref{fig:f13}.
 
-\autofig{13}{Arhitectura aplicației --- vedere de ansamblu}
+\autofigH[0.8]{13}{Arhitectura aplicației --- vedere de ansamblu}
 
 Din perspectiva utilizatorului, funcționalitățile aplicației sunt distribuite pe șase module (pagini) principale, fiecare corespunzând unui obiectiv distinct al gestiunii finanțelor personale. În cele ce urmează este descris pe scurt rolul fiecărui modul.
 
@@ -804,11 +804,11 @@ faro/
 
 Pe partea de server, directorul \texttt{src/modules} este nucleul aplicației și conține câte un subdirector pentru fiecare domeniu funcțional --- autentificare (\texttt{auth}), tranzacții (\texttt{transaction}), bugete (\texttt{budget}), categorii (\texttt{category}), statistici (\texttt{statistics}), notificări (\texttt{notification}), asistentul inteligent (\texttt{insights}), rapoarte (\texttt{report}) și recunoașterea bonurilor (\texttt{ocr}). Fiecare modul respectă o organizare consecventă, separând rutele, controlorul, serviciul cu logica de afaceri și, după caz, componentele specializate (de exemplu, validatorul de bugete sau detectorul de anomalii). Directorul \texttt{src/shared} conține codul comun, reutilizat de mai multe module --- generarea și verificarea jetoanelor JWT \cite{ref:jwt}, gestiunea cookie-urilor, trimiterea de e-mailuri, clientul Prisma și tratarea erorilor --- iar directorul \texttt{src/middleware} găzduiește componentele intermediare Express, cum ar fi cele de autentificare și de tratare centralizată a erorilor. Separat de codul sursă, directorul \texttt{prisma} conține schema declarativă a bazei de date (\texttt{schema.prisma}) și istoricul migrărilor versionate \cite{ref:prisma}.
 
-\autofig{6}{Structura fișierelor proiectului}
+\autofigH[0.8]{6}{Structura fișierelor proiectului}
 
 Întreaga aplicație este desfășurată pe platforma Railway \cite{ref:railway}, care găzduiește, în cadrul aceluiași proiect, trei componente: serverul de aplicație Node.js, baza de date PostgreSQL și varianta compilată a interfeței. Fiecare modificare adusă în depozitul de cod declanșează automat o nouă construire și desfășurare, iar variabilele sensibile (cheile API, secretele JWT, șirul de conexiune la baza de date) sunt configurate ca variabile de mediu securizate. Arhitectura de desfășurare este prezentată în Figura~\ref{fig:f18}.
 
-\autofig{18}{Arhitectura de deployment pe Railway}
+\autofigH{18}{Arhitectura de deployment pe Railway}
 
 \section{Descrierea modulelor}
 
