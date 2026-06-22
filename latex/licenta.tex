@@ -1122,13 +1122,6 @@ Pentru utilizarea aplicației este nevoie doar de un browser web modern (Google 
 
 Primul contact al utilizatorului cu aplicația are loc pe pagina de autentificare (Figura~\ref{fig:scr-login}). Aceasta este împărțită în două zone: în partea stângă un panou de prezentare cu un exemplu vizual al soldului, iar în partea dreaptă formularul propriu-zis de autentificare.
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\textwidth]{figuri/screen-login.png}
-  \caption{Pagina de autentificare}
-  \label{fig:scr-login}
-\end{figure}
-
 Utilizatorul se poate autentifica în trei moduri:
 \begin{itemize}[leftmargin=2cm,itemsep=2pt]
   \item prin introducerea adresei de email și a parolei contului propriu;
@@ -1138,16 +1131,16 @@ Utilizatorul se poate autentifica în trei moduri:
 
 Dacă utilizatorul nu are încă un cont, accesează link-ul \emph{Creează unul gratuit} care deschide pagina de înregistrare, unde completează numele, prenumele, adresa de email, parola și moneda preferată. În cazul în care utilizatorul își uită parola, link-ul \emph{Am uitat parola?} declanșează trimiterea unui email cu un link securizat de resetare, valabil o oră.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-login.png}
+  \caption{Pagina de autentificare}
+  \label{fig:scr-login}
+\end{figure}
+
 \section{Tabloul de bord (Dashboard)}
 
 După autentificare, utilizatorul ajunge pe Tabloul de bord (Figura~\ref{fig:scr-dashboard}), pagina care oferă o privire de ansamblu asupra stării financiare curente.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\textwidth]{figuri/screen-dashboard.png}
-  \caption{Tabloul de bord cu KPI-uri, grafice și bugete}
-  \label{fig:scr-dashboard}
-\end{figure}
 
 Elementele principale ale Tabloului de bord sunt:
 \begin{itemize}[leftmargin=2cm,itemsep=2pt]
@@ -1160,94 +1153,101 @@ Elementele principale ale Tabloului de bord sunt:
 
 Din bara de sus a aplicației, utilizatorul are acces permanent la căutarea globală (deschisă și cu combinația de taste Ctrl+K), la asistentul AI, la clopoțelul de notificări și la butonul de adăugare rapidă a unei tranzacții.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuri/screen-dashboard.png}
+  \caption{Tabloul de bord cu KPI-uri, grafice și bugete}
+  \label{fig:scr-dashboard}
+\end{figure}
+
 \section{Gestiunea tranzacțiilor}
 
 Modulul Tranzacții (Figura~\ref{fig:scr-transactions}) este modulul central al aplicației și permite vizualizarea, filtrarea, adăugarea, editarea și ștergerea tranzacțiilor.
 
-\begin{figure}[htbp]
+În partea de sus a paginii sunt afișate patru carduri rezumat (total perioadă, venituri, cheltuieli și numărul de tranzacții recurente). Sub acestea, utilizatorul poate filtra lista pe segmente (\emph{Toate / Venituri / Cheltuieli / Recurente}), poate căuta după descriere sau sumă, poate restrânge intervalul de date și poate aplica filtre suplimentare pe categorii și interval de sumă.
+
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-transactions.png}
   \caption{Lista de tranzacții cu filtre și indicatori de perioadă}
   \label{fig:scr-transactions}
 \end{figure}
 
-În partea de sus a paginii sunt afișate patru carduri rezumat (total perioadă, venituri, cheltuieli și numărul de tranzacții recurente). Sub acestea, utilizatorul poate filtra lista pe segmente (\emph{Toate / Venituri / Cheltuieli / Recurente}), poate căuta după descriere sau sumă, poate restrânge intervalul de date și poate aplica filtre suplimentare pe categorii și interval de sumă.
-
 Pentru a adăuga o tranzacție nouă, utilizatorul apasă butonul \emph{Tranzacție nouă}, care deschide formularul din Figura~\ref{fig:scr-add}.
 
-\begin{figure}[htbp]
+Formularul oferă două moduri de completare. În mod obișnuit, utilizatorul completează manual descrierea, suma, data, tipul (cheltuială sau venit) și categoria. Alternativ, prin apăsarea butonului \emph{Scanează bon}, utilizatorul încarcă fotografia unui bon fiscal, iar aplicația extrage automat magazinul, suma totală și data folosind modelul de inteligență artificială Google Gemini, completând câmpurile formularului. Tot din acest formular se pot defini tranzacțiile recurente, prin activarea opțiunii corespunzătoare și alegerea frecvenței și a numărului de repetări.
+
+\begin{figure}[H]
   \centering
-  \includegraphics[width=0.86\textwidth]{figuri/screen-add-modal.png}
+  \includegraphics[width=\textwidth]{figuri/screen-add-modal.png}
   \caption{Formularul de adăugare a unei tranzacții, cu opțiunea de scanare a bonului}
   \label{fig:scr-add}
 \end{figure}
-
-Formularul oferă două moduri de completare. În mod obișnuit, utilizatorul completează manual descrierea, suma, data, tipul (cheltuială sau venit) și categoria. Alternativ, prin apăsarea butonului \emph{Scanează bon}, utilizatorul încarcă fotografia unui bon fiscal, iar aplicația extrage automat magazinul, suma totală și data folosind modelul de inteligență artificială Google Gemini, completând câmpurile formularului. Tot din acest formular se pot defini tranzacțiile recurente, prin activarea opțiunii corespunzătoare și alegerea frecvenței și a numărului de repetări.
 
 \section{Bugetele}
 
 Modulul Bugete (Figura~\ref{fig:scr-budgets}) permite planificarea cheltuielilor lunare, atât sub forma unui buget total pentru întreaga lună, cât și sub forma unor bugete individuale pe categorii.
 
-\begin{figure}[htbp]
+Cardul principal afișează bugetul total al lunii curente, procentul utilizat, suma rămasă și numărul de zile rămase din lună. Sub acesta, fiecare buget activ este reprezentat printr-un card cu o bară de progres colorată în funcție de gradul de utilizare (verde în limite sănătoase, portocaliu aproape de limită, roșu la depășire). La depășirea unui buget, utilizatorul este atenționat atât vizual, cât și printr-o notificare în aplicație. Navigarea între luni se face din selectorul aflat în colțul dreapta-sus.
+
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-budgets.png}
   \caption{Modulul de bugete cu cardul total și bugetele pe categorii}
   \label{fig:scr-budgets}
 \end{figure}
 
-Cardul principal afișează bugetul total al lunii curente, procentul utilizat, suma rămasă și numărul de zile rămase din lună. Sub acesta, fiecare buget activ este reprezentat printr-un card cu o bară de progres colorată în funcție de gradul de utilizare (verde în limite sănătoase, portocaliu aproape de limită, roșu la depășire). La depășirea unui buget, utilizatorul este atenționat atât vizual, cât și printr-o notificare în aplicație. Navigarea între luni se face din selectorul aflat în colțul dreapta-sus.
-
 \section{Categoriile}
 
 Modulul Categorii (Figura~\ref{fig:scr-categories}) gestionează categoriile de venituri și de cheltuieli, grupate separat pe cele două tipuri.
 
-\begin{figure}[htbp]
+Aplicația pune la dispoziție un set de categorii predefinite (Mâncare, Transport, Facturi, Divertisment, Sănătate, Haine, Salariu, Bonus etc.), marcate cu eticheta \emph{Predefinită}. Pe lângă acestea, utilizatorul își poate crea categorii proprii, apăsând cardul \emph{Adaugă categorie} și alegând un nume, o pictogramă și o culoare. Categoriile predefinite nu pot fi șterse sau modificate; cele create de utilizator pot fi editate sau șterse, cu condiția să nu fie folosite de tranzacții sau bugete existente.
+
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-categories.png}
   \caption{Modulul de categorii (venituri și cheltuieli)}
   \label{fig:scr-categories}
 \end{figure}
 
-Aplicația pune la dispoziție un set de categorii predefinite (Mâncare, Transport, Facturi, Divertisment, Sănătate, Haine, Salariu, Bonus etc.), marcate cu eticheta \emph{Predefinită}. Pe lângă acestea, utilizatorul își poate crea categorii proprii, apăsând cardul \emph{Adaugă categorie} și alegând un nume, o pictogramă și o culoare. Categoriile predefinite nu pot fi șterse sau modificate; cele create de utilizator pot fi editate sau șterse, cu condiția să nu fie folosite de tranzacții sau bugete existente.
-
 \section{Rapoartele}
 
 Modulul Rapoarte (Figura~\ref{fig:scr-reports}) permite generarea unor rapoarte detaliate și exportarea lor.
 
-\begin{figure}[htbp]
+Generatorul, aflat în panoul din dreapta, funcționează în trei pași: alegerea tipului de raport (venituri, cheltuieli sau complet), alegerea perioadei (luna curentă, ultimele 30 de zile, trimestru, an sau o perioadă personalizată) și selectarea categoriilor incluse. În partea stângă, raportul este previzualizat în timp real, cu indicatori cheie, un tabel detaliat pe categorii și o diagramă de distribuție. Raportul final poate fi exportat în format PDF sau Excel.
+
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-reports.png}
   \caption{Generatorul de rapoarte cu previzualizare live}
   \label{fig:scr-reports}
 \end{figure}
 
-Generatorul, aflat în panoul din dreapta, funcționează în trei pași: alegerea tipului de raport (venituri, cheltuieli sau complet), alegerea perioadei (luna curentă, ultimele 30 de zile, trimestru, an sau o perioadă personalizată) și selectarea categoriilor incluse. În partea stângă, raportul este previzualizat în timp real, cu indicatori cheie, un tabel detaliat pe categorii și o diagramă de distribuție. Raportul final poate fi exportat în format PDF sau Excel.
-
 \section{Asistentul AI}
 
 Asistentul AI (Figura~\ref{fig:scr-ai}) este accesibil în orice moment, ca un panou lateral, din butonul \emph{Asistent AI} aflat în bara de sus.
 
-\begin{figure}[htbp]
+Asistentul, alimentat de modelul Google Gemini, generează un rezumat al activității financiare (săptămânal, lunar sau anual) și un set de recomandări personalizate, calculate pe baza tranzacțiilor reale ale utilizatorului. În plus, utilizatorul poate adresa întrebări libere în limbaj natural (de exemplu, ,,Câți bani am cheltuit pe abonamente luna asta?''), iar asistentul răspunde folosind contextul propriilor date financiare.
+
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-ai.png}
   \caption{Asistentul AI cu insight-uri și recomandări personalizate}
   \label{fig:scr-ai}
 \end{figure}
 
-Asistentul, alimentat de modelul Google Gemini, generează un rezumat al activității financiare (săptămânal, lunar sau anual) și un set de recomandări personalizate, calculate pe baza tranzacțiilor reale ale utilizatorului. În plus, utilizatorul poate adresa întrebări libere în limbaj natural (de exemplu, ,,Câți bani am cheltuit pe abonamente luna asta?''), iar asistentul răspunde folosind contextul propriilor date financiare.
-
 \section{Setările}
 
 Modulul Setări (Figura~\ref{fig:scr-settings}) permite personalizarea aplicației și gestionarea contului.
 
-\begin{figure}[htbp]
+Setările sunt organizate pe file: \emph{Profil} (nume, prenume, email, monedă preferată, fus orar și fotografie de profil), \emph{Securitate} (schimbarea parolei și ștergerea contului), \emph{Preferințe} (mod întunecat, sunete, format de dată european), \emph{Notificări} (activarea sau dezactivarea alertelor de buget) și \emph{Date} (gestionarea datelor contului). Modificările sunt salvate prin apăsarea butonului \emph{Salvează modificările}.
+
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figuri/screen-settings.png}
   \caption{Pagina de setări --- secțiunea Profil}
   \label{fig:scr-settings}
 \end{figure}
-
-Setările sunt organizate pe file: \emph{Profil} (nume, prenume, email, monedă preferată, fus orar și fotografie de profil), \emph{Securitate} (schimbarea parolei și ștergerea contului), \emph{Preferințe} (mod întunecat, sunete, format de dată european), \emph{Notificări} (activarea sau dezactivarea alertelor de buget) și \emph{Date} (gestionarea datelor contului). Modificările sunt salvate prin apăsarea butonului \emph{Salvează modificările}.
 
 % =============================================================================
 % CAPITOLUL 6 — TESTAREA APLICAȚIEI
