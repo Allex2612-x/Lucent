@@ -26,6 +26,7 @@ backend/uploads/
 *.fls
 *.lof
 *.lot
+*.lol
 *.out
 *.toc
 *.synctex.gz

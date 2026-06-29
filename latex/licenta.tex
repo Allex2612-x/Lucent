@@ -152,6 +152,17 @@
 \counterwithout{table}{chapter}
 \renewcommand{\thetable}{\arabic{table}}
 
+% Numerotare continuă a secvențelor de cod (Secvența 1, 2, 3, ... pe toată
+% lucrarea, fără prefix de capitol) + etichetă în română în loc de „Listing".
+\renewcommand{\lstlistingname}{Secvența}
+\renewcommand{\lstlistlistingname}{LISTA SECVENȚELOR DE COD}
+% Pachetul listings fixează numerotarea pe capitol abia la \begin{document};
+% de aceea suprascriem AICI, după ce el și-a făcut treaba.
+\AtBeginDocument{%
+  \counterwithout{lstlisting}{chapter}%
+  \renewcommand{\thelstlisting}{\arabic{lstlisting}}%
+}
+
 % Placeholder vizual pentru o figură/schemă pe care o adaugi tu mai târziu.
 % Primul argument = slug pentru \label (fig:f<slug>); al doilea = legenda.
 % Numărul figurii este atribuit automat de \caption.
@@ -331,6 +342,13 @@
 \begingroup
 \renewcommand{\addvspace}[1]{}%
 \listoftables
+\endgroup
+\thispagestyle{plain}
+
+\newpage
+\begingroup
+\renewcommand{\addvspace}[1]{}%
+\lstlistoflistings
 \endgroup
 \thispagestyle{plain}
 
@@ -773,7 +791,7 @@ Modulul Setări centralizează configurarea contului și a preferințelor utiliz
 
 \section{Structura fișierelor}
 
-Codul sursă al aplicației FARO este organizat sub forma unui depozit de tip \emph{monorepo}, care reunește în aceeași rădăcină atât aplicația client (directorul \texttt{frontend}), cât și serverul de aplicație (directorul \texttt{backend}). Această organizare facilitează partajarea convențiilor de cod, sincronizarea modificărilor care afectează ambele părți și menținerea unui istoric unic al proiectului. Structura principală de directoare este prezentată în Listingul~\ref{lst:structura} și ilustrată sintetic în Figura~\ref{fig:f6}.
+Codul sursă al aplicației FARO este organizat sub forma unui depozit de tip \emph{monorepo}, care reunește în aceeași rădăcină atât aplicația client (directorul \texttt{frontend}), cât și serverul de aplicație (directorul \texttt{backend}). Această organizare facilitează partajarea convențiilor de cod, sincronizarea modificărilor care afectează ambele părți și menținerea unui istoric unic al proiectului. Structura principală de directoare este prezentată în Secvența~\ref{lst:structura} și ilustrată sintetic în Figura~\ref{fig:f6}.
 
 \begin{lstlisting}[language=bash,caption={Structura proiectului},label={lst:structura}]
 faro/
