@@ -791,7 +791,9 @@ Modulul Setări centralizează configurarea contului și a preferințelor utiliz
 
 \section{Structura fișierelor}
 
-Codul sursă al aplicației FARO este organizat sub forma unui depozit de tip \emph{monorepo}, care reunește în aceeași rădăcină atât aplicația client (directorul \texttt{frontend}), cât și serverul de aplicație (directorul \texttt{backend}). Această organizare facilitează partajarea convențiilor de cod, sincronizarea modificărilor care afectează ambele părți și menținerea unui istoric unic al proiectului. Structura principală de directoare este prezentată în Secvența~\ref{lst:structura} și ilustrată sintetic în Figura~\ref{fig:f6}.
+Codul sursă al aplicației FARO este organizat sub forma unui depozit de tip \emph{monorepo}, care reunește în aceeași rădăcină atât aplicația client (directorul \texttt{frontend}), cât și serverul de aplicație (directorul \texttt{backend}). Această organizare facilitează partajarea convențiilor de cod, sincronizarea modificărilor care afectează ambele părți și menținerea unui istoric unic al proiectului. Structura principală de directoare este ilustrată sintetic în Figura~\ref{fig:f6} și detaliată în Secvența~\ref{lst:structura}.
+
+\autofigH[0.8]{6}{Structura fișierelor proiectului}
 
 \noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=bash,caption={Structura proiectului},label={lst:structura}]
@@ -824,8 +826,6 @@ faro/
 În cadrul aplicației client, directorul \texttt{src/features} grupează codul pe pagini funcționale, fiecare subdirector (de exemplu, \texttt{dashboard}, \texttt{transactions}, \texttt{budgets}, \texttt{categories}, \texttt{reports}, \texttt{settings} și \texttt{auth}) conținând componentele specifice unui modul. Directorul \texttt{src/components} reunește componentele reutilizabile, organizate la rândul lor în elemente de interfață (\texttt{ui}), elemente de structură a paginii (\texttt{layout}) și componente de tip grafic (\texttt{charts}). Directorul \texttt{src/services} conține modulele care încapsulează apelurile HTTP către interfața REST a serverului, izolând logica de comunicare de componentele vizuale, în timp ce \texttt{src/store} găzduiește starea globală a aplicației, gestionată cu Zustand \cite{ref:zustand} (de exemplu, starea de autentificare a utilizatorului).
 
 Pe partea de server, directorul \texttt{src/modules} este nucleul aplicației și conține câte un subdirector pentru fiecare domeniu funcțional --- autentificare (\texttt{auth}), tranzacții (\texttt{transaction}), bugete (\texttt{budget}), categorii (\texttt{category}), statistici (\texttt{statistics}), notificări (\texttt{notification}), asistentul inteligent (\texttt{insights}), rapoarte (\texttt{report}) și recunoașterea bonurilor (\texttt{ocr}). Fiecare modul respectă o organizare consecventă, separând rutele, controlorul, serviciul cu logica de afaceri și, după caz, componentele specializate (de exemplu, validatorul de bugete sau detectorul de anomalii). Directorul \texttt{src/shared} conține codul comun, reutilizat de mai multe module --- generarea și verificarea jetoanelor JWT \cite{ref:jwt}, gestiunea cookie-urilor, trimiterea de e-mailuri, clientul Prisma și tratarea erorilor --- iar directorul \texttt{src/middleware} găzduiește componentele intermediare Express, cum ar fi cele de autentificare și de tratare centralizată a erorilor. Separat de codul sursă, directorul \texttt{prisma} conține schema declarativă a bazei de date (\texttt{schema.prisma}) și istoricul migrărilor versionate \cite{ref:prisma}.
-
-\autofigH[0.8]{6}{Structura fișierelor proiectului}
 
 Întreaga aplicație este desfășurată pe platforma Railway \cite{ref:railway}, care găzduiește, în cadrul aceluiași proiect, trei componente: serverul de aplicație Node.js, baza de date PostgreSQL și varianta compilată a interfeței. Fiecare modificare adusă în depozitul de cod declanșează automat o nouă construire și desfășurare, iar variabilele sensibile (cheile API, secretele JWT, șirul de conexiune la baza de date) sunt configurate ca variabile de mediu securizate. Arhitectura de desfășurare este prezentată în Figura~\ref{fig:f18}.
 
@@ -972,11 +972,11 @@ export async function scanReceiptWithGemini(imageBase64, mimeType) {
 \end{minipage}
 \medskip
 
-\autofig{12}{Modul de funcționare al scanării bonului (OCR)}
+\autofigH[0.85]{12}{Modul de funcționare al scanării bonului (OCR)}
 
 Pașii parcurși de la încărcarea fotografiei bonului până la completarea automată a câmpurilor tranzacției sunt prezentați în Figura~\ref{fig:f9}.
 
-\autofig{9}{Flux de scanare a bonului fiscal (OCR)}
+\autofigT[0.70]{9}{Flux de scanare a bonului fiscal (OCR)}
 
 \subsection{Sugestia automată de categorie și asistentul AI}
 
@@ -1103,7 +1103,7 @@ else if (percentage >= 80) {
 \end{minipage}
 \medskip
 
-\autofig{16}{Modul de funcționare al notificărilor de buget}
+\autofigH[0.9]{16}{Modul de funcționare al notificărilor de buget}
 
 \section{Structura bazei de date}
 
