@@ -793,6 +793,7 @@ Modulul Setări centralizează configurarea contului și a preferințelor utiliz
 
 Codul sursă al aplicației FARO este organizat sub forma unui depozit de tip \emph{monorepo}, care reunește în aceeași rădăcină atât aplicația client (directorul \texttt{frontend}), cât și serverul de aplicație (directorul \texttt{backend}). Această organizare facilitează partajarea convențiilor de cod, sincronizarea modificărilor care afectează ambele părți și menținerea unui istoric unic al proiectului. Structura principală de directoare este prezentată în Secvența~\ref{lst:structura} și ilustrată sintetic în Figura~\ref{fig:f6}.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=bash,caption={Structura proiectului},label={lst:structura}]
 faro/
 |-- frontend/
@@ -817,6 +818,8 @@ faro/
         |-- schema.prisma    # schema bazei de date
         `-- migrations/      # migrari versionate
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 În cadrul aplicației client, directorul \texttt{src/features} grupează codul pe pagini funcționale, fiecare subdirector (de exemplu, \texttt{dashboard}, \texttt{transactions}, \texttt{budgets}, \texttt{categories}, \texttt{reports}, \texttt{settings} și \texttt{auth}) conținând componentele specifice unui modul. Directorul \texttt{src/components} reunește componentele reutilizabile, organizate la rândul lor în elemente de interfață (\texttt{ui}), elemente de structură a paginii (\texttt{layout}) și componente de tip grafic (\texttt{charts}). Directorul \texttt{src/services} conține modulele care încapsulează apelurile HTTP către interfața REST a serverului, izolând logica de comunicare de componentele vizuale, în timp ce \texttt{src/store} găzduiește starea globală a aplicației, gestionată cu Zustand \cite{ref:zustand} (de exemplu, starea de autentificare a utilizatorului).
 
@@ -838,6 +841,7 @@ Autentificarea utilizatorilor se bazează pe un mecanism cu pereche dublă de to
 
 Parolele nu sunt stocate niciodată în clar. Înainte de salvarea în baza de date, fiecare parolă este criptată cu funcția de hashing \texttt{bcrypt} \cite{ref:bcrypt}, folosind un factor de cost (numărul de runde) egal cu 10, valoare care asigură un compromis rezonabil între rezistența la atacuri prin forță brută și timpul de răspuns. La logare, parola introdusă este comparată cu hash-ul stocat prin \texttt{bcrypt.compare}, fără a fi nevoie de decriptare. Refresh token-ul conține și un câmp \texttt{tokenVersion}, care permite invalidarea tuturor sesiunilor active ale unui utilizator (de exemplu, după o resetare de parolă), prin simpla incrementare a versiunii în baza de date.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=JavaScript,caption={Înregistrarea utilizatorului și emiterea perechii de token-uri JWT}]
 static async register(data) {
   const existingUser = await prisma.user.findUnique({
@@ -860,6 +864,8 @@ static async register(data) {
   return { user, accessToken, refreshToken };
 }
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 \autofig{14}{Modul de funcționare al autentificării JWT}
 
@@ -873,6 +879,7 @@ Pe lângă autentificarea clasică pe bază de email și parolă, FARO oferă po
 
 După ce utilizatorul aprobă accesul la furnizorul extern, serverul primește profilul verificat (email, nume, prenume) și apelează funcția \texttt{loginOrSignupFromOAuth}. Aceasta este idempotentă: dacă există deja un cont cu acel email, contul este reutilizat; altfel se creează un cont nou cu o parolă aleatoare imposibil de ghicit. Indiferent de cale, funcția emite aceeași pereche de token-uri JWT ca autentificarea clasică, astfel încât restul aplicației nu trebuie să distingă originea sesiunii.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=JavaScript,caption={Căutarea sau crearea contului dintr-un profil OAuth verificat}]
 export async function loginOrSignupFromOAuth(profile) {
   let user = await prisma.user.findUnique({
@@ -895,6 +902,8 @@ export async function loginOrSignupFromOAuth(profile) {
   return { user, accessToken, refreshToken };
 }
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 \subsection{Resetarea parolei}
 
@@ -902,6 +911,7 @@ export async function loginOrSignupFromOAuth(profile) {
 
 Link-ul de resetare este trimis utilizatorului prin email, folosind serviciul tranzacțional Resend \cite{ref:resend}. Mesajul este construit dintr-un șablon HTML branduit, însoțit de o variantă text simplă pentru clienții de email care nu interpretează HTML. La consumarea token-ului, după validarea expirării și a folosirii anterioare, noua parolă este hash-uită cu \texttt{bcrypt}, iar câmpul \texttt{tokenVersion} al utilizatorului este incrementat într-o tranzacție atomică, ceea ce revocă automat toate sesiunile active — o măsură esențială atunci când resetarea este cauzată de compromiterea parolei.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=JavaScript,caption={Generarea tokenului de resetare și trimiterea email-ului prin Resend}]
 export async function requestPasswordReset(email) {
   const user = await prisma.user.findUnique({ where: { email } });
@@ -925,6 +935,8 @@ export async function requestPasswordReset(email) {
   return { ok: true, token: exposeToken ? token : null };
 }
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 \autofig{15}{Modul de funcționare al resetării parolei}
 
@@ -934,6 +946,7 @@ Una dintre funcționalitățile distinctive ale aplicației FARO este posibilita
 
 Răspunsul modelului este apoi curățat de eventuale delimitatoare de tip markdown și parsat în JSON. Pentru a garanta integritatea datelor introduse ulterior în baza de date, fiecare câmp trece printr-o funcție de normalizare (\texttt{normalizeReceiptData}) care validează tipul și forma valorilor: datele care nu trec validarea devin \texttt{null}, iar liniile de produs fără nume sau total valid sunt eliminate. Astfel, structura returnată către interfață este întotdeauna sigură și consistentă, iar bonul digital rezultat este suficient de compact pentru a fi stocat direct în tabela de tranzacții, fără a fi nevoie de găzduirea imaginii.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=JavaScript,caption={Apelul modelului Gemini multimodal pentru scanarea bonului fiscal}]
 export async function scanReceiptWithGemini(imageBase64, mimeType) {
   const c = getClient();
@@ -956,6 +969,8 @@ export async function scanReceiptWithGemini(imageBase64, mimeType) {
     date: data.date, raw, receiptData: data };
 }
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 \autofig{12}{Modul de funcționare al scanării bonului (OCR)}
 
@@ -967,6 +982,7 @@ Pașii parcurși de la încărcarea fotografiei bonului până la completarea au
 
 Pentru a reduce efortul de introducere a datelor, FARO sugerează automat o categorie atunci când utilizatorul completează descrierea unei tranzacții. Acest mecanism este implementat printr-un clasificator euristic, bazat pe reguli de potrivire a cuvintelor-cheie adaptate pieței românești. Descrierea este normalizată (litere mici, eliminarea diacriticelor și a caracterelor speciale), apoi comparată cu un set de reguli care asociază denumiri de comercianți și termeni (de exemplu \texttt{lidl}, \texttt{kaufland}, \texttt{omv}, \texttt{netflix}) cu o categorie implicită. Regula cu cel mai lung cuvânt-cheie potrivit câștigă, fiind considerată cea mai specifică, iar sistemul preferă categoriile proprii ale utilizatorului față de cele implicite, astfel încât redenumirile personalizate să fie respectate.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=JavaScript,caption={Sugerarea categoriei prin potrivirea cuvintelor-cheie din descriere}]
 export function suggestCategory(description, type, userCategories) {
   if (!description) return null;
@@ -990,9 +1006,12 @@ export function suggestCategory(description, type, userCategories) {
     confidence, matchedKeyword: best.keyword };
 }
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 Complementar, aplicația include un asistent financiar conversațional, de această dată construit peste modelul Gemini \cite{ref:gemini}. Asistentul generează rezumate săptămânale, sfaturi scurte personalizate și răspunde la întrebări libere despre finanțele utilizatorului. Pentru fiecare cerere, backend-ul agregă datele relevante (tranzacții pe categorii și pe luni din ultimele 30–60 de zile) și le furnizează modelului ca \emph{context}, alături de un \texttt{systemInstruction} care impune regulile de stil (răspuns concis, în română, fără cifre inventate). Răspunsurile sunt memorate temporar într-un cache cu durata de 24 de ore pentru a limita consumul de cote API. Modul de funcționare al asistentului este prezentat în Figura~\ref{fig:f17}.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=JavaScript,caption={Răspunsul asistentului AI la o întrebare liberă, cu datele utilizatorului drept context}]
 export async function askQuestion(userId, question) {
   if (!question || question.trim().length < 3)
@@ -1014,6 +1033,8 @@ export async function askQuestion(userId, question) {
     generatedAt: new Date().toISOString() };
 }
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 \autofig{17}{Modul de funcționare al asistentului AI}
 
@@ -1023,6 +1044,7 @@ Pentru a semnala cheltuielile neobișnuite, FARO implementează un detector de a
 
 Ulterior, pentru fiecare tranzacție recentă (din ultimele 14 zile) se calculează scorul Z ca raport între diferența față de medie și abaterea standard. Tranzacțiile al căror scor depășește pragul de 2,0 abateri standard peste medie sunt marcate ca anomalii și raportate utilizatorului, ordonate descrescător după scor și limitate la primele 10 rezultate. Acest mecanism permite, de exemplu, evidențierea unei facturi neobișnuit de mari la o categorie în care cheltuielile sunt de regulă constante.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=JavaScript,caption={Calculul scorului Z pe categorie pentru marcarea tranzacțiilor anormale}]
 for (const [catId, list] of grouped) {
   if (list.length < minSamples) continue; // prea putine date = medie zgomotoasa
@@ -1045,6 +1067,8 @@ for (const [catId, list] of grouped) {
 anomalies.sort((a, b) => b.zScore - a.zScore);
 return anomalies.slice(0, 10);
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 \subsection{Validarea bugetelor și notificările}
 
@@ -1052,6 +1076,7 @@ Sistemul de bugete permite utilizatorului să stabilească limite lunare, fie pe
 
 Dincolo de avertismentul afișat înainte de confirmare, sistemul generează notificări persistente prin metoda \texttt{checkAndCreateBudgetNotifications}. După salvarea unei tranzacții, aceasta calculează procentul de utilizare a bugetului pe categoria respectivă și creează o notificare de tip \texttt{budget\_exceeded} la depășirea pragului de 100\%, respectiv \texttt{budget\_near\_limit} între 80\% și 100\%. Funcția respectă preferința utilizatorului de a primi sau nu astfel de notificări și este parțial idempotentă: notificarea de apropiere de limită nu se duplică dacă există deja una necitită. Modul de funcționare al notificărilor este prezentat în Figura~\ref{fig:f16}.
 
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}[language=JavaScript,caption={Crearea notificărilor de buget în funcție de procentul de utilizare}]
 const totalSpent = transactions.reduce((s, t) => s + Number(t.amount), 0);
 const percentage = limitAmount > 0 ? (totalSpent / limitAmount) * 100 : 0;
@@ -1075,6 +1100,8 @@ else if (percentage >= 80) {
   }
 }
 \end{lstlisting}
+\end{minipage}
+\medskip
 
 \autofig{16}{Modul de funcționare al notificărilor de buget}
 
@@ -1082,9 +1109,9 @@ else if (percentage >= 80) {
 
 Persistența datelor în aplicația FARO este asigurată de un sistem de gestiune a bazelor de date relaționale PostgreSQL \cite{ref:postgres}, ales pentru maturitatea sa, pentru conformitatea ridicată cu standardul SQL și pentru suportul nativ al tipurilor de date avansate, precum coloanele de tip JSON binar (JSONB). Accesul la baza de date nu se realizează prin interogări SQL scrise manual, ci prin intermediul ORM-ului Prisma \cite{ref:prisma}, care expune o schemă declarativă (\texttt{schema.prisma}) ca sursă unică de adevăr pentru modelul de date. Din această schemă, Prisma generează automat un client tipat, ceea ce permite ca eventualele erori de acces la coloane sau de tipuri să fie semnalate încă din faza de compilare, înainte de execuție. Modelul fizic cuprinde șapte tabele: \texttt{User}, \texttt{PasswordResetToken}, \texttt{Category}, \texttt{Transaction}, \texttt{Budget}, \texttt{BudgetCategory} și \texttt{Notification}. Diagrama entitate-relație din Figura~\ref{fig:f7} prezintă legăturile dintre aceste entități, iar Figura~\ref{fig:f8} consolidează structurile tuturor tabelelor.
 
-\autofig{7}{Schema bazei de date (Entity-Relationship)}
+\autofigH[0.85]{7}{Schema bazei de date (Entity-Relationship)}
 
-\autofig{8}{Structurile tuturor tabelelor (consolidat)}
+\autofigH[0.85]{8}{Structurile tuturor tabelelor (consolidat)}
 
 Integritatea referențială este garantată prin chei externe definite la nivelul relațiilor Prisma. Identificatorii primari sunt, în marea majoritate a cazurilor, șiruri de tip UUID generate automat (\texttt{@default(uuid())}), ceea ce evită expunerea unor identificatori secvențiali previzibili. Acolo unde ștergerea unei entități-părinte trebuie să atragă automat ștergerea entităților-copil, relația este declarată cu \texttt{onDelete: Cascade} (de exemplu, jetoanele de resetare a parolei și categoriile dintr-un buget). Un element particular al modelului îl constituie coloana \texttt{receiptData} din tabela \texttt{Transaction}, declarată de tip \texttt{Json} și materializată în PostgreSQL ca o coloană JSONB. Aceasta stochează reprezentarea structurată a unui bon fiscal scanat (produse pe linii, totaluri, TVA, metodă de plată), permițând afișarea unui bon digital fără a re-procesa fotografia originală; flexibilitatea formatului JSON este avantajoasă aici, întrucât structura unui bon variază de la un comerciant la altul, iar o modelare rigidă pe coloane fixe ar fi fost nepotrivită \cite{ref:dbconcepts}.
 
